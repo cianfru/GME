@@ -27,6 +27,19 @@ for a, t in first.items():
         x["first"] = min(x["first"] or t0, t0); x["last"] = max(x["last"] or t1, t1)
         for k, v in src.items():
             if k != tgt and v >= 0.1 * amt: x["sources"][k] = x["sources"].get(k, 0) + v
-out = {v: dict(feeders=sorted(x["feeders"]), tok=x["tok"], usd=x["usd"], first=x["first"], last=x["last"], sources=x["sources"]) for v, x in sorted(vault.items(), key=lambda kv: -kv[1]["tok"])}
+# What each holding wallet still holds, and how much of what it got has gone on (to an exchange, or anywhere).
+def after(a):
+    bal = to_cex = sold = sent = 0.0
+    for i in by[a]:
+        s, r, ts, v, b = T[i]
+        if s == r: continue
+        if r == a: bal += v
+        if s == a:
+            bal -= v; sent += v
+            if r in CEX: to_cex += v
+            elif r in infra and r not in LP: sold += v
+    return dict(bal=max(bal, 0.0), sent=sent, toCex=to_cex, soldDex=sold)
+out = {v: dict(feeders=sorted(x["feeders"]), tok=x["tok"], usd=x["usd"], first=x["first"], last=x["last"], sources=x["sources"], **after(v))
+       for v, x in sorted(vault.items(), key=lambda kv: -kv[1]["tok"])}
 json.dump(out, open(os.path.join(D, "vaults90.json"), "w"))
 print(f"{len(out)} holding wallets fed by fresh buy-and-forward wallets in the last 90 days (to {NOW[:16]})")

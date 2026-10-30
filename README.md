@@ -41,6 +41,30 @@ Everything is rebuilt from the public transfer history, with free data only. The
 - **medium**: a new holding wallet or a new accumulator appeared, or a watched group moved coins to other wallets.
 - **info**: buys, and changes in the pool.
 
+## The website (Vercel)
+
+`site/index.html` is a dashboard that reads `site.json`. `scripts/build-site.mjs` builds that file from `data/`, and Vercel runs it on every push to `main`. That means every daily data commit redeploys the site. The dashboard shows:
+- the latest alerts and the alert history;
+- the quiet accumulators;
+- the buy-and-hide holding wallets, including whether each one still holds;
+- the watched groups and who holds the supply;
+- buyers and sellers on the DEX.
+
+The full study is served at `/study`.
+
+**The whole site is password-protected.** `middleware.js` puts an HTTP Basic-auth check in front of every page and data file:
+- Use any username. The password is the `SITE_PASSWORD` environment variable in the Vercel project.
+- Until that variable is set, the site answers 503 and shows nothing.
+- To change the password, edit the variable, then redeploy.
+
+Build and preview locally:
+```
+npm install
+node scripts/build-site.mjs              # → dist/
+python3 -m http.server --directory dist  # http://localhost:8000 (no password check locally)
+npm test                                 # password-check tests
+```
+
 ## Run it locally
 
 ```

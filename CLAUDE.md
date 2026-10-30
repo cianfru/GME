@@ -55,6 +55,18 @@ Read this file first. It is enough to continue without the original conversation
 9. **Engine.** `build-onchain-local.mjs`, ported from SPX and pepecoin, runs with `--decimals=9 --daily`. It produces realized price, MVRV, URPD and holding-age bands. Its console still says "SPX" in places; that is cosmetic.
 10. **`watch.py`** compares every watched group with the last run (`data/watch_state.json`). It writes `data/alerts/latest.json` and `log.jsonl`, and puts the same text in the Actions run summary.
 
+### Website (Vercel)
+- `site/index.html` is the dashboard; it reads `/site.json`.
+- `scripts/build-site.mjs` builds `dist/` with three files:
+  - `index.html`;
+  - `study.html`, which is `report/gme-study.html` wrapped in a full document;
+  - `site.json`, a compact summary holding only what the page shows.
+- `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Each push to `main`, including the daily data commit, redeploys.
+- **Password:** `middleware.js` adds HTTP Basic auth on every path. Any username works; the password is the `SITE_PASSWORD` env var. It **fails closed**: with no password set the site returns 503. Tests are in `test/middleware.test.mjs` (`npm test`).
+  - Never put the password in the repo or in chat. The owner sets it in Vercel.
+  - Vercel Hobby can't password-protect the production domain natively, which is why the middleware exists.
+- **Freshness:** the page shows "Data as of" (time of the newest transfer). It turns red after 36 hours, so stale data is never shown as current.
+
 ## 4. Linking rules (what makes two wallets one owner)
 
 Each rule below links two wallets:
@@ -90,6 +102,12 @@ Guards:
   - `0x05e4…0814`: 1.48B withdrawn from MEXC.
   - `0x4553…4ea2`: buys arriving from other chains.
   - `0xfa67…dbb6`: has held since launch day, 7.11B.
+- **Buy-and-hide holding wallets:**
+  - 18 fresh wallets received coins this way in the last 90 days, but **only 5 still hold them**.
+  - Holding: `0x53ee…efdb` 3.44B, `0xf0f7…b749` 1.50B, `0x644a…7982` 0.80B, plus two small ones.
+  - Several were relays that sold on the DEX: `0xc71f…` 1.49B and `0x8d56…` 0.93B, both in the 90-day top sellers.
+  - Three small ones went to exchanges.
+  - `vaults90.py` now records `bal`, `soldDex`, `toCex` and `sent` for each, so the page shows which is which. Judge a holding wallet by what it still holds, not by what it received.
 - **First watch run (24 hours to 2026-10-30):**
   - the focus cluster took 1.25B from an exchange and bought 0.69B on the DEX;
   - accumulators `0x4553`, `0x7465` and `0xfa67` bought on the DEX;

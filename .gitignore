@@ -20,3 +20,4 @@ data/bs/focus_internal.json
 
 __pycache__/
 node_modules/
+dist/
