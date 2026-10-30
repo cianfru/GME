@@ -91,7 +91,8 @@ summary = dict(asOf=NOW, since=since, price=price, mcap=price * SUPPLY, pool=poo
 os.makedirs(os.path.join(D, "alerts"), exist_ok=True)
 json.dump(dict(summary=summary, alerts=alerts), open(os.path.join(D, "alerts", "latest.json"), "w"), indent=1)
 with open(os.path.join(D, "alerts", "log.jsonl"), "a") as f: f.write(json.dumps(dict(summary=summary, alerts=alerts)) + "\n")
-json.dump(dict(asOf=NOW, pool=pool, groups=gbal, vaults=sorted(V), stealth=sorted(r["owner"] for r in ST)), open(SP, "w"))
+json.dump(dict(asOf=NOW, pool=pool, groups=gbal, vaults=sorted(V), stealth=sorted(r["owner"] for r in ST),
+               members={g: sorted(ws) for g, ws in groups.items()}), open(SP, "w"))
 lines = [f"## GME watch · {NOW[:16]} UTC", f"Price ${price:.3e} · market cap ${price*SUPPLY/1e6:.2f}M · pool {pool/1e9:.2f}B GME · {len(groups)} watched groups", ""]
 lines += [f"- **{a['severity'].upper()}** {a['text']}" for a in alerts] or ["- No alerts since the last run." if prev else "- First run: baseline saved, alerts start tomorrow."]
 md = "\n".join(lines)

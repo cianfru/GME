@@ -55,39 +55,45 @@ Read this file first. It is enough to continue without the original conversation
 9. **Engine.** `build-onchain-local.mjs`, ported from SPX and pepecoin, runs with `--decimals=9 --daily`. It produces realized price, MVRV, URPD and holding-age bands. Its console still says "SPX" in places; that is cosmetic.
 10. **`watch.py`** compares every watched group with the last run (`data/watch_state.json`). It writes `data/alerts/latest.json` and `log.jsonl`, and puts the same text in the Actions run summary.
 
-### Website (Vercel)
-- **A scrolling "visual journey", not a dashboard** (owner asked for "a visual journey, not text heavy"). `site/index.html` has 12 chapters, one per screen. Each has a short headline with the key number, one big D3 visual, and at most one line of caption:
-  1. price story, with pumps marked;
-  2. launch waffle;
-  3. focus wallet holdings + price;
-  4. the 70-wallet network (force graph);
-  5. monthly sends to exchanges vs price;
-  6. pool calculator ("buy $X → +Y%");
-  7. supply split bar;
-  8. cost-basis (URPD) underwater chart;
-  9. cohort survival;
-  10. quiet-accumulator bubbles;
-  11. buy-and-hide received vs held;
-  12. today's alerts as cards, then the verdict (pros/cons, watched signals).
+### Website (Vercel): a monitoring terminal
+- **What the owner wants (2026-10-30):** a terminal to visit regularly and *see what's happening*, like the SPX/pepecoin work. Not a story: an earlier scrolling "visual journey" version was rejected. `site/index.html` is one static page, D3 v7 from cdnjs, dark by default with a light toggle.
+- **Layout:**
+  - **Sticky ticker:** price (24h, 7d), market cap, pool (ETH and GME), holders (30d), MVRV + supply in profit, focus-cluster share (7d), insider status.
+  - **Tabs** (hash routing), with a shared range selector (30D / 90D / 1Y / ALL, saved in localStorage):
+    - **OVERVIEW:** insider-watch card, "what changed" (1d / 7d / 30d), alerts since the last run, price vs realized price, DEX buys vs sells, cluster holdings, holders, new wallets.
+    - **VALUATION:** price vs realized, MVRV, supply in profit, SOPR (7d average), NRPL, cost basis (URPD).
+    - **HOLDERS:** holders, new wallets, holders by $ position size, HODL waves, concentration, cohort survival.
+    - **FLOWS:** DEX buys vs sells, net flow, buyers vs sellers, GME in the pool, exchange balances, liveliness.
+    - **INSIDERS:** status, cluster holdings, daily cluster flows (bought, from exchanges, to exchanges, sold), cluster → exchanges $, network graph, members table.
+    - **WATCHLIST:** watched groups with 1d/7d/30d change and 180-day sparklines, quiet accumulators, buy-and-hide wallets, top 50 holders, alert log.
+  - **Wallet drawer:** every address opens it, with stats, a balance + price chart (buys and sells marked) and the activity list. It reads `wallets.json`, fetched lazily.
+- **Data:** `scripts/terminal.py` runs daily, after `watch.py`, and reads each group's members from `watch_state.json`. It writes:
+  - **`data/terminal.json`:**
+    - daily series since launch: price, the engine's rp/MVRV/sip/SOPR/holders/top10/top100/whale share/NRPL/liveliness/age bands/$-wealth bands/exchange balances, plus DEX buy/sell $ and counts, new wallets, pool GME, focus and cluster balances, and cluster flows by type;
+    - the insider status;
+    - 180-day group histories;
+    - the cluster graph and members;
+    - the top 50 holders and live pool reserves.
+  - **`data/wallets.json`:** per-wallet daily balance + transfer events (merged per day / type / counterparty) for every watched wallet, cluster member and top holder.
   
-  Tables sit in a collapsed "All the numbers" block (the accessible view). Charts render lazily as each chapter scrolls in.
-- **Data:** `scripts/journey.py` (daily, after cohorts.py) writes `data/journey.json`. It holds:
-  - daily price and ATH;
-  - daily balance of the focus wallet and of the cluster;
-  - the cluster's monthly USD sent to exchanges (CEX + deposit-like addresses);
-  - live pool reserves via `getReserves()`;
-  - the cluster graph (members + evidence links between members);
-  - URPD buckets, cohorts, the launch steps and pump runs.
+  `scripts/build-site.mjs` puts terminal.json into `dist/site.json` as `T`, next to alerts, accumulators, holding wallets and float, and copies wallets.json alongside.
+- **Insider status rules** (focus wallet's cluster, in `terminal.py`):
+  - DISTRIBUTING: sent ≥0.05% of supply to exchanges in 30 days.
+  - SELLING: sold more than it bought on the DEX and shrank.
+  - ACCUMULATING: grew by more than 0.05% of supply.
+  - HOLDING: otherwise.
   
-  The last two come from static history files (`page_data.json`, `runs.json`, `launch_block0.json`). `scripts/build-site.mjs` folds it all into `dist/site.json`, along with alerts, accumulators, holding wallets, groups and float.
-- **Charts follow the dataviz rules:**
-  - the reference palette (validated light + dark);
-  - one y-axis per panel: price always gets its own panel under a shared x, never a dual axis;
-  - hover tooltips;
-  - a legend on every multi-series chart.
-- `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Each push to `main`, including the daily data commit, redeploys.
-- **Password is optional (owner: "keep it simple, a side project").** `middleware.js` adds HTTP Basic auth only when the `SITE_PASSWORD` env var is set (any username). Without it the site is open, and `noindex` keeps it out of search. Tests: `npm test`.
-- **Freshness:** the "Data as of" badge turns red after 36 hours.
+  **Tripwire:** any exchange deposit in 7 days, or the focus wallet selling on the DEX in 30 days. A transfer to the GME token contract itself is NOT a DEX sale; it was the only "sale" in the focus wallet's history.
+- **Chart rules:**
+  - one y-axis per chart;
+  - price and realized price share a log axis (same unit);
+  - stacked bars split up (bought, withdrawn) and down (sent to exchanges, sold);
+  - more than 200 days of bars become weekly totals, and daily-average lines are dropped at that point;
+  - % charts are capped at 100;
+  - colours are passed as CSS variable names, so the theme toggle repaints.
+- `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Every push to `main`, including the daily data commit, redeploys. **Production URL: https://gme-terminal.vercel.app** (Vercel project `gme-terminal`, team cianfru's projects, repo `cianfru/GME`). Deployment protection is standard: the production domain is public, preview URLs require Vercel login.
+- **Password is optional (owner: "keep it simple, a side project").** `middleware.js` adds HTTP Basic auth only when the `SITE_PASSWORD` env var is set. Without it the site is open, and `noindex` keeps it out of search. Tests: `npm test`.
+- **Freshness:** the brand dot and the footer turn red after 36 hours without new data.
 - **"Still holding"** (a buy-and-hide wallet) means it kept ≥80% of what it received AND sold or deposited ≤20% of it. A trader that refills, like `0x859f…d9d1` which sold 3.3B, is not a hider.
 
 ## 4. Linking rules (what makes two wallets one owner)

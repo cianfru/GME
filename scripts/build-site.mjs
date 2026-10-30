@@ -77,7 +77,7 @@ const site = {
     // Still holding first (by size), then the ones whose coins have moved on.
     .sort((a, b) => (b.bal ?? 0) - (a.bal ?? 0) || b.tok - a.tok),
   float: Object.entries(float).map(([name, tok]) => ({ name: relabel(name), tok, pct: pct(tok) })),
-  journey: json("journey.json"),
+  T: json("terminal.json"),                       // daily series, insider watch, watched groups, cluster, top holders
   windows: (market.windows || []).map((w) => ({
     days: w.days, buyers: w.buyers, sellers: w.sellers, buyUsd: w.buyUsd, sellUsd: w.sellUsd, newBuyers: w.newBuyers, clusterNet: w.clusterNet,
   })),
@@ -87,10 +87,13 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 writeFileSync(join(OUT, "site.json"), JSON.stringify(site));
 copyFileSync(join(ROOT, "site/index.html"), join(OUT, "index.html"));
+// Per-wallet histories: a separate file, fetched only when a wallet is opened.
+if (existsSync(join(D, "wallets.json")))
+  writeFileSync(join(OUT, "wallets.json"), relabel(readFileSync(join(D, "wallets.json"), "utf8")));
 
 // The study was written as a page fragment (no doctype); give it a full document shell and a way back.
 const study = readFileSync(join(ROOT, "report/gme-study.html"), "utf8");
-const back = `<a href="/" style="position:fixed;top:10px;right:max(16px,env(safe-area-inset-right,0px));z-index:9;font:600 13px/1 system-ui,sans-serif;padding:9px 12px;border-radius:999px;background:#15181b;color:#fff;text-decoration:none">← Daily watch</a>`;
+const back = `<a href="/" style="position:fixed;top:10px;right:max(16px,env(safe-area-inset-right,0px));z-index:9;font:600 13px/1 system-ui,sans-serif;padding:9px 12px;border-radius:999px;background:#15181b;color:#fff;text-decoration:none">← Terminal</a>`;
 writeFileSync(
   join(OUT, "study.html"),
   `<!doctype html>\n<html lang="en">\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="robots" content="noindex">\n${study}\n${back}\n</html>\n`,

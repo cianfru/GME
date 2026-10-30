@@ -43,14 +43,16 @@ Everything is rebuilt from the public transfer history, with free data only. The
 
 ## The website (Vercel)
 
-`site/index.html` is a dashboard that reads `site.json`. `scripts/build-site.mjs` builds that file from `data/`, and Vercel runs it on every push to `main`. That means every daily data commit redeploys the site. The dashboard shows:
-- the latest alerts and the alert history;
-- the quiet accumulators;
-- the buy-and-hide holding wallets, including whether each one still holds;
-- the watched groups and who holds the supply;
-- buyers and sellers on the DEX.
+**https://gme-terminal.vercel.app** is a monitoring terminal built from `data/` on every push to `main`, so each daily data commit refreshes it.
+- **Ticker:** price, market cap, pool, holders, MVRV, the focus cluster's share and the insider status, each with its recent change.
+- **Overview:** the insider watch, what changed over 1/7/30 days, and today's alerts.
+- **Valuation:** realized price, MVRV, supply in profit, SOPR, NRPL and cost basis.
+- **Holders:** count, new wallets, size bands, holding age, concentration and cohorts.
+- **Flows:** DEX buys and sells, the pool and exchange balances.
+- **Insiders:** the focus wallet's cluster: holdings, daily flows, exchange deposits, network and members.
+- **Watchlist:** watched groups, quiet accumulators, buy-and-hide wallets, top holders and the alert log.
 
-The full study is served at `/study`.
+Every address opens a wallet drawer with its balance history and activity. `scripts/terminal.py` builds the chart data; `scripts/build-site.mjs` assembles `dist/`. The full written study is at `/study`.
 
 **Password (optional).** The site is open to anyone with the URL (and asks search engines not to index it). To lock it, set `SITE_PASSWORD` in the Vercel project's environment variables and redeploy: `middleware.js` then asks for that password (any username) on every page and data file.
 
