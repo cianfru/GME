@@ -1,0 +1,120 @@
+name: daily refresh + watch
+
+on:
+  schedule:
+    - cron: "23 6 * * *"   # 06:23 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gme-daily
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # The full transfer history lives as a release asset (tag gme-archive), not in git.
+      # First run: no asset yet, so pull everything from the deploy block (~1h).
+      - name: Get transfer archive
+        run: |
+          if gh release download gme-archive -p transfers.csv.gz -D data --clobber; then
+            gunzip -f data/transfers.csv.gz
+            echo "archive rows: $(($(wc -l < data/transfers.csv) - 1))"
+          else
+            echo "no archive asset yet: full pull"
+            python3 scripts/pull-transfers-rpc.py --start-block=19858481 --out=data/transfers.csv --log=data/pull.log
+          fi
+
+      - name: Pull new transfers and merge
+        run: |
+          MAX=$(python3 scripts/archive_tools.py maxblock data/transfers.csv)
+          python3 scripts/pull-transfers-rpc.py --start-block=$MAX --out=data/delta.csv --log=data/pull.log
+          python3 scripts/archive_tools.py merge data/transfers.csv data/delta.csv
+
+      - name: Prices
+        run: |
+          python3 scripts/pull-prices-defillama.py --out=data/prices.csv
+          python3 scripts/pull-eth-prices.py data/eth_prices.csv
+
+      - name: Classify new addresses (contract or wallet)
+        run: python3 scripts/getcode.py
+
+      - name: Rebuild exclude list
+        run: python3 scripts/build_exclude.py
+
+      - name: Refresh the focus wallet's ETH transfers
+        continue-on-error: true
+        run: python3 scripts/refresh_focus.py
+
+      - name: Clusters
+        run: |
+          python3 scripts/cluster.py
+          python3 scripts/coinbase_group.py
+          python3 scripts/cluster_all.py
+          python3 scripts/vaults90.py
+
+      - name: Quiet accumulators
+        run: python3 scripts/stealth.py
+
+      - name: Gas funders of watched wallets (Ethplorer)
+        continue-on-error: true
+        run: python3 scripts/funders_ethplorer.py data/watch_addrs.txt
+
+      - name: Quiet accumulators (with gas links)
+        run: python3 scripts/stealth.py
+
+      - name: Float and market
+        run: |
+          python3 scripts/float.py
+          python3 scripts/market.py
+
+      - name: Exchange overhang
+        continue-on-error: true
+        run: python3 scripts/overhang.py
+
+      - name: Metrics engine (realized price, MVRV, URPD, holding age)
+        continue-on-error: true
+        run: |
+          python3 -c "
+          import json
+          t = json.load(open('data/addr-types.json'))
+          json.dump({'types': {a: ('contract' if v == 'contract' else 'eoa') for a, v in t.items()}}, open('data/addr-types-engine.json', 'w'))"
+          node scripts/build-onchain-local.mjs --transfers=data/transfers.csv --prices=data/prices.csv --decimals=9 --daily \
+            --threshold=155 --whale_min=100000000 --whale_days=30 \
+            --out=data/engine/onchain.json --urpd=data/engine/urpd.json --addrtypes=data/addr-types-engine.json
+
+      - name: Watch (alerts since last run)
+        run: python3 scripts/watch.py
+
+      - name: Upload archive
+        run: |
+          gzip -kf data/transfers.csv
+          gh release view gme-archive >/dev/null 2>&1 || \
+            gh release create gme-archive -t "Transfer archive" -n "Full GME transfer history (sender,receiver,time,value,block). Updated daily by the workflow."
+          gh release upload gme-archive data/transfers.csv.gz --clobber
+
+      - name: Commit data
+        run: |
+          git config user.name "gme-terminal bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git commit -m "data: daily refresh $(date -u +%F)"
+          git push

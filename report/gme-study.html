@@ -1,0 +1,588 @@
+<title>GME On-Chain Study</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,600..800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column (~46rem) with charts at full column width; summary panel first, evidence after. */
+:root {
+  --bg: #f4f5f6; --surface: #ffffff; --fg: #15181b; --fg-2: #444b53; --muted: #69717a; --line: #dde1e5; --line-2: #c9ced4;
+  --accent: #b3122a; --accent-soft: #f8e6e9;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+  --good: #0a7d36; --bad: #b3122a;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Public Sans", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --t-xs: .78rem; --t-sm: .875rem; --t-md: 1rem; --t-lg: 1.25rem; --t-xl: 1.7rem; --t-2xl: 2.5rem;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111315; --surface: #191c1f; --fg: #eceef0; --fg-2: #bcc3ca; --muted: #8e969f; --line: #2b3035; --line-2: #3a4046;
+  --accent: #ff5d6c; --accent-soft: #3a1a1e;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+  --good: #43c46f; --bad: #ff5d6c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111315; --surface: #191c1f; --fg: #eceef0; --fg-2: #bcc3ca; --muted: #8e969f; --line: #2b3035; --line-2: #3a4046;
+  --accent: #ff5d6c; --accent-soft: #3a1a1e;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+  --good: #43c46f; --bad: #ff5d6c; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: var(--t-md); line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 2.5rem 4rem }
+main { max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: 3rem }
+a { color: inherit; text-decoration-color: var(--line-2); text-underline-offset: 3px }
+a:hover { text-decoration-color: var(--accent) }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 82%; line-height: 1.15; text-wrap: balance; margin: 0 }
+h1 { font-size: var(--t-2xl); font-weight: 800; letter-spacing: -.01em }
+h2 { font-size: var(--t-xl); font-weight: 800 }
+h3 { font-size: var(--t-lg); font-weight: 700 }
+p { margin: 0; max-width: 65ch }
+section { display: flex; flex-direction: column; gap: 1rem; min-width: 0 }
+.eyebrow { font-family: var(--f-mono); font-size: var(--t-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
+.eyebrow b { color: var(--accent); font-weight: 500 }
+.lede { font-size: 1.1rem; color: var(--fg-2) }
+.mono, .addr, td.n, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums }
+.addr { font-size: .9em; white-space: nowrap }
+header { display: flex; flex-direction: column; gap: .9rem }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden }
+.facts div { background: var(--surface); padding: .7rem .85rem; display: flex; flex-direction: column; gap: .15rem; min-width: 0 }
+.facts span { font-size: var(--t-xs); color: var(--muted) }
+.facts strong { font-family: var(--f-mono); font-size: 1.05rem; font-weight: 500 }
+.verdict { background: var(--surface); border: 1px solid var(--line-2); border-radius: 8px; padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: 1rem }
+.verdict h2 { font-size: var(--t-lg) }
+.verdict ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .55rem }
+.verdict li { max-width: 65ch }
+.read { border-top: 1px solid var(--line); padding-top: 1rem; display: flex; flex-direction: column; gap: .6rem }
+.read p strong { color: var(--accent) }
+.figure { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1rem .75rem; display: flex; flex-direction: column; gap: .6rem; min-width: 0 }
+.figure h3 { font-size: 1.05rem }
+.figure .sub { font-size: var(--t-sm); color: var(--muted) }
+.legend { display: flex; flex-wrap: wrap; gap: .35rem 1.1rem; font-size: var(--t-sm); color: var(--fg-2) }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: .4rem }
+.legend i.sq { height: 10px; width: 10px; border-radius: 2px }
+.chart { position: relative; width: 100%; min-width: 0 }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible }
+.chart text { font-family: var(--f-mono); font-size: 11px; fill: var(--muted) }
+.chart .lab { fill: var(--fg-2); font-size: 11.5px }
+.grid line { stroke: var(--line); stroke-width: 1 }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line-2); border-radius: 6px; padding: .45rem .6rem;
+  font-family: var(--f-mono); font-size: 12px; line-height: 1.45; color: var(--fg); box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 2 }
+.tip .k { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: .35rem; vertical-align: -1px }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface) }
+table { border-collapse: collapse; width: 100%; font-size: var(--t-sm) }
+th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top }
+th { font-weight: 600; font-size: var(--t-xs); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap }
+tr:last-child td { border-bottom: 0 }
+td.n, th.n { text-align: right; white-space: nowrap }
+.neg { color: var(--bad) } .pos { color: var(--good) }
+.chip { display: inline-block; font-family: var(--f-mono); font-size: .72rem; padding: .05rem .4rem; border-radius: 4px; border: 1px solid var(--line-2); color: var(--fg-2); white-space: nowrap }
+.chip.t1 { border-color: var(--accent); color: var(--accent) }
+.ev { display: flex; flex-direction: column; gap: .9rem; margin: 0; padding: 0; list-style: none; counter-reset: ev }
+.ev li { display: grid; grid-template-columns: 2rem 1fr; gap: .2rem .6rem; counter-increment: ev }
+.ev li::before { content: counter(ev); font-family: var(--f-mono); color: var(--accent); font-size: var(--t-sm); padding-top: .1rem }
+.ev li > div { min-width: 0; display: flex; flex-direction: column; gap: .25rem }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start }
+.cols > div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.1rem; min-width: 0; display: flex; flex-direction: column; gap: .5rem }
+.cols h3 { font-size: 1.05rem }
+.cols ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .4rem; font-size: .95rem }
+.note { font-size: var(--t-sm); color: var(--muted) }
+.supply { display: flex; height: 26px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--surface) }
+.supply div { height: 100% }
+.supply-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .3rem 1.2rem; font-size: var(--t-sm); margin: 0; padding: 0; list-style: none }
+.supply-list li { display: flex; gap: .5rem; align-items: baseline }
+.supply-list li span:last-child { margin-left: auto; font-family: var(--f-mono); color: var(--fg-2) }
+.supply-list i { width: 10px; height: 10px; border-radius: 2px; flex: none; align-self: center }
+.trip { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .45rem }
+footer { font-size: var(--t-sm); color: var(--muted); border-top: 1px solid var(--line); padding-top: 1.2rem; display: flex; flex-direction: column; gap: .6rem }
+@media (max-width: 640px) {
+  h1 { font-size: 2rem } .cols { grid-template-columns: 1fr } .verdict { padding: 1.1rem } .facts { grid-template-columns: repeat(2, 1fr) }
+  .ev li { grid-template-columns: 1.4rem 1fr }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important } }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow"><b>Ethereum</b> · GME (GameStop meme token) · <a class="addr" href="https://etherscan.io/token/0xc56C7A0eAA804f854B536A5F3D5f49D2EC4B12b8" target="_blank" rel="noopener">0xc56C…12b8</a> · data to 29 Oct 2026, 14:06 UTC</div>
+  <h1>GME: who holds it, and is the wallet behind it still buying?</h1>
+  <p class="lede">A rebuild of every GME transfer since launch: 470,287 transfers across 35,979 addresses. It covers the wallet you shared, the wallets linked to it, what the first buyers did, and whether the on-chain picture supports buying.</p>
+  <div class="facts">
+    <div><span>Price</span><strong>$0.00000556</strong></div>
+    <div><span>Market cap</span><strong>$2.3M</strong></div>
+    <div><span>From the top</span><strong>−98.6%</strong></div>
+    <div><span>Holder wallets</span><strong>11,030</strong></div>
+    <div><span>Your wallet's share</span><strong>7.3%</strong></div>
+    <div><span>Its cluster's share</span><strong>15.2%</strong></div>
+  </div>
+</header>
+
+<section class="verdict" aria-labelledby="bl">
+  <h2 id="bl">Bottom line</h2>
+  <ul>
+    <li>The wallet you shared (<a class="addr" href="https://etherscan.io/address/0xE14767042159E5BD2bf16F81A0FE387ab153Fbb4" target="_blank" rel="noopener">0xE147…Fbb4</a>) is the largest GME holder with 30.74B GME. That is 7.3% of supply and the most it has ever held. It has bought on Uniswap since June 2024 and has never sold GME on a DEX.</li>
+    <li>It is not alone. With conservative rules I link 68 more wallets to it. Together they hold 64.0B GME (15.2% of supply), more than the whole Uniswap pool (52.6B).</li>
+    <li>The group's selling went through side wallets and exchange deposits. About $2.7M of GME went to exchanges, roughly $2.0M of it between November 2024 and February 2025, around the top.</li>
+    <li>The pumps came from a thin pool. About $1.7M of net buying took the market cap from $6.8M to $141M in late 2024. Two-thirds of that buying came from new wallets, while the cluster sold into the demand through exchanges.</li>
+    <li>The very first buyers were a bundle. Twenty-seven wallets from two funders took 42% of supply in the first block for 2.5 ETH and sold all of it within weeks. They are gone, and nothing links them to your wallet.</li>
+    <li>Of 8,923 wallets that held at least 10M GME in its first month, 367 still hold any. The few left are still trimming.</li>
+    <li>The market is flat. Over the last 90 days, $707k was bought and $702k sold on DEX. Holder count has slowly declined since November 2025.</li>
+  </ul>
+  <div class="read">
+    <p><strong>My read:</strong> GME is a dormant, concentrated memecoin. Its largest owner group is still adding slowly, but no new demand is following it. Buying now is a bet that this group pumps the token again. Size it as money you can lose completely.</p>
+    <p class="note">This is a reading of public on-chain data, not financial advice. Wallet links are evidence of shared control, not proof of who owns them.</p>
+  </div>
+</section>
+
+<section aria-labelledby="s-token">
+  <div class="eyebrow">The token</div>
+  <h2 id="s-token">The contract is clean. The risk is who holds it.</h2>
+  <p>GME launched on 13 May 2024 at 03:45 UTC with 420.69B tokens and 9 decimals. It is a standard stealth-launch contract. Ownership is renounced, buy and sell tax is 0%, wallet-to-wallet tax is 0% and the size limits are removed. There is no mint function. The deployer can still swap or withdraw the contract's own leftover launch tax (0.57B GME). It cannot touch anyone else's tokens.</p>
+  <p>All Uniswap V2 liquidity tokens sit in the burn address, so the liquidity can't be pulled. The pool holds 130.6 WETH and 52.6B GME, about $608k in total. That is thin. A $10,000 buy moves the price about 6.7%, a $50,000 buy about 36%, and selling 1B GME about −4%.</p>
+  <div class="figure">
+    <h3>Market value vs what holders paid</h3>
+    <div class="sub">Market cap at the daily close, and the same supply valued at holders' average cost (realized price). Log scale.</div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Market cap</span><span><i style="background:var(--s2)"></i>Value at holders' average cost</span></div>
+    <div class="chart" id="c-price" role="img" aria-label="Line chart of GME market cap from May 2024 to October 2026, peaking near $168M in December 2024 and falling to $2.3M, against value at holders' average cost of about $24M."></div>
+  </div>
+  <p>Holders paid about 10 times today's price on average ($0.000058 against $0.0000056). Only 13% of the supply people hold is in profit, and 63% of it hasn't moved in over a year. The base is patient and deep underwater.</p>
+</section>
+
+<section aria-labelledby="s-launch">
+  <div class="eyebrow">The launch · block 19,858,497</div>
+  <h2 id="s-launch">The first buyers were a bundle, and they sold everything</h2>
+  <p>The block that added liquidity also carried 27 buys. Those wallets paid 2.50 ETH between them (about $7,300) and got 42% of supply at a market cap near $9,000. By the next block, 12 seconds later, 55% of supply had been bought.</p>
+  <div class="figure">
+    <h3>Share of supply bought in the first 35 blocks</h3>
+    <div class="sub">Cumulative, from the pool's transfers to buyers. Each block is about 12 seconds.</div>
+    <div class="chart" id="c-launch" role="img" aria-label="Column chart: 42% of supply bought in block 0, 55% by block 1, 74% by block 34."></div>
+  </div>
+  <ul class="trip">
+    <li>22 of the 27 trace back to one wallet, <a class="addr" href="https://etherscan.io/address/0x6b4bed0b3a7bb0c7d4b905cdc7ffc4233d62fdf6" target="_blank" rel="noopener">0x6b4b…fdf6</a>. It was one of the buyers, and it funded the other 21 with 0.04 ETH each (two through an extra hop) within ten minutes on 10 May 2024, three days before launch. The other 5 were funded by <a class="addr" href="https://etherscan.io/address/0xadee001d258e19874fb67d595af9342d3f8cb999" target="_blank" rel="noopener">0xadee…b999</a>.</li>
+    <li>The 22 forwarded each buy to a fresh wallet the same day. The 5 sold straight into the pool. Across 64 wallets they sold 169.8B GME, 96% of it in May 2024. The first 27 hours alone brought them 180.7 ETH, about $529k.</li>
+    <li>They hold nothing today, and none of them touch your wallet or its cluster.</li>
+    <li>The deployer bought 26.6B on launch day, sold 16.5B back the same day and gave about 9.1B to eight wallets. On 1 November 2024 it sent its last 0.94B to your wallet, which sent 0.94B to the burn address the next day.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="s-wallet">
+  <div class="eyebrow">The wallet you shared · <span class="addr">0xE147…Fbb4</span></div>
+  <h2 id="s-wallet">A steady buyer that never sells on a DEX, with a lot of help</h2>
+  <p>It is a person's wallet (an EIP-7702 smart account), active since 29 April 2023. Besides GME it holds 4.64M pepecoin (about $584k, the largest pepecoin holder), 7.9M BOOE (about $288k), and 60% of a token called Faith whose ticker, FBB4, is this wallet's last four characters. It uses BasedAI contracts heavily, the token tied to pepecoin.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>GME flow</th><th class="n">GME</th><th class="n">USD at the time</th></tr></thead>
+    <tbody>
+      <tr><td>Bought on Uniswap (first buy 3 Jun 2024)</td><td class="n">27.96B</td><td class="n">$1.38M</td></tr>
+      <tr><td>Sold on any DEX</td><td class="n">0.00B</td><td class="n">$374</td></tr>
+      <tr><td>Uniswap V3 liquidity: added 7.03B, removed 17.50B</td><td class="n pos">+10.47B</td><td class="n">—</td></tr>
+      <tr><td>Withdrawn from exchanges (4.35B in Oct 2026)</td><td class="n">5.77B</td><td class="n">$152k</td></tr>
+      <tr><td>Deposited to exchanges</td><td class="n">1.73B</td><td class="n">$183k</td></tr>
+      <tr><td>Received from linked wallets</td><td class="n">21.94B</td><td class="n">$675k</td></tr>
+      <tr><td>Sent to linked wallets</td><td class="n">32.72B</td><td class="n">$2.80M</td></tr>
+      <tr><td>Burned (the deployer's last 0.94B)</td><td class="n">0.94B</td><td class="n">$97k</td></tr>
+      <tr><td><strong>Holds now</strong></td><td class="n"><strong>30.74B</strong></td><td class="n"><strong>$171k</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p>Its own first buy came three weeks after launch, during the June 2024 GameStop stock rally. Two wallets it had funded with ETH before launch were already buying GME on 14 May 2024, the day after launch: <a class="addr" href="https://etherscan.io/address/0xcbd46b681dadc1f18f14ccea828fa9fade1305a8" target="_blank" rel="noopener">0xcbd4…05a8</a> (funded February 2024) and <a class="addr" href="https://etherscan.io/address/0xe6747ac9e06bbc2e120458ed3b570a08e773c244" target="_blank" rel="noopener">0xe674…c244</a> (funded April 2024).</p>
+  <p>The removed V3 liquidity exceeds what it added by 10.5B GME. Its liquidity ranges were converting ETH into GME as the price fell, which works as a standing buy order under the market. That support is gone now: the V3 pool holds about $5k in total.</p>
+  <p>On paper the wallet is deep in loss. Valued at the daily close when each coin arrived, its holdings cost about $1.6M and are worth $171k. It has never been short of capital, though. It received 1,087 ETH from <a class="addr" href="https://etherscan.io/address/0xa7de68878e849b85b13d116a074d14d70d4a784c" target="_blank" rel="noopener">0xa7de…784c</a> (August–December 2024), a wallet that also fed GME into it through <span class="addr">0x436a…00e8</span>. It also received 445 ETH from an unidentified exchange's hot wallet (November 2024 to today) and 207 ETH from MEXC.</p>
+  <div class="figure">
+    <h3>GME held: your wallet and its whole cluster</h3>
+    <div class="sub">Billions of GME. The cluster line is the 69 wallets identified today, including yours.</div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>Your wallet</span><span><i style="background:var(--s2)"></i>Whole cluster</span></div>
+    <div class="chart" id="c-hold" role="img" aria-label="Line chart of GME held. Your wallet climbs from 0 in June 2024 to 30.7B in October 2026. The whole cluster peaks near 100B in late 2024 and holds 64B today."></div>
+  </div>
+</section>
+
+<section aria-labelledby="s-cluster">
+  <div class="eyebrow">The cluster · 69 wallets · 64.0B GME</div>
+  <h2 id="s-cluster">The wallets tied to it, and the evidence for each link</h2>
+  <p>I link two wallets only when at least one of these holds. They send GME to the same exchange deposit address. One gives the other its first GME, or empties itself into it, for at least $2,000. Or your wallet funded it with ETH and it then traded GME. Pools, routers and exchanges never link anyone. Wallets that only sent your wallet ETH are not merged, because an ETH payment could be an OTC buyer.</p>
+  <p>That gives 24 wallets linked directly (8.5B GME) and 44 one step further (24.8B), plus yours. Together that is 15.2% of all GME and 18.2% of the GME held by people rather than pools or exchanges. Merged as one owner, the top ten owners hold 38.4% of people-held GME, against 30.8% when every wallet counts separately.</p>
+  <ol class="ev">
+    <li><div><strong>One MEXC account.</strong> <span>The deposit address <a class="addr" href="https://etherscan.io/address/0x3c7e2bbecb4ba096a37fbce50b370c4dadcf9633" target="_blank" rel="noopener">0x3c7e…9633</a> received GME from your wallet and from five others: <span class="addr">0x884f…1c98</span>, <span class="addr">0x2f04…949c</span>, <span class="addr">0xff58…9d50</span>, <span class="addr">0x8271…4dce</span> and <span class="addr">0x34d9…1e26</span>. Your wallet also sent it 20 ETH, and the same address moved pepecoin, BOOE, BasedAI and USDT. On MEXC a deposit address belongs to one account.</span></div></li>
+    <li><div><strong>First coins from your wallet.</strong> <span>On 6 June 2024 your wallet gave 7.5B GME each to <span class="addr">0x2f04…949c</span> and <span class="addr">0x884f…1c98</span>, their first GME. In November 2024 it parked 6.22B and 4.90B in two fresh wallets that did nothing for ten months.</span></div></li>
+    <li><div><strong>The September 2025 reshuffle.</strong> <span>On 24–25 September 2025, cluster wallets moved 38.8B GME, 34.5B of it into brand-new wallets. Examples: <span class="addr">0x2f04…</span> → <a class="addr" href="https://etherscan.io/address/0xfa070156a411ef524e2b598ae892b707975594f4" target="_blank" rel="noopener">0xfa07…94f4</a> (12.86B), <span class="addr">0xfef4…</span> → <span class="addr">0x1df2…6356</span> (6.22B), <span class="addr">0x1cfe…</span> → <a class="addr" href="https://etherscan.io/address/0xd8cb407bb1aad1713d5056fcf333c185c1b3d493" target="_blank" rel="noopener">0xd8cb…d493</a> (4.91B). Seven of today's 30 largest holders were created on those two days. Four meet the link rules, one came from a wallet that sent yours 195 ETH, and two show no link.</span></div></li>
+    <li><div><strong>An exchange account that pays your wallet.</strong> <span>Eight wallets deposited $801k of GME into one deposit address at an unidentified exchange during 2025. Three of them had been funded by your wallet with 39 to 188 ETH. The same exchange's hot wallet paid your wallet 445 ETH. That last link is suggestive only, since everyone on that exchange withdraws from the same hot wallet.</span></div></li>
+  </ol>
+  <div class="figure">
+    <h3>Money in and out of the cluster, by month</h3>
+    <div class="sub">USD at the daily close. Up: GME bought on DEX. Down: GME sent to exchanges, and GME sold on DEX. Moves between cluster wallets and liquidity positions are left out.</div>
+    <div class="legend"><span><i class="sq" style="background:var(--s1)"></i>Bought on DEX</span><span><i class="sq" style="background:var(--s2)"></i>Sent to exchanges</span><span><i class="sq" style="background:var(--s3)"></i>Sold on DEX</span></div>
+    <div class="chart" id="c-flow" role="img" aria-label="Diverging monthly columns from May 2024 to October 2026. Buying peaks in mid-2024. Exchange deposits peak in December 2024 at about $1.1M. Both are small in 2026."></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Cluster totals, launch to today</th><th class="n">GME</th><th class="n">USD at the time</th></tr></thead>
+    <tbody>
+      <tr><td>Bought on DEX</td><td class="n">67.74B</td><td class="n">$3.43M</td></tr>
+      <tr><td>Sold on DEX</td><td class="n">6.51B</td><td class="n">$0.32M</td></tr>
+      <tr><td>Sent to exchanges (likely sold there)</td><td class="n">23.57B</td><td class="n">$2.67M</td></tr>
+      <tr><td>Withdrawn from exchanges</td><td class="n">11.51B</td><td class="n">$0.55M</td></tr>
+      <tr><td>Absorbed through Uniswap V3 liquidity (net)</td><td class="n">34.80B</td><td class="n">—</td></tr>
+      <tr><td>Sent to wallets outside the cluster</td><td class="n">23.46B</td><td class="n">$2.18M</td></tr>
+      <tr><td><strong>Holds now</strong></td><td class="n"><strong>64.03B</strong></td><td class="n"><strong>$356k</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p>The biggest single transfer out was 4.11B GME, worth $1.29M, that your wallet sent on 17 January 2025 via <span class="addr">0xdbef…b910</span> to <span class="addr">0xdbf5…c080</span>. In the last four months the group has been adding again: 2.5B bought on DEX and 5.95B withdrawn from exchanges, against 1.62B deposited.</p>
+  <p>Their bag can't be sold at today's price. Selling all 64B into the V2 pool would return about 72 ETH ($167k) and cut the price about 80%. Your wallet's 30.7B alone would return about 48 ETH ($112k) and cut it about 60%.</p>
+  <p class="note">A correction to our pepecoin study. We wrote that <span class="addr">0x2f04…949c</span> dumped about $1M of GME into its top. The GME data says it never sold GME on a DEX. It put 7.33B into V3 liquidity, deposited 0.70B ($158k) to the shared MEXC account, and in September 2025 moved 12.86B to <span class="addr">0xfa07…94f4</span>, which still holds 10.07B. That cross-token file also dates GME's top to August 2025; the real top was 11 December 2024. Of the 170 wallets in the pepecoin cohort, 30 traded GME and 6 are in this cluster.</p>
+</section>
+
+<section aria-labelledby="s-pump">
+  <div class="eyebrow">How the price was pumped</div>
+  <h2 id="s-pump">A thin pool, held supply, a crowd, and sales off the DEX</h2>
+  <p>GME's Uniswap liquidity is burned, so nobody can add or remove it. The price is the ratio of ETH to GME in the pool, and the two multiplied together stay fixed. So the price rises with the square of the ETH buyers put in. From 10 October to 12 December 2024, about 430 ETH (~$1.7M) of net buying took the market cap from $6.8M to $141M. That is about $80 of market cap for every $1 of net buying. Today, about $126k of net buying would double the price and about $657k would make it 10×.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Period</th><th class="n">Market cap</th><th class="n">Net money into pool</th><th class="n">Net buyers</th><th class="n">From new wallets</th><th class="n">From the cluster</th><th class="n">Cluster to exchanges</th></tr></thead>
+    <tbody>
+      <tr><td>25 May–14 Jun 2024</td><td class="n">$3.1M → $11.8M</td><td class="n">87 ETH · $303k</td><td class="n">4,125</td><td class="n">65%</td><td class="n">6%</td><td class="n">$0</td></tr>
+      <tr><td>10–31 Oct 2024</td><td class="n">$6.8M → $41.4M</td><td class="n">225 ETH · $566k</td><td class="n">1,419</td><td class="n">66%</td><td class="n">9%</td><td class="n">$0</td></tr>
+      <tr><td>1–21 Nov 2024 (pause)</td><td class="n">$41.4M → $32.5M</td><td class="n">outflow</td><td class="n">1,280</td><td class="n">48%</td><td class="n">10%</td><td class="n">$376k</td></tr>
+      <tr><td>21 Nov–12 Dec 2024</td><td class="n">$32.5M → $141M</td><td class="n">259 ETH · $1.0M</td><td class="n">2,573</td><td class="n">65%</td><td class="n">5%</td><td class="n">$430k</td></tr>
+      <tr><td>12 Dec 2024–28 Feb 2025</td><td class="n">$165M → $46M</td><td class="n">outflow</td><td class="n">5,197</td><td class="n">43%</td><td class="n">5%</td><td class="n">$1.19M</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="ev">
+    <li><div><strong>Own the supply first.</strong> <span>Going into October 2024 the cluster held 67.9B GME, about three times the 23.3B in the pool. Most of it was bought when the market cap was $4–15M. Supply held off the market keeps the pool thin.</span></div></li>
+    <li><div><strong>A catalyst and an audience.</strong> <span>The first run started on 3 June 2024, when Roaring Kitty's return sent GameStop stock up. 23.6B GME left the pool that day, and your wallet made its first buy. The second run came with the late-2024 memecoin rally. GME started moving through MEXC's wallets on 5 November 2024, and Gate.io listed it as GAMESTOP on 16 December, after the top. Promotion on X happens off-chain and isn't in this data.</span></div></li>
+    <li><div><strong>The crowd does most of the buying.</strong> <span>In each run about 65% of net buying came from wallets that had never held GME. It was spread over 1,400 to 4,100 buyers, with the top ten at 16–25%. The cluster's own buying was 5–9%. The 53 largest outside buyers were first funded by unrelated wallets or by Coinbase, Binance or Kraken. Nothing shows the cluster funding them.</span></div></li>
+    <li><div><strong>Sell somewhere the chart doesn't show it.</strong> <span>From November 2024 to February 2025, cluster wallets bought $1.75M of GME on Uniswap and sent $2.0M of GME to exchanges. On the Uniswap chart they look like buyers. The selling happens on exchange order books, and arbitrage bots carry that pressure back to the pool. Other holders sold $7.1M net in the final leg and $12.3M after the top.</span></div></li>
+  </ol>
+  <p class="note">Not visible on-chain: posts and calls on X or Telegram, paid promoters, market making or wash trading on MEXC, and wallets funded straight from exchanges that couldn't be linked. Part of the new-wallet buying could still be theirs, but it is spread across thousands of wallets.</p>
+</section>
+
+<section aria-labelledby="s-cex">
+  <div class="eyebrow">Exchanges and supply waiting to sell</div>
+  <h2 id="s-cex">The pool is the only market, and most underwater holders sit still</h2>
+  <p>CoinGecko lists one market for this contract: the Uniswap V2 pool. MEXC's "GME" pair is the Solana GME, a different token. Gate.io listed this contract as GAMESTOP in December 2024 and has since delisted it. Bybit couldn't be checked from here, and CoinGecko shows no Bybit market for it. Small amounts still move through a MEXC wallet ($33k in and $76k out in October 2026), but MEXC's public market list has no pair for this contract.</p>
+  <p>Where several venues do list a small token, arbitrage keeps their prices together, so what limits a pump is the combined depth. For tokens this size the order books are usually thinner than the pool. The Solana GME on MEXC has about $100–180 of orders within 2% of its price. GME's Uniswap pool absorbs about $3,000 before it moves 2%.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Cost basis vs today</th><th class="n">Market cap</th><th class="n">Held GME</th><th class="n">Cluster</th><th class="n">Others (wallets)</th></tr></thead>
+    <tbody>
+      <tr><td>Below today (in profit)</td><td class="n">up to $2.3M</td><td class="n">49.4B · 14.0%</td><td class="n">6.3B</td><td class="n">43.1B (825)</td></tr>
+      <tr><td>1–2×</td><td class="n">$2.3–4.7M</td><td class="n">54.7B · 15.5%</td><td class="n">2.2B</td><td class="n">52.5B (578)</td></tr>
+      <tr><td>2–3×</td><td class="n">$4.7–7.0M</td><td class="n">37.5B · 10.6%</td><td class="n">15.6B</td><td class="n">21.9B (506)</td></tr>
+      <tr><td>3–5×</td><td class="n">$7.0–11.7M</td><td class="n">20.6B · 5.8%</td><td class="n">0.7B</td><td class="n">19.8B (675)</td></tr>
+      <tr><td>5–10×</td><td class="n">$11.7–23.4M</td><td class="n">43.8B · 12.4%</td><td class="n">7.5B</td><td class="n">36.4B (1,738)</td></tr>
+      <tr><td>10–20×</td><td class="n">$23.4–46.8M</td><td class="n">100.5B · 28.5%</td><td class="n">22.6B</td><td class="n">78.0B (3,112)</td></tr>
+      <tr><td>Above 20×</td><td class="n">above $46.8M</td><td class="n">45.9B · 13.0%</td><td class="n">9.2B</td><td class="n">36.8B (3,201)</td></tr>
+    </tbody>
+  </table></div>
+  <p>Cost basis is first-in-first-out at the daily close. Coins moved inside the cluster keep their cost. Each row shows where those holders get back to even. Up to 3× the 2026 buyers move into profit. Between 3× and 10× little supply is waiting to break even. The large wall sits at 10–20×, the $23–47M market caps where most 2025 buyers came in.</p>
+  <p>GME has had eight bounces of 1.5–2.2× since March 2025. In them, 30–62% of the coins sold were sold at a loss. Only 4–14% came from holders selling at less than half their cost, and coins held longer than six months made up 3–16% of the selling. Recent traders sell into bounces. The deeply underwater, long-held supply has mostly stayed put. All eight bounces faded, including the latest: 2.2× to $4.2M in August 2026, then back to $2.3M.</p>
+</section>
+
+<section aria-labelledby="s-quiet">
+  <div class="eyebrow">Quiet accumulators · last 90 days · data to 30 Oct 2026, 06:11 UTC</div>
+  <h2 id="s-quiet">Who has been buying without showing it</h2>
+  <p>At this size small buys matter. With the pool holding 138 WETH and 49.7B GME, buying 1% of supply (4.2B) in one go costs about 12.8 ETH, roughly $29k, and lifts the price about 19%. Buying 0.25% costs about $6.7k. Anyone building a stake quietly has to buy in pieces, often through fresh wallets that forward to a holding wallet.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Who holds the 420.69B GME</th><th class="n">GME</th><th class="n">% of supply</th></tr></thead>
+    <tbody>
+      <tr><td>Burned</td><td class="n">9.4B</td><td class="n">2.2%</td></tr>
+      <tr><td>Uniswap V2 pool</td><td class="n">49.7B</td><td class="n">11.8%</td></tr>
+      <tr><td>Exchanges, other pools and contracts</td><td class="n">6.2B</td><td class="n">1.5%</td></tr>
+      <tr><td>Your wallet's cluster (69 wallets)</td><td class="n">64.4B</td><td class="n">15.3%</td></tr>
+      <tr><td>Its looser extension (upper bound)</td><td class="n">22.6B</td><td class="n">5.4%</td></tr>
+      <tr><td>Coinbase group (31 wallets)</td><td class="n">8.5B</td><td class="n">2.0%</td></tr>
+      <tr><td>Everyone else, moved GME in the last 90 days</td><td class="n">79.5B</td><td class="n">18.9%</td></tr>
+      <tr><td>Everyone else, no GME moves for 90+ days</td><td class="n">180.5B</td><td class="n">42.9%</td></tr>
+    </tbody>
+  </table></div>
+  <p>The list below is every owner (a single wallet or a linked group) that added at least 0.1% of supply in the last 90 days while selling less than 15% of what it took in.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Owner</th><th class="n">Added</th><th class="n">Holds</th><th class="n">Spent on DEX</th><th>How</th><th class="n">Last buy</th></tr></thead>
+    <tbody>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0x53ee29857d28411b2b7846e63b0732153efcefdb" target="_blank" rel="noopener">0x53ee…efdb</a> · 6 wallets</td><td class="n">3.24B · 0.77%</td><td class="n">0.82%</td><td class="n">$25.3k</td><td>Pays gas to fresh wallets that buy on Uniswap and forward to it</td><td class="n">26 Oct</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0xf0f76372ddebdeb2d5d4a9b2bb93207ad583b749" target="_blank" rel="noopener">0xf0f7…b749</a> · with 0x1935…c642, 0x3e2d…801f</td><td class="n">2.92B · 0.69%</td><td class="n">0.95%</td><td class="n">$23.4k</td><td>Fresh wallet buys and forwards; gas from 0x1935; 0.42B fed from 0x3e2d</td><td class="n">3 Sep</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0xf48e94ab3bf4cab38ad31f62b9fb23c30f55fd58" target="_blank" rel="noopener">0xf48e…fd58</a></td><td class="n">1.80B · 0.43%</td><td class="n">0.99%</td><td class="n">$9.8k</td><td>Two buys</td><td class="n">15 Oct</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0x05e48a73b19d56a6c7b43557cb1e066e05d00814" target="_blank" rel="noopener">0x05e4…0814</a></td><td class="n">1.48B · 0.35%</td><td class="n">0.35%</td><td class="n">—</td><td>New wallet; withdrew from MEXC on 19 Oct; has no ETH and has never moved</td><td class="n">—</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0x4553e860c8f3eb4ecb976ca8da5369c54aad4ea2" target="_blank" rel="noopener">0x4553…4ea2</a></td><td class="n">1.11B · 0.26%</td><td class="n">0.26%</td><td class="n">$5.8k</td><td>New on 22 Oct; buys through a cross-chain aggregator</td><td class="n">29 Oct</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0x644aff2061967a0cbf006819a7fd04464cc37982" target="_blank" rel="noopener">0x644a…7982</a> · 2 wallets</td><td class="n">0.80B · 0.19%</td><td class="n">0.19%</td><td class="n">$6.4k</td><td>Fresh wallet buys and forwards</td><td class="n">23 Aug</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0xa760013a9afa4cb3736f1c74cd0f0b9cd5bce3fe" target="_blank" rel="noopener">0xa760…e3fe</a></td><td class="n">0.75B · 0.18%</td><td class="n">0.22%</td><td class="n">$4.8k</td><td>Six buys since 31 Jul</td><td class="n">25 Oct</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0x9c3df13f9972ba214d5449761873f46d24174b6d" target="_blank" rel="noopener">0x9c3d…174b</a> · 3 wallets</td><td class="n">0.72B · 0.17%</td><td class="n">0.17%</td><td class="n">$5.3k</td><td>One buy</td><td class="n">8 Sep</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0x74e038864ee45c6f97ae0602bb4b807fed49302a" target="_blank" rel="noopener">0x74e0…302a</a></td><td class="n">0.72B · 0.17%</td><td class="n">0.17%</td><td class="n">$3.7k</td><td>Four buys</td><td class="n">14 Aug</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0xfa67f9c8446b25621efe1ae2c9c3323cf99cdbb6" target="_blank" rel="noopener">0xfa67…dbb6</a> · 2 wallets</td><td class="n">0.56B · 0.13%</td><td class="n">1.69%</td><td class="n">$4.0k</td><td>Launch-day holder; trades around a 7B core it has never sold</td><td class="n">29 Oct</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0xad072dd676d996b51cfc483d51d58f48dc2e646d" target="_blank" rel="noopener">0xad07…646d</a></td><td class="n">0.53B · 0.13%</td><td class="n">0.15%</td><td class="n">$3.1k</td><td>Five buys</td><td class="n">24 Oct</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0xa4106a85b2897b808d3b17d70045c3761d3be374" target="_blank" rel="noopener">0xa410…e374</a></td><td class="n">0.51B · 0.12%</td><td class="n">0.24%</td><td class="n">$2.5k</td><td>Two buys</td><td class="n">21 Oct</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0x1094c7b95535279bc80751a3831c37037be214f5" target="_blank" rel="noopener">0x1094…14f5</a></td><td class="n">0.47B · 0.11%</td><td class="n">0.12%</td><td class="n">—</td><td>Received from another wallet</td><td class="n">—</td></tr>
+      <tr><td><a class="addr" href="https://etherscan.io/address/0x7465f3990783fb7ebdac8efe9c2f578d6f7a2467" target="_blank" rel="noopener">0x7465…2467</a></td><td class="n">0.46B · 0.11%</td><td class="n">0.11%</td><td class="n">$3.2k</td><td>Four buys</td><td class="n">29 Oct</td></tr>
+    </tbody>
+  </table></div>
+  <p>Together these 14 owners added 16.1B GME, 3.8% of supply, for about $97k. Over the same 90 days other holders sold slightly more into the pool, so the price stayed flat. In the last 30 days that turned, with 2.8B net leaving the pool. Not in the table: your wallet's cluster added 5.5B (mostly 4.35B withdrawn from MEXC plus $9k of buys), and the Coinbase group's bot added 1.4B ($6.8k in 87 small buys).</p>
+  <p class="note">Their ETH came from Binance, Kraken, MEXC, Coinbase, two large unlabelled exchange wallets and cross-chain bridges. None comes from your wallet's cluster or from the wallets that funded it. The links inside the table come from gas payments and direct transfers. Shared exchange and bridge funders, and dust sent from lookalike addresses, link no one. Buying through fresh wallets is a privacy habit as much as a signal, so treat this as a list to watch, not proof of a plan.</p>
+</section>
+
+<section aria-labelledby="s-early">
+  <div class="eyebrow">The early buyers today</div>
+  <h2 id="s-early">Almost everyone who was early has left</h2>
+  <p>Wallets that ever held at least 10M GME, grouped by when they first received it. Early groups include trading bots that bought and sold within minutes, so the share still holding is low partly by construction.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>First got GME</th><th class="n">Wallets</th><th class="n">Still hold</th><th class="n">GME held now</th><th class="n">% of supply</th><th class="n">90-day change</th></tr></thead>
+    <tbody>
+      <tr><td>Launch bundle (block 0 and its wallets)</td><td class="n">64</td><td class="n">0 · 0%</td><td class="n">0</td><td class="n">0.0%</td><td class="n">—</td></tr>
+      <tr><td>Day 1 · 13–14 May 2024</td><td class="n">2,921</td><td class="n">62 · 2%</td><td class="n">12.3B</td><td class="n">2.9%</td><td class="n neg">−3.96B</td></tr>
+      <tr><td>Week 1</td><td class="n">2,146</td><td class="n">101 · 5%</td><td class="n">20.2B</td><td class="n">4.8%</td><td class="n neg">−1.76B</td></tr>
+      <tr><td>Rest of month 1 · your cluster</td><td class="n">8</td><td class="n">2</td><td class="n">34.7B</td><td class="n">8.2%</td><td class="n pos">+5.56B</td></tr>
+      <tr><td>Rest of month 1 · everyone else</td><td class="n">3,848</td><td class="n">202 · 5%</td><td class="n">36.3B</td><td class="n">8.6%</td><td class="n neg">−2.05B</td></tr>
+      <tr><td>Jun–Sep 2024</td><td class="n">1,366</td><td class="n">109 · 8%</td><td class="n">28.5B</td><td class="n">6.8%</td><td class="n pos">+2.41B</td></tr>
+      <tr><td>The run · Oct 2024–Jan 2025</td><td class="n">3,189</td><td class="n">521 · 16%</td><td class="n">76.1B</td><td class="n">18.1%</td><td class="n neg">−5.49B</td></tr>
+      <tr><td>2025</td><td class="n">2,456</td><td class="n">502 · 20%</td><td class="n">91.7B</td><td class="n">21.8%</td><td class="n neg">−8.00B</td></tr>
+      <tr><td>2026</td><td class="n">842</td><td class="n">170 · 20%</td><td class="n">44.2B</td><td class="n">10.5%</td><td class="n pos">+13.63B</td></tr>
+    </tbody>
+  </table></div>
+  <p>Outside your cluster, the early holders are still net sellers. The buying in the last 90 days comes mostly from 2026 arrivals.</p>
+</section>
+
+<section aria-labelledby="s-now">
+  <div class="eyebrow">The market now</div>
+  <h2 id="s-now">Flat demand, slowly fewer holders, two new quiet buyers</h2>
+  <p>In the last 90 days, 661 wallets bought $707k and 667 wallets sold $702k on DEX, about $7,800 a day each way. 262 wallets bought GME for the first time. Your wallet was the sixth-largest net buyer (+1.54B, about $9,500). The second-largest holder, <a class="addr" href="https://etherscan.io/address/0x8d10bb06cc54f61666f772f9d09cca714400a8c8" target="_blank" rel="noopener">0x8d10…a8c8</a> (14.3B), sold 1.7B in the same period.</p>
+  <div class="figure">
+    <h3>Wallets holding GME</h3>
+    <div class="sub">Month-end count, pools and exchanges excluded.</div>
+    <div class="chart" id="c-holders" role="img" aria-label="Line chart of holder count: 3,011 in May 2024, rising to a peak of 11,507 in November 2025, 11,030 in October 2026."></div>
+  </div>
+  <p>Wallets with at least 1B GME have fallen from 83 to 62. Two newer buyers stand out. <a class="addr" href="https://etherscan.io/address/0xee8311fe397e2464f78b3732e74dcd65087e7187" target="_blank" rel="noopener">0xee83…7187</a> bought 5.93B (about $39k) in one trade on 30 July 2026. And on 2 October 2026, 30 wallets sent the GME they had bought since May 2025 to <a class="addr" href="https://etherscan.io/address/0xe1fc21df6bbe9caa933f93896866501375669717" target="_blank" rel="noopener">0xe1fc…9717</a>, 8.46B in total (about $47k). 28 of those 30 were first funded from the same Coinbase hot wallet. That looks like one buyer spread across many wallets. I found no link to your cluster.</p>
+  <div class="figure">
+    <h3>Where the 420.69B GME sit</h3>
+    <div class="supply" id="supply" role="img" aria-label="Stacked bar of GME supply by holder group."></div>
+    <ul class="supply-list" id="supply-list"></ul>
+  </div>
+</section>
+
+<section aria-labelledby="s-buy">
+  <div class="eyebrow">The decision</div>
+  <h2 id="s-buy">Does it make sense to buy?</h2>
+  <div class="cols">
+    <div>
+      <h3>In favour</h3>
+      <ul>
+        <li>The contract is clean: ownership renounced, 0% tax, liquidity burned.</li>
+        <li>The market cap is back near its launch level, and holders paid about 10 times today's price on average.</li>
+        <li>63% of held supply hasn't moved in a year. Little of it is in profit, so few holders have a reason to take profit.</li>
+        <li>The largest holder keeps adding, has never sold on a DEX from its main wallet, and has capital.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Against</h3>
+      <ul>
+        <li>One connected group owns more GME than the pool, so its decisions set the price.</li>
+        <li>That group already took money out near the top through side wallets and exchanges, while the main wallet kept holding.</li>
+        <li>It moves coins into fresh wallets, 38.8B in two days in September 2025, which makes it harder to follow.</li>
+        <li>Demand has been flat for six months and holders are slowly declining. For 22 months, each rally has peaked lower than the one before.</li>
+        <li>Liquidity is thin, and no exchange lists this contract today (Gate.io delisted it). Your exit goes through the same pool as theirs, and they hold far more.</li>
+        <li>The same group also runs pepecoin, BOOE and BasedAI positions. GME is one bag among several.</li>
+      </ul>
+    </div>
+  </div>
+  <p>I wouldn't call this an investment. It is a speculation on what one group does next. If you take a position, keep it to money you can lose entirely, buy in small pieces with tight slippage, and watch for these signals:</p>
+  <ul class="trip">
+    <li><strong>Exit signals:</strong> GME leaving the September 2025 wallets (<span class="addr">0xfa07…94f4</span>, <span class="addr">0xd8cb…d493</span>, <span class="addr">0x1df2…6356</span>, <span class="addr">0xcc9a…91e3</span>, <span class="addr">0xff58…9d50</span>). Any cluster wallet depositing to MEXC or the unidentified exchange. Your wallet selling on a DEX for the first time.</li>
+    <li><strong>Signs of real demand:</strong> holder count rising for several weeks, DEX buys clearly above sells, the pool's WETH reserve growing above 130 WETH, and large new buyers with no link to the cluster.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="s-addr">
+  <div class="eyebrow">Addresses</div>
+  <h2 id="s-addr">The wallets that matter</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Wallet</th><th>Link</th><th>Role</th><th class="n">GME now</th></tr></thead>
+    <tbody id="addr-rows"></tbody>
+  </table></div>
+</section>
+
+<footer>
+  <p><strong>Method.</strong> Every GME Transfer event from deployment to block 26,298,907 was pulled from public Ethereum nodes (<span class="mono">eth_getLogs</span>). Rebuilt balances match Blockscout's top holders exactly, with 11,384 addresses holding a balance (11,030 once pools, contracts and exchanges are removed). Launch-window trades are priced exactly from Uniswap swap events. Everything else uses DeFiLlama's daily close (from 16 May 2024) and an ETH price of $2,326 for today's figures.</p>
+  <p>All 35,979 addresses were checked for contract code. Smart accounts (EIP-7702) count as people. An exchange deposit address is one that forwards at least 95% of its GME to an exchange hot wallet. A deposit is likely a sale, but the chain can't confirm it.</p>
+  <p>The cluster uses GME transfers plus your wallet's own ETH transfers. It doesn't trace ETH funding for every other wallet, so it is a floor. It could also include someone who paid into the same exchange account. USD values use the daily close, which overstates prices on launch day and on fast-moving days. The figures and scripts live in the gme_study folder next to the pepecoin project.</p>
+</footer>
+</main>
+
+<script id="data" type="application/json">{"days":["2024-05-13","2024-05-14","2024-05-15","2024-05-16","2024-05-17","2024-05-18","2024-05-19","2024-05-20","2024-05-21","2024-05-22","2024-05-23","2024-05-24","2024-05-25","2024-05-26","2024-05-27","2024-05-28","2024-05-29","2024-05-30","2024-05-31","2024-06-01","2024-06-02","2024-06-03","2024-06-04","2024-06-05","2024-06-06","2024-06-07","2024-06-08","2024-06-09","2024-06-10","2024-06-11","2024-06-12","2024-06-13","2024-06-14","2024-06-15","2024-06-16","2024-06-17","2024-06-18","2024-06-19","2024-06-20","2024-06-21","2024-06-22","2024-06-23","2024-06-24","2024-06-25","2024-06-26","2024-06-27","2024-06-28","2024-06-29","2024-06-30","2024-07-01","2024-07-02","2024-07-03","2024-07-04","2024-07-05","2024-07-06","2024-07-07","2024-07-08","2024-07-09","2024-07-10","2024-07-11","2024-07-12","2024-07-13","2024-07-14","2024-07-15","2024-07-16","2024-07-17","2024-07-18","2024-07-19","2024-07-20","2024-07-21","2024-07-22","2024-07-23","2024-07-24","2024-07-25","2024-07-26","2024-07-27","2024-07-28","2024-07-29","2024-07-30","2024-07-31","2024-08-01","2024-08-02","2024-08-03","2024-08-04","2024-08-05","2024-08-06","2024-08-07","2024-08-08","2024-08-09","2024-08-10","2024-08-11","2024-08-12","2024-08-13","2024-08-14","2024-08-15","2024-08-16","2024-08-17","2024-08-18","2024-08-19","2024-08-20","2024-08-21","2024-08-22","2024-08-23","2024-08-24","2024-08-25","2024-08-26","2024-08-27","2024-08-28","2024-08-29","2024-08-30","2024-08-31","2024-09-01","2024-09-02","2024-09-03","2024-09-04","2024-09-05","2024-09-06","2024-09-07","2024-09-08","2024-09-09","2024-09-10","2024-09-11","2024-09-12","2024-09-13","2024-09-14","2024-09-15","2024-09-16","2024-09-17","2024-09-18","2024-09-19","2024-09-20","2024-09-21","2024-09-22","2024-09-23","2024-09-24","2024-09-25","2024-09-26","2024-09-27","2024-09-28","2024-09-29","2024-09-30","2024-10-01","2024-10-02","2024-10-03","2024-10-04","2024-10-05","2024-10-06","2024-10-07","2024-10-08","2024-10-09","2024-10-10","2024-10-11","2024-10-12","2024-10-13","2024-10-14","2024-10-15","2024-10-16","2024-10-17","2024-10-18","2024-10-19","2024-10-20","2024-10-21","2024-10-22","2024-10-23","2024-10-24","2024-10-25","2024-10-26","2024-10-27","2024-10-28","2024-10-29","2024-10-30","2024-10-31","2024-11-01","2024-11-02","2024-11-03","2024-11-04","2024-11-05","2024-11-06","2024-11-07","2024-11-08","2024-11-09","2024-11-10","2024-11-11","2024-11-12","2024-11-13","2024-11-14","2024-11-15","2024-11-16","2024-11-17","2024-11-18","2024-11-19","2024-11-20","2024-11-21","2024-11-22","2024-11-23","2024-11-24","2024-11-25","2024-11-26","2024-11-27","2024-11-28","2024-11-29","2024-11-30","2024-12-01","2024-12-02","2024-12-03","2024-12-04","2024-12-05","2024-12-06","2024-12-07","2024-12-08","2024-12-09","2024-12-10","2024-12-11","2024-12-12","2024-12-13","2024-12-14","2024-12-15","2024-12-16","2024-12-17","2024-12-18","2024-12-19","2024-12-20","2024-12-21","2024-12-22","2024-12-23","2024-12-24","2024-12-25","2024-12-26","2024-12-27","2024-12-28","2024-12-29","2024-12-30","2024-12-31","2025-01-01","2025-01-02","2025-01-03","2025-01-04","2025-01-05","2025-01-06","2025-01-07","2025-01-08","2025-01-09","2025-01-10","2025-01-11","2025-01-12","2025-01-13","2025-01-14","2025-01-15","2025-01-16","2025-01-17","2025-01-18","2025-01-19","2025-01-20","2025-01-21","2025-01-22","2025-01-23","2025-01-24","2025-01-25","2025-01-26","2025-01-27","2025-01-28","2025-01-29","2025-01-30","2025-01-31","2025-02-01","2025-02-02","2025-02-03","2025-02-04","2025-02-05","2025-02-06","2025-02-07","2025-02-08","2025-02-09","2025-02-10","2025-02-11","2025-02-12","2025-02-13","2025-02-14","2025-02-15","2025-02-16","2025-02-17","2025-02-18","2025-02-19","2025-02-20","2025-02-21","2025-02-22","2025-02-23","2025-02-24","2025-02-25","2025-02-26","2025-02-27","2025-02-28","2025-03-01","2025-03-02","2025-03-03","2025-03-04","2025-03-05","2025-03-06","2025-03-07","2025-03-08","2025-03-09","2025-03-10","2025-03-11","2025-03-12","2025-03-13","2025-03-14","2025-03-15","2025-03-16","2025-03-17","2025-03-18","2025-03-19","2025-03-20","2025-03-21","2025-03-22","2025-03-23","2025-03-24","2025-03-25","2025-03-26","2025-03-27","2025-03-28","2025-03-29","2025-03-30","2025-03-31","2025-04-01","2025-04-02","2025-04-03","2025-04-04","2025-04-05","2025-04-06","2025-04-07","2025-04-08","2025-04-09","2025-04-10","2025-04-11","2025-04-12","2025-04-13","2025-04-14","2025-04-15","2025-04-16","2025-04-17","2025-04-18","2025-04-19","2025-04-20","2025-04-21","2025-04-22","2025-04-23","2025-04-24","2025-04-25","2025-04-26","2025-04-27","2025-04-28","2025-04-29","2025-04-30","2025-05-01","2025-05-02","2025-05-03","2025-05-04","2025-05-05","2025-05-06","2025-05-07","2025-05-08","2025-05-09","2025-05-10","2025-05-11","2025-05-12","2025-05-13","2025-05-14","2025-05-15","2025-05-16","2025-05-17","2025-05-18","2025-05-19","2025-05-20","2025-05-21","2025-05-22","2025-05-23","2025-05-24","2025-05-25","2025-05-26","2025-05-27","2025-05-28","2025-05-29","2025-05-30","2025-05-31","2025-06-01","2025-06-02","2025-06-03","2025-06-04","2025-06-05","2025-06-06","2025-06-07","2025-06-08","2025-06-09","2025-06-10","2025-06-11","2025-06-12","2025-06-13","2025-06-14","2025-06-15","2025-06-16","2025-06-17","2025-06-18","2025-06-19","2025-06-20","2025-06-21","2025-06-22","2025-06-23","2025-06-24","2025-06-25","2025-06-26","2025-06-27","2025-06-28","2025-06-29","2025-06-30","2025-07-01","2025-07-02","2025-07-03","2025-07-04","2025-07-05","2025-07-06","2025-07-07","2025-07-08","2025-07-09","2025-07-10","2025-07-11","2025-07-12","2025-07-13","2025-07-14","2025-07-15","2025-07-16","2025-07-17","2025-07-18","2025-07-19","2025-07-20","2025-07-21","2025-07-22","2025-07-23","2025-07-24","2025-07-25","2025-07-26","2025-07-27","2025-07-28","2025-07-29","2025-07-30","2025-07-31","2025-08-01","2025-08-02","2025-08-03","2025-08-04","2025-08-05","2025-08-06","2025-08-07","2025-08-08","2025-08-09","2025-08-10","2025-08-11","2025-08-12","2025-08-13","2025-08-14","2025-08-15","2025-08-16","2025-08-17","2025-08-18","2025-08-19","2025-08-20","2025-08-21","2025-08-22","2025-08-23","2025-08-24","2025-08-25","2025-08-26","2025-08-27","2025-08-28","2025-08-29","2025-08-30","2025-08-31","2025-09-01","2025-09-02","2025-09-03","2025-09-04","2025-09-05","2025-09-06","2025-09-07","2025-09-08","2025-09-09","2025-09-10","2025-09-11","2025-09-12","2025-09-13","2025-09-14","2025-09-15","2025-09-16","2025-09-17","2025-09-18","2025-09-19","2025-09-20","2025-09-21","2025-09-22","2025-09-23","2025-09-24","2025-09-25","2025-09-26","2025-09-27","2025-09-28","2025-09-29","2025-09-30","2025-10-01","2025-10-02","2025-10-03","2025-10-04","2025-10-05","2025-10-06","2025-10-07","2025-10-08","2025-10-09","2025-10-10","2025-10-11","2025-10-12","2025-10-13","2025-10-14","2025-10-15","2025-10-16","2025-10-17","2025-10-18","2025-10-19","2025-10-20","2025-10-21","2025-10-22","2025-10-23","2025-10-24","2025-10-25","2025-10-26","2025-10-27","2025-10-28","2025-10-29","2025-10-30","2025-10-31","2025-11-01","2025-11-02","2025-11-03","2025-11-04","2025-11-05","2025-11-06","2025-11-07","2025-11-08","2025-11-09","2025-11-10","2025-11-11","2025-11-12","2025-11-13","2025-11-14","2025-11-15","2025-11-16","2025-11-17","2025-11-18","2025-11-19","2025-11-20","2025-11-21","2025-11-22","2025-11-23","2025-11-24","2025-11-25","2025-11-26","2025-11-27","2025-11-28","2025-11-29","2025-11-30","2025-12-01","2025-12-02","2025-12-03","2025-12-04","2025-12-05","2025-12-06","2025-12-07","2025-12-08","2025-12-09","2025-12-10","2025-12-11","2025-12-12","2025-12-13","2025-12-14","2025-12-15","2025-12-16","2025-12-17","2025-12-18","2025-12-19","2025-12-20","2025-12-21","2025-12-22","2025-12-23","2025-12-24","2025-12-25","2025-12-26","2025-12-27","2025-12-28","2025-12-29","2025-12-30","2025-12-31","2026-01-01","2026-01-02","2026-01-03","2026-01-04","2026-01-05","2026-01-06","2026-01-07","2026-01-08","2026-01-09","2026-01-10","2026-01-11","2026-01-12","2026-01-13","2026-01-14","2026-01-15","2026-01-16","2026-01-17","2026-01-18","2026-01-19","2026-01-20","2026-01-21","2026-01-22","2026-01-23","2026-01-24","2026-01-25","2026-01-26","2026-01-27","2026-01-28","2026-01-29","2026-01-30","2026-01-31","2026-02-01","2026-02-02","2026-02-03","2026-02-04","2026-02-05","2026-02-06","2026-02-07","2026-02-08","2026-02-09","2026-02-10","2026-02-11","2026-02-12","2026-02-13","2026-02-14","2026-02-15","2026-02-16","2026-02-17","2026-02-18","2026-02-19","2026-02-20","2026-02-21","2026-02-22","2026-02-23","2026-02-24","2026-02-25","2026-02-26","2026-02-27","2026-02-28","2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15","2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20","2026-03-21","2026-03-22","2026-03-23","2026-03-24","2026-03-25","2026-03-26","2026-03-27","2026-03-28","2026-03-29","2026-03-30","2026-03-31","2026-04-01","2026-04-02","2026-04-03","2026-04-04","2026-04-05","2026-04-06","2026-04-07","2026-04-08","2026-04-09","2026-04-10","2026-04-11","2026-04-12","2026-04-13","2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-18","2026-04-19","2026-04-20","2026-04-21","2026-04-22","2026-04-23","2026-04-24","2026-04-25","2026-04-26","2026-04-27","2026-04-28","2026-04-29","2026-04-30","2026-05-01","2026-05-02","2026-05-03","2026-05-04","2026-05-05","2026-05-06","2026-05-07","2026-05-08","2026-05-09","2026-05-10","2026-05-11","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25","2026-05-26","2026-05-27","2026-05-28","2026-05-29","2026-05-30","2026-05-31","2026-06-01","2026-06-02","2026-06-03","2026-06-04","2026-06-05","2026-06-06","2026-06-07","2026-06-08","2026-06-09","2026-06-10","2026-06-11","2026-06-12","2026-06-13","2026-06-14","2026-06-15","2026-06-16","2026-06-17","2026-06-18","2026-06-19","2026-06-20","2026-06-21","2026-06-22","2026-06-23","2026-06-24","2026-06-25","2026-06-26","2026-06-27","2026-06-28","2026-06-29","2026-06-30","2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05","2026-07-06","2026-07-07","2026-07-08","2026-07-09","2026-07-10","2026-07-11","2026-07-12","2026-07-13","2026-07-14","2026-07-15","2026-07-16","2026-07-17","2026-07-18","2026-07-19","2026-07-20","2026-07-21","2026-07-22","2026-07-23","2026-07-24","2026-07-25","2026-07-26","2026-07-27","2026-07-28","2026-07-29","2026-07-30","2026-07-31","2026-08-01","2026-08-02","2026-08-03","2026-08-04","2026-08-05","2026-08-06","2026-08-07","2026-08-08","2026-08-09","2026-08-10","2026-08-11","2026-08-12","2026-08-13","2026-08-14","2026-08-15","2026-08-16","2026-08-17","2026-08-18","2026-08-19","2026-08-20","2026-08-21","2026-08-22","2026-08-23","2026-08-24","2026-08-25","2026-08-26","2026-08-27","2026-08-28","2026-08-29","2026-08-30","2026-08-31","2026-09-01","2026-09-02","2026-09-03","2026-09-04","2026-09-05","2026-09-06","2026-09-07","2026-09-08","2026-09-09","2026-09-10","2026-09-11","2026-09-12","2026-09-13","2026-09-14","2026-09-15","2026-09-16","2026-09-17","2026-09-18","2026-09-19","2026-09-20","2026-09-21","2026-09-22","2026-09-23","2026-09-24","2026-09-25","2026-09-26","2026-09-27","2026-09-28","2026-09-29","2026-09-30","2026-10-01","2026-10-02","2026-10-03","2026-10-04","2026-10-05","2026-10-06","2026-10-07","2026-10-08","2026-10-09","2026-10-10","2026-10-11","2026-10-12","2026-10-13","2026-10-14","2026-10-15","2026-10-16","2026-10-17","2026-10-18","2026-10-19","2026-10-20","2026-10-21","2026-10-22","2026-10-23","2026-10-24","2026-10-25","2026-10-26","2026-10-27","2026-10-28","2026-10-29"],"price":[null,null,null,5.08e-06,5.08e-06,7.11e-06,1.19e-05,1.19e-05,8.09e-06,4.63e-06,4.22e-06,4.93e-06,7.36e-06,7.36e-06,4.34e-06,5.97e-06,4.81e-06,4.56e-06,4.56e-06,4.92e-06,4.92e-06,4.9e-06,2.72e-05,2.72e-05,2.29e-05,6.82e-05,3.81e-05,3.34e-05,4.2e-05,4.2e-05,3.71e-05,3.71e-05,3.75e-05,2.81e-05,2.81e-05,2.45e-05,2.45e-05,2.24e-05,2.12e-05,1.93e-05,1.62e-05,1.62e-05,1.47e-05,1.44e-05,1.77e-05,1.7e-05,1.7e-05,1.59e-05,1.64e-05,1.64e-05,1.53e-05,1.53e-05,1.41e-05,1.43e-05,1.61e-05,1.61e-05,1.55e-05,1.57e-05,1.48e-05,1.48e-05,1.46e-05,1.46e-05,1.6e-05,1.6e-05,1.46e-05,1.62e-05,1.57e-05,1.57e-05,1.31e-05,1.31e-05,1.82e-05,1.86e-05,1.71e-05,1.71e-05,1.65e-05,1.85e-05,1.57e-05,1.57e-05,1.49e-05,1.45e-05,1.4e-05,1.35e-05,1.17e-05,1.04e-05,1.04e-05,1.1e-05,1.05e-05,1.03e-05,1.31e-05,1.21e-05,1.2e-05,1.23e-05,1.34e-05,1.27e-05,1.13e-05,1.12e-05,1.08e-05,9.68e-06,1.12e-05,1.05e-05,9.75e-06,9.47e-06,1.05e-05,1.1e-05,1.04e-05,9.11e-06,9.47e-06,9.87e-06,9.74e-06,1e-05,9.78e-06,9.91e-06,1.25e-05,1.25e-05,1.64e-05,1.36e-05,1.75e-05,1.92e-05,1.68e-05,1.69e-05,1.38e-05,1.37e-05,1.2e-05,1.17e-05,1.18e-05,1.09e-05,1.23e-05,1.13e-05,1.14e-05,1.69e-05,1.93e-05,1.78e-05,1.72e-05,1.99e-05,2.3e-05,2.09e-05,1.88e-05,1.9e-05,2.22e-05,1.94e-05,1.82e-05,1.7e-05,1.57e-05,1.58e-05,1.59e-05,1.61e-05,1.7e-05,1.64e-05,1.76e-05,1.71e-05,1.62e-05,1.7e-05,1.81e-05,2.94e-05,2.99e-05,3.18e-05,2.95e-05,4.16e-05,4.4e-05,5.29e-05,6.51e-05,6.07e-05,6.76e-05,7.59e-05,0.000105,9.34e-05,0.000108,0.00011,0.000131,0.000109,0.0001,0.00011,9.83e-05,0.000104,9.79e-05,9.37e-05,0.000113,0.000102,9.76e-05,0.000102,0.000112,0.00012,0.0001,9.27e-05,8.53e-05,9.66e-05,8.62e-05,7.89e-05,6.5e-05,6.92e-05,5.89e-05,6.84e-05,7.72e-05,9.49e-05,0.000162,0.000142,0.000134,0.000131,0.000124,0.000113,0.000113,0.000115,0.000101,8.91e-05,0.000105,0.000125,0.000187,0.000205,0.000239,0.00028,0.000277,0.000311,0.000399,0.000393,0.000335,0.000329,0.000312,0.000307,0.000287,0.000249,0.000226,0.000273,0.000302,0.000281,0.000297,0.000271,0.000358,0.000298,0.000285,0.00027,0.000265,0.000228,0.000219,0.000212,0.000206,0.000247,0.000256,0.000261,0.00028,0.000232,0.000332,0.000278,0.000274,0.000289,0.000299,0.000299,0.000263,0.000279,0.000285,0.000313,0.000287,0.000267,0.000237,0.000215,0.000258,0.000237,0.000271,0.000247,0.000236,0.000231,0.000218,0.000227,0.000248,0.000233,0.000208,0.000163,0.0002,0.000153,0.000147,0.000123,0.000103,0.000111,0.000134,0.000174,0.000159,0.000162,0.000182,0.000179,0.000164,0.000159,0.000154,0.000141,0.000145,0.00015,0.000139,0.000139,0.000133,9.97e-05,0.000114,0.000104,0.000112,0.000109,9.79e-05,0.000122,0.000102,9.44e-05,8.17e-05,8.11e-05,6.25e-05,6.89e-05,5.51e-05,4.74e-05,5.04e-05,5.78e-05,6.81e-05,7.11e-05,8.55e-05,8.37e-05,9.15e-05,9.4e-05,0.000118,0.000104,9.82e-05,9.3e-05,0.000103,0.000104,9.97e-05,9.87e-05,8.79e-05,7.99e-05,7.05e-05,6.96e-05,6.72e-05,6.55e-05,5.84e-05,6.28e-05,6.41e-05,6.31e-05,5e-05,5.29e-05,5.03e-05,5.8e-05,5.26e-05,5.73e-05,6.16e-05,5.53e-05,5.57e-05,5.35e-05,5.31e-05,5.62e-05,5.73e-05,5.94e-05,6.11e-05,5.96e-05,6.36e-05,6.49e-05,5.74e-05,6.61e-05,7.62e-05,7.44e-05,7.22e-05,6.68e-05,6.45e-05,6.27e-05,6.07e-05,5.72e-05,5.39e-05,5.12e-05,5.02e-05,4.74e-05,6.48e-05,7.09e-05,9.77e-05,9.96e-05,0.000105,9.98e-05,8.92e-05,7.75e-05,7.29e-05,6.86e-05,7.41e-05,7.47e-05,7.08e-05,7.02e-05,8.91e-05,9.01e-05,8.69e-05,8.44e-05,0.000113,9.82e-05,9.51e-05,0.000103,9.3e-05,9.08e-05,9.65e-05,9.12e-05,8.42e-05,8.1e-05,7.31e-05,7.39e-05,8.97e-05,8.14e-05,9.27e-05,8.67e-05,7.8e-05,7.11e-05,6.47e-05,6.3e-05,6.62e-05,6.39e-05,6.01e-05,5.86e-05,5.92e-05,5.2e-05,4.81e-05,4.56e-05,5.09e-05,4.89e-05,4.66e-05,4.6e-05,4.49e-05,4.54e-05,5.19e-05,4.96e-05,4.67e-05,4.67e-05,4.95e-05,4.62e-05,4.27e-05,4.28e-05,4.31e-05,4.42e-05,4.76e-05,6.06e-05,6.11e-05,5.92e-05,6.24e-05,5.85e-05,6.16e-05,6.21e-05,6.69e-05,6.03e-05,5.78e-05,5.91e-05,6.22e-05,6.08e-05,6.75e-05,7.31e-05,6.96e-05,7.43e-05,8.47e-05,7.26e-05,6.8e-05,6.25e-05,5.99e-05,5.99e-05,6.06e-05,6.31e-05,6.19e-05,5.81e-05,5.93e-05,8.67e-05,7.64e-05,9.61e-05,9.82e-05,9.39e-05,0.000101,8.6e-05,7.89e-05,7.33e-05,7.29e-05,7.65e-05,7.12e-05,5.79e-05,5.99e-05,5.82e-05,6.62e-05,6.62e-05,7.66e-05,6.64e-05,6.96e-05,6.81e-05,6.18e-05,6.12e-05,6.28e-05,6.41e-05,5.72e-05,6.22e-05,6.88e-05,7e-05,6.97e-05,7.43e-05,7.02e-05,7.6e-05,7.27e-05,7.26e-05,6.65e-05,7.34e-05,6.74e-05,6.97e-05,6.82e-05,6.94e-05,8.18e-05,7.78e-05,7.45e-05,6.55e-05,6.27e-05,6.33e-05,5.85e-05,6.83e-05,6.14e-05,6.44e-05,6.4e-05,6.42e-05,6.45e-05,5.96e-05,6.18e-05,6.18e-05,6.71e-05,6.36e-05,6.34e-05,6.61e-05,6.53e-05,6.52e-05,5.71e-05,4.99e-05,4.57e-05,5.65e-05,5.3e-05,5.11e-05,4.84e-05,4.74e-05,4.75e-05,4.88e-05,4.56e-05,4.86e-05,4.63e-05,4.26e-05,4.38e-05,4.81e-05,4.55e-05,4.77e-05,5.32e-05,5.06e-05,4.96e-05,4.96e-05,4.54e-05,4.44e-05,4.88e-05,4.62e-05,4.21e-05,5.22e-05,4.75e-05,4.94e-05,4.83e-05,4.95e-05,4.8e-05,4.69e-05,4.43e-05,4.19e-05,4.09e-05,3.85e-05,3.39e-05,3.36e-05,3.16e-05,4.66e-05,4.82e-05,5.42e-05,5.12e-05,4.91e-05,5.6e-05,5.68e-05,5.61e-05,5.56e-05,5.63e-05,5.56e-05,5.51e-05,4.64e-05,5.16e-05,5.31e-05,5e-05,4.73e-05,4.71e-05,4.88e-05,4.67e-05,4.77e-05,4.8e-05,4.33e-05,4.11e-05,4.03e-05,4.14e-05,3.87e-05,3.87e-05,3.95e-05,4.11e-05,4.45e-05,4.68e-05,4.53e-05,4.32e-05,4.06e-05,4.05e-05,3.99e-05,3.84e-05,3.83e-05,3.87e-05,3.9e-05,3.82e-05,3.71e-05,4.4e-05,4.4e-05,4.37e-05,4.9e-05,4.59e-05,4.4e-05,4.07e-05,4.47e-05,4.11e-05,4.04e-05,3.97e-05,3.78e-05,4.25e-05,4.01e-05,3.91e-05,3.86e-05,4.34e-05,4.46e-05,4.2e-05,3.72e-05,3.84e-05,3.82e-05,4.03e-05,3.85e-05,3.65e-05,3.88e-05,3.92e-05,3.65e-05,3.13e-05,3.21e-05,2.82e-05,2.49e-05,2.72e-05,2.3e-05,2.04e-05,1.71e-05,2.14e-05,2.09e-05,2.18e-05,2.13e-05,2.11e-05,2.05e-05,1.99e-05,2e-05,2.05e-05,1.86e-05,1.95e-05,1.86e-05,1.73e-05,1.75e-05,1.73e-05,1.74e-05,1.7e-05,1.61e-05,1.58e-05,1.78e-05,1.81e-05,1.82e-05,1.83e-05,1.89e-05,1.9e-05,1.9e-05,1.93e-05,1.78e-05,1.79e-05,1.7e-05,1.75e-05,1.88e-05,1.79e-05,1.89e-05,1.89e-05,1.85e-05,1.83e-05,1.91e-05,2e-05,1.83e-05,1.86e-05,1.88e-05,1.85e-05,1.79e-05,1.62e-05,1.73e-05,1.66e-05,1.61e-05,1.59e-05,1.55e-05,1.5e-05,1.48e-05,1.43e-05,1.55e-05,1.47e-05,1.4e-05,1.34e-05,1.28e-05,1.25e-05,1.3e-05,1.43e-05,1.36e-05,1.38e-05,1.22e-05,1.24e-05,1.26e-05,1.41e-05,1.44e-05,1.54e-05,1.37e-05,1.5e-05,1.38e-05,1.42e-05,1.54e-05,1.56e-05,1.7e-05,1.68e-05,1.48e-05,1.82e-05,1.89e-05,1.67e-05,1.64e-05,1.66e-05,1.57e-05,1.91e-05,1.81e-05,1.84e-05,1.73e-05,1.6e-05,1.61e-05,1.68e-05,1.63e-05,1.63e-05,1.7e-05,1.73e-05,1.57e-05,1.49e-05,1.5e-05,1.41e-05,1.32e-05,1.32e-05,1.35e-05,1.3e-05,1.33e-05,1.33e-05,1.27e-05,1.32e-05,1.26e-05,1.3e-05,1.25e-05,1.19e-05,1.15e-05,1.15e-05,1.19e-05,1.18e-05,1.09e-05,9.62e-06,1.09e-05,1.13e-05,1.02e-05,9.9e-06,1.1e-05,1.01e-05,9.21e-06,8.99e-06,1.01e-05,9.82e-06,9.87e-06,1e-05,9.95e-06,9.54e-06,9.27e-06,8.99e-06,9.02e-06,9.05e-06,9e-06,8.99e-06,7.94e-06,7.86e-06,7.51e-06,7.58e-06,7.48e-06,6.7e-06,6.67e-06,6.79e-06,7.11e-06,7.53e-06,7.54e-06,7.54e-06,7.37e-06,7.21e-06,6.78e-06,7.28e-06,7.09e-06,6.05e-06,5.64e-06,5.65e-06,5.02e-06,5e-06,5.46e-06,5.18e-06,5.16e-06,5.33e-06,5.41e-06,5.49e-06,5.33e-06,5.2e-06,5.02e-06,5.02e-06,5.05e-06,5.14e-06,4.61e-06,4.6e-06,4.66e-06,6.55e-06,6.56e-06,6.25e-06,6.53e-06,6.1e-06,5.85e-06,5.4e-06,5.49e-06,5.03e-06,5.05e-06,5.38e-06,5.18e-06,5.22e-06,5.18e-06,5.07e-06,5.08e-06,5e-06,4.96e-06,5.15e-06,5.09e-06,6.27e-06,7.16e-06,7.88e-06,7.46e-06,7.9e-06,9.92e-06,8.95e-06,9.2e-06,9.09e-06,8.92e-06,8.1e-06,7.69e-06,8.07e-06,8.04e-06,7.73e-06,8.52e-06,8.35e-06,8.4e-06,7.65e-06,7.08e-06,7.41e-06,7.35e-06,6.9e-06,6.86e-06,6.73e-06,6.55e-06,6.87e-06,6.59e-06,6.31e-06,6.19e-06,6.9e-06,6.74e-06,6.65e-06,8.17e-06,7.87e-06,7.16e-06,7.11e-06,7.11e-06,7.1e-06,7.08e-06,7.03e-06,6.75e-06,6.71e-06,6.63e-06,6.56e-06,6.58e-06,6.47e-06,6.41e-06,6.32e-06,5.93e-06,5.97e-06,6.09e-06,6.24e-06,6.03e-06,5.89e-06,5.77e-06,5.62e-06,4.98e-06,4.99e-06,4.92e-06,4.93e-06,4.67e-06,4.91e-06,4.96e-06,4.96e-06,5.01e-06,5.02e-06,4.86e-06,5.33e-06,5.43e-06,5.56e-06,5.56e-06],"rp":[null,5.1e-06,5.1e-06,5.1e-06,5.1e-06,5.1e-06,5.4e-06,6.5e-06,7.1e-06,7e-06,6.7e-06,6.5e-06,6.3e-06,6.5e-06,6.5e-06,6.2e-06,6.3e-06,6.2e-06,6.1e-06,6e-06,6e-06,6e-06,5.5e-06,8e-06,1.07e-05,1.19e-05,2.26e-05,2.23e-05,2.21e-05,2.23e-05,2.29e-05,2.31e-05,2.34e-05,2.38e-05,2.37e-05,2.38e-05,2.4e-05,2.38e-05,2.38e-05,2.37e-05,2.32e-05,2.29e-05,2.29e-05,2.25e-05,2.24e-05,2.23e-05,2.2e-05,2.2e-05,2.19e-05,2.19e-05,2.18e-05,2.18e-05,2.17e-05,2.16e-05,2.15e-05,2.15e-05,2.15e-05,2.14e-05,2.13e-05,2.12e-05,2.11e-05,2.11e-05,2.11e-05,2.11e-05,2.1e-05,2.1e-05,2.09e-05,2.08e-05,2.08e-05,2.08e-05,2.06e-05,2.06e-05,2.06e-05,2.05e-05,2.02e-05,2.03e-05,2.03e-05,2.03e-05,2.02e-05,2.02e-05,2.01e-05,2e-05,1.99e-05,2e-05,1.98e-05,1.95e-05,1.95e-05,1.95e-05,1.94e-05,1.94e-05,1.95e-05,1.95e-05,1.95e-05,1.94e-05,1.95e-05,1.95e-05,1.95e-05,1.95e-05,1.95e-05,1.94e-05,1.95e-05,1.94e-05,1.94e-05,1.94e-05,1.94e-05,1.94e-05,1.94e-05,1.94e-05,1.94e-05,1.93e-05,1.93e-05,1.93e-05,1.93e-05,1.92e-05,1.92e-05,1.91e-05,1.91e-05,1.91e-05,1.91e-05,1.92e-05,1.92e-05,1.92e-05,1.91e-05,1.91e-05,1.91e-05,1.91e-05,1.9e-05,1.89e-05,1.88e-05,1.87e-05,1.88e-05,1.88e-05,1.88e-05,1.89e-05,1.9e-05,1.92e-05,1.92e-05,1.92e-05,1.93e-05,1.94e-05,1.94e-05,1.94e-05,1.94e-05,1.94e-05,1.93e-05,1.93e-05,1.93e-05,1.93e-05,1.93e-05,1.93e-05,1.94e-05,1.94e-05,1.93e-05,1.94e-05,1.99e-05,2.03e-05,2.06e-05,2.07e-05,2.15e-05,2.19e-05,2.23e-05,2.34e-05,2.39e-05,2.47e-05,2.55e-05,2.77e-05,2.88e-05,2.97e-05,3.03e-05,3.17e-05,3.25e-05,3.34e-05,3.42e-05,3.46e-05,3.49e-05,3.51e-05,3.56e-05,3.59e-05,3.65e-05,3.66e-05,3.69e-05,3.98e-05,4.06e-05,4.11e-05,4.13e-05,4.13e-05,4.37e-05,4.54e-05,4.59e-05,4.58e-05,4.59e-05,4.58e-05,4.6e-05,4.65e-05,4.85e-05,5.16e-05,5.23e-05,5.26e-05,5.3e-05,5.46e-05,5.51e-05,5.73e-05,5.73e-05,5.83e-05,5.83e-05,5.85e-05,5.88e-05,6.18e-05,6.51e-05,6.74e-05,7.3e-05,7.55e-05,7.89e-05,8.33e-05,8.62e-05,8.72e-05,8.81e-05,8.87e-05,8.88e-05,8.99e-05,9.01e-05,9.05e-05,9.19e-05,9.29e-05,0.000101,0.000101,0.000101,0.000103,0.000103,0.000103,0.000103,0.000103,0.000103,0.000103,0.000103,0.000104,0.000105,0.000105,0.000105,0.000106,0.000106,0.000111,0.000111,0.000111,0.000112,0.000112,0.000112,0.000114,0.000114,0.000116,0.00012,0.00012,0.000121,0.000121,0.000121,0.000121,0.000121,0.000122,0.000122,0.000122,0.000122,0.000122,0.000123,0.000123,0.000123,0.000123,0.000123,0.000123,0.000117,0.000117,0.000116,0.000116,0.000115,0.000115,0.000116,0.000116,0.000116,0.000116,0.000116,0.000116,0.000116,0.000116,0.000116,0.000116,0.000116,0.000115,0.000115,0.000115,0.000114,0.000114,0.000114,0.000114,0.000114,0.000113,0.000114,0.000114,0.000113,0.000112,0.000112,0.000111,0.000111,0.000111,0.00011,0.000109,0.000108,0.000108,0.000108,0.000108,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000107,0.000106,0.000105,0.000105,0.000105,0.000105,0.000105,0.000105,0.000105,0.000104,0.000104,0.000104,0.000104,0.000104,0.000103,0.000103,0.000103,0.000103,0.000103,0.000103,0.000103,0.000103,0.000103,0.000102,0.000101,0.000101,0.000101,0.000101,0.000101,0.000101,0.000101,0.000101,0.000101,0.0001,0.0001,0.0001,9.96e-05,9.96e-05,9.94e-05,9.92e-05,9.9e-05,9.89e-05,9.89e-05,9.9e-05,9.9e-05,9.89e-05,9.89e-05,9.88e-05,9.87e-05,9.84e-05,9.82e-05,9.82e-05,9.82e-05,9.81e-05,9.79e-05,9.78e-05,9.78e-05,9.77e-05,9.78e-05,9.78e-05,9.77e-05,9.76e-05,9.76e-05,9.76e-05,9.76e-05,9.77e-05,9.75e-05,9.73e-05,9.72e-05,9.7e-05,9.7e-05,9.68e-05,9.68e-05,9.68e-05,9.67e-05,9.67e-05,9.65e-05,9.63e-05,9.62e-05,9.66e-05,9.65e-05,9.58e-05,9.56e-05,9.54e-05,9.53e-05,9.5e-05,9.46e-05,9.46e-05,9.45e-05,9.44e-05,9.43e-05,9.42e-05,9.38e-05,9.38e-05,9.38e-05,9.36e-05,9.36e-05,9.35e-05,9.35e-05,9.3e-05,9.28e-05,9.27e-05,9.23e-05,9.2e-05,9.2e-05,9.18e-05,9.18e-05,9.17e-05,9.15e-05,9.14e-05,9.14e-05,9.11e-05,9.11e-05,9.1e-05,9.11e-05,9.1e-05,9.09e-05,9.08e-05,9.08e-05,9.07e-05,9.07e-05,9.03e-05,9.03e-05,9.03e-05,9.02e-05,9.01e-05,9.01e-05,9.01e-05,9.01e-05,8.99e-05,8.94e-05,8.96e-05,8.96e-05,8.96e-05,8.97e-05,8.98e-05,8.98e-05,9e-05,9.01e-05,9.01e-05,9e-05,9e-05,9e-05,9.01e-05,9.01e-05,9e-05,9e-05,8.99e-05,8.99e-05,8.99e-05,8.99e-05,8.99e-05,8.99e-05,8.98e-05,8.96e-05,8.95e-05,8.96e-05,8.95e-05,8.94e-05,8.94e-05,8.93e-05,8.91e-05,8.91e-05,8.91e-05,8.91e-05,8.9e-05,8.89e-05,8.89e-05,8.89e-05,8.89e-05,8.89e-05,8.88e-05,8.88e-05,8.88e-05,8.88e-05,8.88e-05,8.88e-05,8.89e-05,8.89e-05,8.97e-05,8.71e-05,8.71e-05,8.7e-05,8.7e-05,8.69e-05,8.67e-05,8.66e-05,8.66e-05,8.62e-05,8.61e-05,8.61e-05,8.61e-05,8.6e-05,8.6e-05,8.55e-05,8.53e-05,8.51e-05,8.51e-05,8.51e-05,8.51e-05,8.51e-05,8.5e-05,8.5e-05,8.5e-05,8.48e-05,8.47e-05,8.47e-05,8.46e-05,8.45e-05,8.45e-05,8.44e-05,8.44e-05,8.43e-05,8.41e-05,8.39e-05,8.38e-05,8.38e-05,8.38e-05,8.37e-05,8.35e-05,8.33e-05,8.31e-05,8.31e-05,8.3e-05,8.3e-05,8.3e-05,8.3e-05,8.29e-05,8.29e-05,8.29e-05,8.29e-05,8.28e-05,8.27e-05,8.27e-05,8.24e-05,8.17e-05,8.15e-05,8.14e-05,8.14e-05,8.14e-05,8.13e-05,8.13e-05,8.13e-05,8.13e-05,8.13e-05,8.13e-05,8.14e-05,8.14e-05,8.14e-05,8.13e-05,8.13e-05,8.12e-05,8.12e-05,8.12e-05,8.12e-05,8.12e-05,8.12e-05,8.12e-05,8.12e-05,8.12e-05,8.12e-05,8.1e-05,8.1e-05,8.09e-05,8.08e-05,8.07e-05,8.07e-05,8.07e-05,8.07e-05,8.06e-05,8.06e-05,8.06e-05,8.07e-05,8.06e-05,8.06e-05,8e-05,7.99e-05,7.97e-05,7.95e-05,7.95e-05,7.95e-05,7.92e-05,7.91e-05,7.91e-05,7.89e-05,7.85e-05,7.86e-05,7.86e-05,7.86e-05,7.86e-05,7.85e-05,7.86e-05,7.86e-05,7.85e-05,7.83e-05,7.83e-05,7.83e-05,7.79e-05,7.79e-05,7.78e-05,7.78e-05,7.77e-05,7.76e-05,7.75e-05,7.74e-05,7.73e-05,7.62e-05,7.61e-05,7.6e-05,7.6e-05,7.44e-05,7.44e-05,7.44e-05,7.39e-05,7.35e-05,7.35e-05,7.34e-05,7.33e-05,7.32e-05,7.31e-05,7.29e-05,7.28e-05,7.28e-05,7.28e-05,7.27e-05,7.27e-05,7.27e-05,7.25e-05,7.24e-05,7.23e-05,7.24e-05,7.22e-05,7.23e-05,7.21e-05,7.2e-05,7.16e-05,7.16e-05,7.15e-05,7.15e-05,7.15e-05,7.14e-05,7.15e-05,7.15e-05,7.14e-05,7.13e-05,7.13e-05,7.13e-05,7.13e-05,7.13e-05,7.12e-05,7.12e-05,7.12e-05,7.11e-05,7.11e-05,7.1e-05,7.1e-05,7.09e-05,7.08e-05,7.08e-05,7.08e-05,7.07e-05,7.07e-05,7.07e-05,7.05e-05,7.04e-05,7.04e-05,7.04e-05,7.01e-05,7.01e-05,7.01e-05,7.02e-05,7.02e-05,7.02e-05,7.02e-05,7.01e-05,7.01e-05,7.01e-05,7.03e-05,7.02e-05,7.02e-05,6.99e-05,6.97e-05,6.96e-05,6.98e-05,6.96e-05,6.97e-05,6.97e-05,6.94e-05,6.93e-05,6.91e-05,6.92e-05,6.93e-05,6.89e-05,6.89e-05,6.9e-05,6.9e-05,6.9e-05,6.87e-05,6.84e-05,6.85e-05,6.84e-05,6.84e-05,6.85e-05,6.85e-05,6.84e-05,6.83e-05,6.84e-05,6.83e-05,6.82e-05,6.79e-05,6.8e-05,6.8e-05,6.8e-05,6.81e-05,6.81e-05,6.79e-05,6.78e-05,6.76e-05,6.77e-05,6.78e-05,6.77e-05,6.79e-05,6.79e-05,6.79e-05,6.8e-05,6.8e-05,6.8e-05,6.78e-05,6.78e-05,6.78e-05,6.73e-05,6.67e-05,6.64e-05,6.64e-05,6.64e-05,6.61e-05,6.65e-05,6.64e-05,6.63e-05,6.62e-05,6.62e-05,6.61e-05,6.61e-05,6.62e-05,6.58e-05,6.58e-05,6.58e-05,6.56e-05,6.56e-05,6.55e-05,6.55e-05,6.57e-05,6.56e-05,6.56e-05,6.56e-05,6.56e-05,6.59e-05,6.58e-05,6.56e-05,6.55e-05,6.54e-05,6.55e-05,6.55e-05,6.56e-05,6.57e-05,6.57e-05,6.53e-05,6.52e-05,6.53e-05,6.53e-05,6.53e-05,6.55e-05,6.58e-05,6.53e-05,6.54e-05,6.54e-05,6.53e-05,6.52e-05,6.52e-05,6.54e-05,6.55e-05,6.56e-05,6.55e-05,6.56e-05,6.56e-05,6.57e-05,6.57e-05,6.56e-05,6.41e-05,6.4e-05,6.41e-05,6.4e-05,6.39e-05,6.4e-05,6.44e-05,6.43e-05,6.46e-05,6.46e-05,6.43e-05,6.43e-05,6.43e-05,6.43e-05,6.43e-05,6.42e-05,6.44e-05,6.42e-05,6.41e-05,6.41e-05,6.38e-05,6.33e-05,6.33e-05,6.33e-05,6.31e-05,6.24e-05,6.28e-05,6.27e-05,6.28e-05,6.25e-05,6.26e-05,6.26e-05,6.25e-05,6.24e-05,6.25e-05,6.23e-05,6.24e-05,6.23e-05,6.24e-05,6.25e-05,6.24e-05,6.23e-05,6.24e-05,6.23e-05,6.23e-05,6.23e-05,6.21e-05,6.19e-05,6.2e-05,6.2e-05,6.18e-05,6.19e-05,6.14e-05,6.08e-05,6.09e-05,6.11e-05,6.1e-05,6.1e-05,6.07e-05,6.07e-05,6.08e-05,6.09e-05,6.09e-05,6.1e-05,5.99e-05,5.99e-05,6e-05,6e-05,6e-05,6e-05,5.97e-05,5.95e-05,5.96e-05,5.98e-05,5.93e-05,5.97e-05,5.97e-05,6.02e-05,6.01e-05,6.01e-05,6.01e-05,5.99e-05,5.95e-05,5.9e-05,5.88e-05,5.87e-05,5.86e-05,5.86e-05,5.82e-05,5.81e-05,5.8e-05],"focus":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9,1.98,20.28,8.64,9.25,10.83,10.83,10.83,10.83,10.83,10.83,10.83,10.83,10.83,11.12,11.46,11.46,11.46,11.46,11.46,11.46,11.46,11.46,11.46,11.87,11.87,11.87,11.87,11.87,11.87,11.87,11.87,11.87,14.46,14.46,14.46,14.46,14.46,14.46,14.46,14.46,14.46,14.46,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,14.67,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.28,15.22,15.22,15.22,15.22,15.22,15.22,15.22,15.22,15.22,15.15,15.15,11.35,11.35,11.35,11.35,11.35,11.35,11.35,11.35,11.35,11.35,11.35,11.35,12.37,12.37,12.8,13.32,13.32,13.32,13.32,13.32,13.32,13.32,13.32,13.32,13.32,13.32,13.32,13.32,13.32,17.56,17.56,17.56,17.56,17.56,17.56,17.56,17.56,17.56,17.56,18.04,22.07,22.46,22.46,22.46,22.64,23.13,23.57,23.57,23.57,23.99,24.39,24.39,24.96,25.02,25.16,25.21,25.27,25.89,26.88,25.98,26.0,24.54,24.58,24.58,24.58,24.61,24.61,24.67,24.97,24.97,24.97,26.29,20.07,20.07,20.07,21.87,21.87,21.87,21.94,17.04,17.04,17.04,17.04,17.12,17.12,17.12,17.12,17.12,17.12,17.12,17.48,17.48,17.59,17.68,17.71,17.71,17.71,17.7,17.68,17.68,17.68,17.68,17.68,17.68,17.68,17.91,17.91,17.91,17.99,17.99,17.99,17.99,17.99,17.99,17.99,17.99,17.99,17.99,17.99,18.1,18.1,18.13,18.16,18.16,18.16,18.16,18.31,18.31,18.31,18.31,18.31,18.31,18.31,18.31,18.39,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.35,14.38,14.54,15.05,15.05,15.05,15.05,15.05,15.05,15.05,15.05,15.05,15.05,15.07,15.07,15.07,15.07,15.07,15.07,15.07,15.07,15.07,15.07,15.07,15.18,15.18,15.23,15.23,15.23,15.23,15.23,15.23,15.8,15.8,15.88,16.02,16.02,16.02,16.02,16.02,16.02,16.02,16.02,16.02,16.02,16.02,16.06,16.06,16.06,16.06,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.18,16.46,16.46,16.46,16.46,16.46,16.48,16.48,16.48,16.48,16.55,16.55,16.55,16.55,16.55,16.55,16.55,16.55,16.55,16.55,16.55,16.62,16.64,16.65,16.65,16.65,16.65,16.65,16.65,16.65,16.65,16.65,16.65,16.65,16.65,16.65,16.65,16.72,16.72,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.93,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,16.98,17.86,18.44,18.44,18.44,18.44,18.44,18.82,19.07,19.07,19.07,19.07,19.07,19.28,19.28,19.5,19.5,19.5,19.5,19.5,19.5,19.5,19.5,19.5,19.5,19.5,19.5,19.5,19.5,19.82,19.82,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.45,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.49,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.57,20.62,20.62,20.62,20.74,20.78,22.14,22.83,22.83,22.87,22.87,23.65,23.79,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.17,24.25,24.25,24.25,24.27,24.31,24.35,24.35,24.35,24.35,24.35,24.35,23.98,23.98,23.98,23.98,23.98,23.98,23.98,23.98,23.98,23.98,23.98,23.98,23.98,23.98,23.98,24.05,24.05,24.06,24.06,24.06,24.06,24.06,24.06,24.06,24.06,24.06,24.06,24.06,24.06,24.06,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.16,24.04,24.04,24.03,24.03,24.03,24.03,24.03,24.05,24.05,24.05,24.05,24.05,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.08,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.2,24.72,25.18,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.53,25.7,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,25.85,26.52,28.94,28.94,28.94,28.94,28.94,29.18,29.18,29.47,30.74],"cluster":[0.2,4.44,17.84,16.57,16.89,16.89,16.89,16.89,16.89,16.89,16.89,16.89,16.89,16.89,16.89,16.86,16.86,16.86,16.86,16.86,16.86,13.2,14.43,21.46,26.15,29.91,31.49,31.49,32.08,32.08,33.83,34.2,35.4,35.4,35.4,35.69,36.33,36.33,36.33,36.33,36.33,36.33,36.37,36.6,37.37,38.49,38.49,38.49,38.49,38.49,38.49,38.49,38.49,38.49,42.83,42.83,44.91,44.91,44.91,46.02,47.2,47.97,48.95,48.95,49.15,49.15,49.2,50.02,50.02,50.63,50.63,50.63,50.63,50.63,50.91,50.91,50.91,50.91,50.91,50.91,50.91,50.91,50.91,52.24,52.24,52.24,52.31,52.31,52.92,52.92,52.92,52.92,52.92,52.92,52.92,53.79,53.79,53.79,53.79,53.79,53.79,53.79,54.49,56.33,56.33,56.33,56.33,56.34,56.29,56.29,56.29,56.29,56.22,56.22,52.72,52.72,52.72,52.72,52.72,52.72,52.72,52.77,52.77,52.77,52.77,52.77,53.79,62.62,63.05,63.62,63.62,63.62,63.62,63.62,63.62,63.62,63.62,63.62,63.62,63.62,63.62,63.59,63.59,67.92,67.92,67.92,67.94,67.94,67.88,67.88,67.87,67.87,67.87,68.35,68.35,68.74,68.74,64.14,64.32,64.81,65.47,65.47,67.54,67.97,68.37,68.37,68.95,69.0,69.1,68.99,69.14,69.76,70.66,69.75,69.81,69.36,70.28,70.26,70.47,70.33,70.15,70.04,70.17,69.97,70.11,71.69,71.4,70.98,71.79,73.32,73.3,73.3,73.37,73.58,73.77,74.01,73.98,74.06,74.06,74.06,74.06,74.06,74.06,73.97,74.34,74.34,74.44,74.53,74.57,74.61,74.53,74.27,74.12,74.58,74.55,74.55,73.74,73.68,73.7,73.77,72.7,72.69,72.76,72.82,72.9,72.94,73.22,73.22,73.23,73.23,73.56,73.73,73.73,73.84,73.84,73.88,73.91,73.95,73.97,73.97,74.58,74.64,74.66,74.66,74.63,74.6,74.55,74.51,74.57,70.21,70.19,70.21,70.19,70.16,70.13,70.11,70.08,70.06,70.06,70.07,70.04,70.02,69.99,69.99,69.96,70.0,70.09,70.5,70.34,70.2,70.05,70.05,70.05,70.05,70.05,69.97,70.0,70.02,70.02,70.02,70.02,70.02,70.02,70.0,69.98,69.98,69.98,69.98,70.09,70.09,70.14,70.14,70.14,70.14,70.14,70.14,70.73,70.68,70.78,70.9,70.9,70.9,70.89,70.88,70.87,70.88,70.89,70.88,70.88,70.88,70.86,70.88,70.86,70.87,70.95,70.93,70.97,70.93,70.92,70.93,70.91,70.91,70.84,70.82,70.82,70.77,70.77,70.76,70.76,70.76,72.23,72.24,72.24,72.24,72.24,72.24,72.24,72.37,72.35,72.33,72.28,72.28,72.56,72.52,72.47,72.47,72.47,72.49,72.45,72.44,72.44,72.51,72.51,72.42,72.41,72.42,68.42,68.41,68.41,68.31,68.3,68.23,68.28,68.3,68.31,68.25,68.25,68.18,68.18,68.18,68.18,68.18,68.18,68.1,68.08,68.08,68.08,68.08,68.09,68.1,68.32,68.32,68.31,68.31,68.31,68.31,68.31,68.31,68.36,68.35,68.33,68.33,68.32,68.32,68.3,68.3,68.3,68.3,68.3,68.3,68.3,67.56,67.56,67.58,67.58,67.58,67.57,67.61,67.62,67.63,67.63,67.63,67.57,67.56,67.5,67.46,67.47,67.48,67.49,67.5,67.5,66.26,66.22,67.08,67.66,67.67,67.66,67.67,67.66,68.05,68.23,68.22,68.22,68.23,68.22,68.35,68.38,68.27,68.27,68.27,68.27,68.27,68.27,68.25,68.23,67.76,67.76,67.76,67.75,67.56,66.46,66.78,66.78,67.41,67.41,67.41,67.41,67.42,67.42,67.42,67.41,67.41,67.41,67.41,67.42,67.42,67.42,67.42,67.42,67.41,67.38,67.38,67.43,67.43,67.43,67.43,67.43,67.43,67.42,67.42,67.42,67.42,67.42,67.42,67.42,67.42,67.42,67.42,67.42,67.42,67.42,67.4,67.39,67.39,67.39,67.4,67.41,67.41,67.41,65.44,63.34,63.34,63.26,63.27,63.27,63.27,63.35,63.34,63.34,63.34,63.34,63.34,63.34,63.34,63.34,63.35,63.36,63.34,63.34,63.34,63.34,63.34,63.34,63.34,63.34,63.34,63.34,63.34,63.34,63.39,63.39,63.39,63.28,63.32,64.68,65.36,65.36,65.42,65.42,66.19,66.32,66.71,66.71,66.72,66.72,66.72,66.72,66.72,66.72,66.72,66.72,66.72,66.73,66.73,66.73,66.63,66.5,66.57,66.57,66.37,66.4,66.38,66.42,66.44,66.34,66.34,66.34,66.35,65.99,66.0,65.99,65.99,65.99,65.99,65.99,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.07,66.07,66.09,66.09,66.09,66.09,66.09,66.09,66.09,66.09,66.09,66.09,66.09,66.09,66.09,66.18,66.18,66.18,66.18,66.18,66.18,65.99,65.99,65.99,65.99,65.99,65.99,65.99,65.99,65.99,65.99,65.99,65.99,65.99,65.87,65.88,65.86,65.86,65.86,65.87,65.87,65.89,65.89,65.59,65.58,65.58,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,65.61,64.88,64.88,64.88,64.88,64.88,64.88,64.88,64.88,64.88,64.88,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.29,63.95,63.95,63.95,63.95,63.95,63.95,63.95,63.95,63.95,63.95,63.95,63.95,63.95,64.07,64.07,64.07,64.07,61.38,61.38,61.38,61.38,61.38,60.58,60.58,60.58,60.58,60.58,60.58,60.58,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,60.57,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,57.51,58.03,58.49,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,58.84,59.01,59.16,59.16,59.16,59.16,59.16,59.16,59.16,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,58.06,59.14,59.14,59.14,59.14,59.14,59.14,59.14,59.81,62.23,62.23,62.23,62.23,62.23,62.47,62.47,62.76,64.03],"holders":[["2024-05",3011,2069,83],["2024-06",5535,3337,81],["2024-07",5118,2820,79],["2024-08",5051,2700,74],["2024-09",5285,2794,70],["2024-10",5995,3131,70],["2024-11",6457,3191,76],["2024-12",8179,3893,77],["2025-01",9464,4165,76],["2025-02",9840,4261,69],["2025-03",10339,4444,74],["2025-04",10396,4427,72],["2025-05",10783,4535,69],["2025-06",10807,4395,70],["2025-07",10808,4305,68],["2025-08",11030,4367,69],["2025-09",10965,4268,68],["2025-10",10988,4225,68],["2025-11",11507,4541,66],["2025-12",11400,4453,65],["2026-01",11291,4326,64],["2026-02",11223,4254,61],["2026-03",11197,4209,63],["2026-04",11209,4206,62],["2026-05",11202,4151,62],["2026-06",11079,4043,64],["2026-07",11130,4058,60],["2026-08",11112,4018,58],["2026-09",11034,3935,58],["2026-10",11030,3918,62]],"flows":[["2024-05",74684,0,8770,0],["2024-06",505441,0,5338,0],["2024-07",100043,0,442,0],["2024-08",18829,0,487,0],["2024-09",20015,0,0,0],["2024-10",435183,0,1656,0],["2024-11",643572,375895,11521,122119],["2024-12",728849,1079946,20620,81902],["2025-01",342150,379556,37281,75756],["2025-02",32334,165198,14802,0],["2025-03",116027,32958,65684,0],["2025-04",8865,7021,17466,95207],["2025-05",40978,267817,36910,46322],["2025-06",12351,69453,13310,17568],["2025-07",165387,50709,24955,0],["2025-08",91889,18073,5893,18073],["2025-09",2388,171754,8554,41583],["2025-10",15731,27754,1491,15402],["2025-11",44536,0,17413,0],["2025-12",7378,0,0,0],["2026-01",6192,0,10015,0],["2026-02",810,0,13668,0],["2026-03",0,0,0,0],["2026-04",2305,0,0,0],["2026-05",0,12939,0,0],["2026-06",0,0,0,0],["2026-07",7721,2721,0,2721],["2026-08",2369,9811,0,0],["2026-09",0,0,0,0],["2026-10",4811,0,0,28502]],"launch":[[0,42.35,42.35],[1,13.02,55.37],[2,2.55,57.92],[3,1.58,59.5],[4,1.49,60.98],[5,0.09,61.07],[6,1.12,62.2],[7,0.12,62.32],[8,0.28,62.59],[9,3.65,66.25],[10,0.97,67.22],[11,0.52,67.73],[12,0.1,67.83],[13,0.0,67.83],[14,0.37,68.2],[15,0.57,68.77],[16,0.68,69.45],[17,0.05,69.5],[18,0.0,69.5],[19,0.01,69.51],[20,0.0,69.51],[21,0.33,69.84],[22,0.17,70.01],[23,0.0,70.01],[24,0.08,70.08],[25,0.0,70.08],[26,0.0,70.08],[27,0.0,70.08],[28,0.0,70.08],[29,0.0,70.08],[30,0.27,70.35],[31,0.0,70.35],[32,1.15,71.5],[33,0.42,71.92],[34,1.81,73.73]],"supply":[["Your wallet",7.31,30.74],["Rest of its cluster (68 wallets)",7.91,33.29],["Uniswap pool",12.5,52.59],["Burned",2.23,9.39],["Next 100 largest holders",43.7,183.85],["Everyone else",26.35,110.83]]}</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const SUP = 420.69e9;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmtDate = s => { const [y, m, d] = s.split('-'); return (d ? (+d) + ' ' : '') + MON[+m - 1] + ' ' + y; };
+  const usd = v => { const a = Math.abs(v); const s = v < 0 ? '−' : ''; return a >= 1e6 ? s + '$' + (a / 1e6).toFixed(a >= 1e7 ? 0 : 1) + 'M' : a >= 1e3 ? s + '$' + Math.round(a / 1e3) + 'k' : s + '$' + Math.round(a); };
+
+  function tipFor(box) { let t = box.querySelector('.tip'); if (!t) { t = document.createElement('div'); t.className = 'tip'; t.hidden = true; box.appendChild(t); } return t; }
+  function placeTip(box, t, x, y) {
+    const bw = box.clientWidth, tw = t.offsetWidth, th = t.offsetHeight;
+    let left = x + 14; if (left + tw > bw) left = x - tw - 14; if (left < 0) left = 0;
+    let top = y - th - 10; if (top < 0) top = y + 14;
+    t.style.left = left + 'px'; t.style.top = top + 'px';
+  }
+
+  // Line chart on a shared daily or monthly x index. One y-scale only.
+  function lineChart(box, o) {
+    const W = 720, H = o.h || 300, m = { l: 58, r: 16, t: 14, b: 28 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true' }, box);
+    const n = o.x.length;
+    const X = i => m.l + (i / (n - 1)) * pw;
+    const lo = o.log ? Math.log10(o.min) : o.min, hi = o.log ? Math.log10(o.max) : o.max;
+    const Y = v => m.t + ph - ((o.log ? Math.log10(v) : v) - lo) / (hi - lo) * ph;
+    const g = el('g', { class: 'grid' }, svg);
+    o.ticks.forEach(v => { el('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v) }, g); const t = el('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end' }, svg); t.textContent = o.yFmt(v); });
+    o.xticks.forEach(i => { const t = el('text', { x: X(i), y: H - 8, 'text-anchor': 'middle' }, svg); t.textContent = o.xFmt(o.x[i]); el('line', { x1: X(i), x2: X(i), y1: m.t + ph, y2: m.t + ph + 4, stroke: css('--line-2') }, svg); });
+    el('line', { x1: m.l, x2: W - m.r, y1: m.t + ph, y2: m.t + ph, stroke: css('--line-2') }, svg);
+    o.series.forEach(s => {
+      let d = '', pen = false;
+      s.v.forEach((v, i) => { if (v == null || (o.log && v <= 0)) { pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); pen = true; });
+      el('path', { d, fill: 'none', stroke: s.c, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+      let li = s.v.length - 1; while (li > 0 && s.v[li] == null) li--;
+      el('circle', { cx: X(li), cy: Y(s.v[li]), r: 4, fill: s.c, stroke: css('--surface'), 'stroke-width': 2 }, svg);
+      if (s.end) { const t = el('text', { x: X(li) - 8, y: Y(s.v[li]) + (s.endDy || -9), 'text-anchor': 'end', class: 'lab' }, svg); t.textContent = s.end; }
+    });
+    (o.marks || []).forEach(mk => { const t = el('text', { x: X(mk.i) + (mk.dx || 8), y: Y(mk.v) + (mk.dy || 4), class: 'lab', 'text-anchor': mk.anchor || 'start' }, svg); t.textContent = mk.text; el('circle', { cx: X(mk.i), cy: Y(mk.v), r: 4, fill: mk.c, stroke: css('--surface'), 'stroke-width': 2 }, svg); });
+    const cross = el('line', { y1: m.t, y2: m.t + ph, stroke: css('--line-2'), 'stroke-width': 1, visibility: 'hidden' }, svg);
+    const dots = o.series.map(s => el('circle', { r: 4, fill: s.c, stroke: css('--surface'), 'stroke-width': 2, visibility: 'hidden' }, svg));
+    const hit = el('rect', { x: m.l, y: m.t, width: pw, height: ph, fill: 'transparent' }, svg);
+    const tip = tipFor(box);
+    function move(ev) {
+      const r = svg.getBoundingClientRect(); const px = (ev.clientX - r.left) * W / r.width;
+      const i = Math.max(0, Math.min(n - 1, Math.round((px - m.l) / pw * (n - 1))));
+      cross.setAttribute('x1', X(i)); cross.setAttribute('x2', X(i)); cross.setAttribute('visibility', 'visible');
+      let html = '<div>' + o.tipDate(o.x[i]) + '</div>';
+      o.series.forEach((s, k) => { const v = s.v[i]; if (v == null) { dots[k].setAttribute('visibility', 'hidden'); return; }
+        dots[k].setAttribute('cx', X(i)); dots[k].setAttribute('cy', Y(v)); dots[k].setAttribute('visibility', 'visible');
+        html += `<div><span class="k" style="background:${s.c}"></span>${s.name}: ${s.fmt(v, i)}</div>`; });
+      tip.innerHTML = html; tip.hidden = false; placeTip(box, tip, (X(i) / W) * r.width, (ev.clientY - r.top));
+    }
+    hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move);
+    hit.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dots.forEach(d => d.setAttribute('visibility', 'hidden')); });
+  }
+
+  // Column chart, optionally diverging: up = [values], down = stacked [values].
+  function colChart(box, o) {
+    const W = 720, H = o.h || 280, m = { l: 58, r: 12, t: 16, b: 28 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b, n = o.labels.length;
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true' }, box);
+    const Y = v => m.t + ph - (v - o.min) / (o.max - o.min) * ph;
+    const g = el('g', { class: 'grid' }, svg);
+    o.ticks.forEach(v => { el('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v) }, g); const t = el('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end' }, svg); t.textContent = o.yFmt(v); });
+    const band = pw / n, bw = Math.min(24, band - 3);
+    const tip = tipFor(box);
+    o.labels.forEach((lab, i) => {
+      const cx = m.l + band * (i + .5), x = cx - bw / 2;
+      const grp = el('g', {}, svg);
+      let base = 0;
+      o.up.forEach(s => { const v = s.v[i]; if (!v) return; const y0 = Y(base), y1 = Y(base + v); el('path', { d: barPath(x, y1, bw, y0 - y1, 'up'), fill: s.c }, grp); base += v; });
+      base = 0;
+      (o.down || []).forEach((s, k, arr) => { const v = s.v[i]; if (!v) return; const y0 = Y(-base), y1 = Y(-(base + v)); const last = arr.slice(k + 1).every(t => !t.v[i]);
+        el('path', { d: last ? barPath(x, y0 + (base ? 2 : 0), bw, y1 - y0 - (base ? 2 : 0), 'down') : rect(x, y0 + (base ? 2 : 0), bw, y1 - y0 - (base ? 2 : 0)), fill: s.c }, grp); base += v; });
+      if (o.xlab(i)) { const t = el('text', { x: cx, y: H - 8, 'text-anchor': 'middle' }, svg); t.textContent = o.xlab(i); }
+      const hit = el('rect', { x: m.l + band * i, y: m.t, width: band, height: ph, fill: 'transparent' }, svg);
+      const show = ev => { const r = svg.getBoundingClientRect();
+        let html = '<div>' + o.tipLabel(lab) + '</div>';
+        [...o.up, ...(o.down || [])].forEach(s => { html += `<div><span class="k" style="background:${s.c}"></span>${s.name}: ${o.tipFmt(s.v[i] || 0)}</div>`; });
+        tip.innerHTML = html; tip.hidden = false; placeTip(box, tip, (cx / W) * r.width, ev.clientY - r.top); };
+      hit.addEventListener('pointermove', show); hit.addEventListener('pointerdown', show);
+      hit.addEventListener('pointerleave', () => { tip.hidden = true; });
+    });
+    el('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: css('--line-2') }, svg);
+    (o.marks || []).forEach(mk => { const cx = m.l + band * (mk.i + .5); const t = el('text', { x: cx + (mk.dx || 0), y: Y(mk.v) - 8, 'text-anchor': mk.anchor || 'middle', class: 'lab' }, svg); t.textContent = mk.text; });
+  }
+  function rect(x, y, w, h) { return `M${x} ${y}h${w}v${h}h${-w}Z`; }
+  function barPath(x, y, w, h, dir) { // 4px rounded data-end, square at the baseline
+    const r = Math.min(4, Math.abs(h) / 2, w / 2);
+    if (h <= 0) return '';
+    if (dir === 'up') return `M${x} ${y + h}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + w - r}Q${x + w} ${y} ${x + w} ${y + r}V${y + h}Z`;
+    return `M${x} ${y}V${y + h - r}Q${x} ${y + h} ${x + r} ${y + h}H${x + w - r}Q${x + w} ${y + h} ${x + w} ${y + h - r}V${y}Z`;
+  }
+
+  function draw() {
+    document.querySelectorAll('.chart').forEach(c => c.innerHTML = '');
+    const days = D.days;
+    const qtr = days.map((d, i) => (d.endsWith('-01') && ['01', '07'].includes(d.slice(5, 7))) ? i : -1).filter(i => i >= 0);
+    const xFmt = d => MON[+d.slice(5, 7) - 1] + ' ' + d.slice(0, 4);
+    // 1. market cap vs realized
+    const mc = D.price.map(p => p == null ? null : p * SUP), rc = D.rp.map((p, i) => p == null || D.price[i] == null ? null : p * SUP);
+    lineChart(document.getElementById('c-price'), {
+      x: days, log: true, min: 1.5e6, max: 2.5e8, ticks: [2e6, 5e6, 2e7, 5e7, 2e8], yFmt: usd, xticks: qtr, xFmt, tipDate: fmtDate,
+      series: [
+        { name: 'Market cap', v: mc, c: css('--s1'), fmt: (v, i) => usd(v) + ' · $' + D.price[i].toPrecision(3), end: '$2.3M', endDy: 18 },
+        { name: 'At holders’ avg cost', v: rc, c: css('--s2'), fmt: v => usd(v), end: '$24M' }
+      ],
+      marks: [{ i: days.indexOf('2024-12-11'), v: 0.000399 * SUP, text: 'Top · 11 Dec 2024 · $168M', c: css('--s1'), dx: 9, dy: 4 }]
+    });
+    // 2. launch
+    const L = D.launch;
+    colChart(document.getElementById('c-launch'), {
+      labels: L.map(r => r[0]), min: 0, max: 80, ticks: [0, 20, 40, 60, 80], yFmt: v => v + '%', h: 240,
+      up: [{ name: 'Share of supply bought so far', v: L.map(r => r[2]), c: css('--s1') }],
+      xlab: i => (i % 5 === 0 ? 'block ' + i : ''), tipLabel: l => 'Block +' + l + ' (≈' + (l * 12) + ' s)', tipFmt: v => v.toFixed(1) + '%',
+      marks: [{ i: 34, v: L[34][2], text: '74%', anchor: 'middle' }]
+    });
+    // 3. holdings
+    lineChart(document.getElementById('c-hold'), {
+      x: days, min: 0, max: 120, ticks: [0, 30, 60, 90, 120], yFmt: v => v + 'B', xticks: qtr, xFmt, tipDate: fmtDate,
+      series: [
+        { name: 'Whole cluster', v: D.cluster, c: css('--s2'), fmt: v => v.toFixed(1) + 'B GME', end: '64.0B' },
+        { name: 'Your wallet', v: D.focus, c: css('--s1'), fmt: v => v.toFixed(1) + 'B GME', end: '30.7B', endDy: -10 }
+      ]
+    });
+    // 4. flows
+    const F = D.flows;
+    colChart(document.getElementById('c-flow'), {
+      labels: F.map(r => r[0]), min: -1.2e6, max: 0.8e6, ticks: [-1.2e6, -0.8e6, -0.4e6, 0, 0.4e6, 0.8e6], yFmt: usd, h: 300,
+      up: [{ name: 'Bought on DEX', v: F.map(r => r[1]), c: css('--s1') }],
+      down: [{ name: 'Sent to exchanges', v: F.map(r => r[2]), c: css('--s2') }, { name: 'Sold on DEX', v: F.map(r => r[3]), c: css('--s3') }],
+      xlab: i => (['01', '07'].includes(F[i][0].slice(5)) ? xFmt(F[i][0]) : ''), tipLabel: l => fmtDate(l), tipFmt: usd,
+      marks: [{ i: F.findIndex(r => r[0] === '2024-12'), v: -1.1e6 - 0.09e6, text: '$1.1M to exchanges, Dec 2024', anchor: 'start', dx: 16 }]
+    });
+    // 5. holders
+    const Hm = D.holders;
+    lineChart(document.getElementById('c-holders'), {
+      x: Hm.map(r => r[0]), min: 0, max: 12000, ticks: [0, 3000, 6000, 9000, 12000], yFmt: v => (v / 1000) + 'K', h: 240,
+      xticks: Hm.map((r, i) => ['01', '07'].includes(r[0].slice(5)) ? i : -1).filter(i => i >= 0), xFmt, tipDate: fmtDate,
+      series: [{ name: 'Holders', v: Hm.map(r => r[1]), c: css('--s1'), fmt: v => v.toLocaleString('en-US'), end: '11,030', endDy: 18 }],
+      marks: [{ i: Hm.findIndex(r => r[0] === '2025-11'), v: 11507, text: 'Peak 11,507 · Nov 2025', c: css('--s1'), anchor: 'end', dx: -9, dy: -8 }]
+    });
+  }
+
+  // supply bar + list (labels visible: the light palette has three sub-3:1 slots)
+  const cols = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6'];
+  const sb = document.getElementById('supply'), sl = document.getElementById('supply-list');
+  D.supply.forEach((s, i) => {
+    const d = document.createElement('div'); d.style.width = s[1] + '%'; d.style.background = `var(${cols[i]})`; d.title = `${s[0]}: ${s[1]}% · ${s[2]}B`; sb.appendChild(d);
+    const li = document.createElement('li'); li.innerHTML = `<i style="background:var(${cols[i]})"></i><span>${s[0]}</span><span>${s[1].toFixed(1)}% · ${s[2].toFixed(1)}B</span>`; sl.appendChild(li);
+  });
+
+  const A = [
+    ['0xE14767042159E5BD2bf16F81A0FE387ab153Fbb4', 'yours', 'The wallet you shared · #1 holder', '30.74B'],
+    ['0x884fb7eaaa53c47d591002e704ac454c1f4a1c98', '1', 'Got 7.5B from yours · same MEXC account · sold via LP and exchanges', '3.95B'],
+    ['0x2f04c585e994d263a0ddfaf448bdc2f8b7aa949c', '1', 'Got 7.5B from yours · same MEXC account · emptied into 0xfa07… Sep 2025', '0'],
+    ['0xff5811780f6cf89ac61019b1fc8cee604c2a9d50', '1', 'Same MEXC account · created 25 Sep 2025', '4.43B'],
+    ['0x3c7e2bbecb4ba096a37fbce50b370c4dadcf9633', 'deposit', 'MEXC deposit address shared by six cluster wallets', '0'],
+    ['0x436a8b2c68ab69b1ba3dc6cef9be32042fc100e8', '1', 'Emptied 15.7B into yours on 5 Jun 2024', '0'],
+    ['0xfa070156a411ef524e2b598ae892b707975594f4', '2', 'Created 24 Sep 2025 with 12.86B from 0x2f04… · #4 holder', '10.07B'],
+    ['0xd8cb407bb1aad1713d5056fcf333c185c1b3d493', '2', 'Created 24 Sep 2025 from a wallet yours had parked coins in', '4.78B'],
+    ['0x70790a654e8c22cfc36dfdd7418eea17ab6abdce', '2', 'First GME from 0x884f… · #10 holder', '4.81B'],
+    ['0xcc9a1e80fc7a6986d66a208d9ea58e8a100091e3', '2', 'Created 25 Sep 2025 from 0x34d9… (same MEXC account)', '2.38B'],
+    ['0x1df28f138f6f10a23a5c474a79619d0c634d6356', '2', 'Created 24 Sep 2025 with 6.22B parked by yours in Nov 2024', '0.63B'],
+    ['0x18d080b89570e4b996eb17fa1f0206f0ce35d604', 'deposit', 'Deposit address at an unidentified exchange · $801k of cluster GME', '0'],
+    ['0xa7de68878e849b85b13d116a074d14d70d4a784c', 'not merged', 'Sent yours 1,087 ETH · fed GME to yours via 0x436a…', '0'],
+    ['0x8d10bb06cc54f61666f772f9d09cca714400a8c8', 'none', '#2 holder · net seller in the last 90 days', '14.30B'],
+    ['0xe1fc21df6bbe9caa933f93896866501375669717', 'none', 'Collected 8.46B from 30 Coinbase-funded wallets on 2 Oct 2026', '8.46B'],
+    ['0x6b4bed0b3a7bb0c7d4b905cdc7ffc4233d62fdf6', 'none', 'Funded 21 launch-block buyers · launch bundle, fully sold', '0'],
+    ['0xe2cd830acc58d5a0e2f55cfedac116b793a2224f', 'none', 'Deployer · sent its last 0.94B to yours in Nov 2024', '0']
+  ];
+  const tb = document.getElementById('addr-rows');
+  A.forEach(([a, t, role, bal]) => {
+    const chip = t === 'yours' ? '<span class="chip t1">yours</span>' : t === '1' ? '<span class="chip t1">direct</span>' : t === '2' ? '<span class="chip">one step</span>' : `<span class="chip">${t}</span>`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><a class="addr" href="https://etherscan.io/address/${a}" target="_blank" rel="noopener">${a.slice(0, 6)}…${a.slice(-4)}</a></td><td>${chip}</td><td>${role}</td><td class="n">${bal}</td>`;
+    tb.appendChild(tr);
+  });
+
+  draw();
+  const mq = window.matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', draw);
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>

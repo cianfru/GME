@@ -1,0 +1,22 @@
+# Large or rebuilt every run: the archive is a release asset (tag gme-archive)
+data/transfers.csv
+data/transfers.pkl
+data/delta.csv
+*.gz
+data/*.log
+
+# Intermediate files
+data/wallet_state.json
+data/sales.json
+data/addr-types-engine.json
+data/early/
+data/engine/whales.json
+data/engine/entities.json
+data/engine/cex-sankey.json
+data/engine/self-moves.json
+data/engine/urpd-history.json
+data/bs/focus_txs.json
+data/bs/focus_internal.json
+
+__pycache__/
+node_modules/
