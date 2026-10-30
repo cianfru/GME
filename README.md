@@ -52,10 +52,7 @@ Everything is rebuilt from the public transfer history, with free data only. The
 
 The full study is served at `/study`.
 
-**The whole site is password-protected.** `middleware.js` puts an HTTP Basic-auth check in front of every page and data file:
-- Use any username. The password is the `SITE_PASSWORD` environment variable in the Vercel project.
-- Until that variable is set, the site answers 503 and shows nothing.
-- To change the password, edit the variable, then redeploy.
+**Password (optional).** The site is open to anyone with the URL (and asks search engines not to index it). To lock it, set `SITE_PASSWORD` in the Vercel project's environment variables and redeploy: `middleware.js` then asks for that password (any username) on every page and data file.
 
 Build and preview locally:
 ```

@@ -43,7 +43,7 @@ const site = {
   supply: SUPPLY,
   holders: hold(months.at(-1)),
   holders3m: hold(months.at(-4)),
-  alerts: (latest.alerts || []).map((a) => ({ ...a, text: relabel(a.text) })),
+  alerts: (latest.alerts || []).map((a) => ({ ...a, text: relabel(a.text), ...(a.group ? { group: relabel(a.group) } : {}) })),
   // Every past run that raised a medium or high alert, newest first.
   history: log
     .map((r) => ({
@@ -77,6 +77,7 @@ const site = {
     // Still holding first (by size), then the ones whose coins have moved on.
     .sort((a, b) => (b.bal ?? 0) - (a.bal ?? 0) || b.tok - a.tok),
   float: Object.entries(float).map(([name, tok]) => ({ name: relabel(name), tok, pct: pct(tok) })),
+  journey: json("journey.json"),
   windows: (market.windows || []).map((w) => ({
     days: w.days, buyers: w.buyers, sellers: w.sellers, buyUsd: w.buyUsd, sellUsd: w.sellUsd, newBuyers: w.newBuyers, clusterNet: w.clusterNet,
   })),

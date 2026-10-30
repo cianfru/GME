@@ -56,16 +56,39 @@ Read this file first. It is enough to continue without the original conversation
 10. **`watch.py`** compares every watched group with the last run (`data/watch_state.json`). It writes `data/alerts/latest.json` and `log.jsonl`, and puts the same text in the Actions run summary.
 
 ### Website (Vercel)
-- `site/index.html` is the dashboard; it reads `/site.json`.
-- `scripts/build-site.mjs` builds `dist/` with three files:
-  - `index.html`;
-  - `study.html`, which is `report/gme-study.html` wrapped in a full document;
-  - `site.json`, a compact summary holding only what the page shows.
+- **A scrolling "visual journey", not a dashboard** (owner asked for "a visual journey, not text heavy"). `site/index.html` has 12 chapters, one per screen. Each has a short headline with the key number, one big D3 visual, and at most one line of caption:
+  1. price story, with pumps marked;
+  2. launch waffle;
+  3. focus wallet holdings + price;
+  4. the 70-wallet network (force graph);
+  5. monthly sends to exchanges vs price;
+  6. pool calculator ("buy $X → +Y%");
+  7. supply split bar;
+  8. cost-basis (URPD) underwater chart;
+  9. cohort survival;
+  10. quiet-accumulator bubbles;
+  11. buy-and-hide received vs held;
+  12. today's alerts as cards, then the verdict (pros/cons, watched signals).
+  
+  Tables sit in a collapsed "All the numbers" block (the accessible view). Charts render lazily as each chapter scrolls in.
+- **Data:** `scripts/journey.py` (daily, after cohorts.py) writes `data/journey.json`. It holds:
+  - daily price and ATH;
+  - daily balance of the focus wallet and of the cluster;
+  - the cluster's monthly USD sent to exchanges (CEX + deposit-like addresses);
+  - live pool reserves via `getReserves()`;
+  - the cluster graph (members + evidence links between members);
+  - URPD buckets, cohorts, the launch steps and pump runs.
+  
+  The last two come from static history files (`page_data.json`, `runs.json`, `launch_block0.json`). `scripts/build-site.mjs` folds it all into `dist/site.json`, along with alerts, accumulators, holding wallets, groups and float.
+- **Charts follow the dataviz rules:**
+  - the reference palette (validated light + dark);
+  - one y-axis per panel: price always gets its own panel under a shared x, never a dual axis;
+  - hover tooltips;
+  - a legend on every multi-series chart.
 - `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Each push to `main`, including the daily data commit, redeploys.
-- **Password:** `middleware.js` adds HTTP Basic auth on every path. Any username works; the password is the `SITE_PASSWORD` env var. It **fails closed**: with no password set the site returns 503. Tests are in `test/middleware.test.mjs` (`npm test`).
-  - Never put the password in the repo or in chat. The owner sets it in Vercel.
-  - Vercel Hobby can't password-protect the production domain natively, which is why the middleware exists.
-- **Freshness:** the page shows "Data as of" (time of the newest transfer). It turns red after 36 hours, so stale data is never shown as current.
+- **Password is optional (owner: "keep it simple, a side project").** `middleware.js` adds HTTP Basic auth only when the `SITE_PASSWORD` env var is set (any username). Without it the site is open, and `noindex` keeps it out of search. Tests: `npm test`.
+- **Freshness:** the "Data as of" badge turns red after 36 hours.
+- **"Still holding"** (a buy-and-hide wallet) means it kept ≥80% of what it received AND sold or deposited ≤20% of it. A trader that refills, like `0x859f…d9d1` which sold 3.3B, is not a hider.
 
 ## 4. Linking rules (what makes two wallets one owner)
 
@@ -103,8 +126,8 @@ Guards:
   - `0x4553…4ea2`: buys arriving from other chains.
   - `0xfa67…dbb6`: has held since launch day, 7.11B.
 - **Buy-and-hide holding wallets:**
-  - 18 fresh wallets received coins this way in the last 90 days, but **only 5 still hold them**.
-  - Holding: `0x53ee…efdb` 3.44B, `0xf0f7…b749` 1.50B, `0x644a…7982` 0.80B, plus two small ones.
+  - 18 fresh wallets received coins this way in the last 90 days, but **only 4 still hold them**.
+  - Holding: `0x53ee…efdb` 3.44B, `0xf0f7…b749` 1.50B, `0x644a…7982` 0.80B and `0xb9f4…1813` (small).
   - Several were relays that sold on the DEX: `0xc71f…` 1.49B and `0x8d56…` 0.93B, both in the 90-day top sellers.
   - Three small ones went to exchanges.
   - `vaults90.py` now records `bal`, `soldDex`, `toCex` and `sent` for each, so the page shows which is which. Judge a holding wallet by what it still holds, not by what it received.

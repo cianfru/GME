@@ -89,6 +89,12 @@ jobs:
         continue-on-error: true
         run: python3 scripts/overhang.py
 
+      - name: Cohorts and the site's chart data
+        continue-on-error: true
+        run: |
+          python3 scripts/cohorts.py
+          python3 scripts/journey.py
+
       - name: Metrics engine (realized price, MVRV, URPD, holding age)
         continue-on-error: true
         run: |

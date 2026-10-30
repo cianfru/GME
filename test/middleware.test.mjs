@@ -17,10 +17,9 @@ test("checkAuth rejects wrong, partial, longer, missing and malformed credential
   assert.equal(checkAuth(basic("gme", ""), ""), false);
 });
 
-test("middleware stays closed (503) when no password is configured", () => {
+test("middleware lets everything through when no password is configured", () => {
   delete process.env.SITE_PASSWORD;
-  const r = middleware(req(basic("gme", "anything")));
-  assert.equal(r.status, 503);
+  assert.equal(middleware(req(null)).headers.get("x-middleware-next"), "1");
 });
 
 test("middleware asks for the password (401) and lets the right one through", () => {

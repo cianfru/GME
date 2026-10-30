@@ -1,5 +1,5 @@
-// Password gate for every page and data file on the Vercel site (HTTP Basic auth: any username, the password is
-// the SITE_PASSWORD environment variable set in the Vercel project). With no password set, the site stays closed.
+// Optional password gate for every page and data file on the Vercel site (HTTP Basic auth: any username, the password
+// is the SITE_PASSWORD environment variable). With no SITE_PASSWORD set the site is open; set it in Vercel and redeploy to lock it.
 import { next } from "@vercel/functions";
 
 const REALM = 'Basic realm="GME daily watch", charset="UTF-8"';
@@ -19,12 +19,7 @@ export function checkAuth(header, password) {
 
 export default function middleware(request) {
   const password = process.env.SITE_PASSWORD;
-  if (!password) {
-    return new Response("This site is closed until a password is set (SITE_PASSWORD in the Vercel project settings, then redeploy).", {
-      status: 503, headers: { "Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": "noindex", "Cache-Control": "no-store" },
-    });
-  }
-  if (!checkAuth(request.headers.get("authorization"), password)) {
+  if (password && !checkAuth(request.headers.get("authorization"), password)) {
     return new Response("Password required.", {
       status: 401, headers: { "WWW-Authenticate": REALM, "Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": "noindex", "Cache-Control": "no-store" },
     });

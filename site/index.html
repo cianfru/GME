@@ -4,266 +4,816 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>GME Daily Watch</title>
+<title>GME On-Chain Story</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,600..800&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,600..900&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
 :root {
-  --bg: #f4f5f6; --surface: #ffffff; --fg: #15181b; --fg-2: #444b53; --muted: #69717a; --line: #dde1e5; --line-2: #c9ced4;
-  --accent: #b3122a; --bar: #2a78d6; --bar-track: #e8ecf0;
-  --high: #b3122a; --high-soft: #f8e6e9; --med: #8a5a00; --med-soft: #fbf0d9; --info-soft: #eef1f4;
-  --good: #0a7d36;
+  color-scheme: light;
+  --bg: #f4f4f2; --surface: #fcfcfb; --fg: #0b0b0b; --fg-2: #52514e; --muted: #75746f; --line: #e2e1dc; --grid: #ebeae6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --good: #0ca30c; --warn: #fab219; --crit: #d03b3b; --neutral: #a9a8a2; --accent: #e34948;
   --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --f-body: "Public Sans", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color-scheme: light;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #111315; --surface: #191c1f; --fg: #eceef0; --fg-2: #bcc3ca; --muted: #8e969f; --line: #2b3035; --line-2: #3a4046;
-  --accent: #ff5d6c; --bar: #3987e5; --bar-track: #262b30;
-  --high: #ff6b78; --high-soft: #3a1a1e; --med: #f0b544; --med-soft: #33280f; --info-soft: #20252a;
-  --good: #43c46f; color-scheme: dark } }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) {
+  color-scheme: dark;
+  --bg: #111110; --surface: #1a1a19; --fg: #f0efec; --fg-2: #c3c2b7; --muted: #94938b; --line: #2e2e2b; --grid: #252523;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --neutral: #5d5c57; --accent: #e66767 } }
 :root[data-theme="dark"] {
-  --bg: #111315; --surface: #191c1f; --fg: #eceef0; --fg-2: #bcc3ca; --muted: #8e969f; --line: #2b3035; --line-2: #3a4046;
-  --accent: #ff5d6c; --bar: #3987e5; --bar-track: #262b30;
-  --high: #ff6b78; --high-soft: #3a1a1e; --med: #f0b544; --med-soft: #33280f; --info-soft: #20252a;
-  --good: #43c46f; color-scheme: dark }
+  color-scheme: dark;
+  --bg: #111110; --surface: #1a1a19; --fg: #f0efec; --fg-2: #c3c2b7; --muted: #94938b; --line: #2e2e2b; --grid: #252523;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --neutral: #5d5c57; --accent: #e66767 }
 * { box-sizing: border-box }
-html { -webkit-text-size-adjust: 100% }
-body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 1rem; line-height: 1.55;
-  padding: 2rem max(16px, env(safe-area-inset-right, 0px)) 4rem max(16px, env(safe-area-inset-left, 0px)) }
-main { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: 2.75rem }
-a { color: inherit; text-decoration-color: var(--line-2); text-underline-offset: 3px }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto } }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); line-height: 1.5; overflow-x: hidden }
+a { color: inherit; text-underline-offset: 3px; text-decoration-color: var(--line) }
 a:hover { text-decoration-color: var(--accent) }
-a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px }
-h1, h2 { font-family: var(--f-display); font-stretch: 82%; line-height: 1.12; margin: 0; text-wrap: balance }
-h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 800; letter-spacing: -.01em }
-h2 { font-size: 1.55rem; font-weight: 800 }
-p { margin: 0; max-width: 68ch }
-section { display: flex; flex-direction: column; gap: .9rem; min-width: 0 }
-.mono, td.num, .tile .v { font-family: var(--f-mono); font-variant-numeric: tabular-nums }
-.muted { color: var(--muted) }
-.sub { color: var(--fg-2) }
-header { display: flex; flex-direction: column; gap: .7rem }
-.topline { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; font-size: .9rem; color: var(--fg-2) }
-.pill { display: inline-flex; align-items: center; gap: .4rem; padding: .2rem .65rem; border-radius: 999px; background: var(--surface);
-  border: 1px solid var(--line); font-size: .85rem; white-space: nowrap }
-.pill .dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--good) }
-.pill.stale { border-color: var(--high); color: var(--high) }
-.pill.stale .dot { background: var(--high) }
-.btn { display: inline-flex; align-items: center; min-height: 40px; padding: 0 1rem; border-radius: 8px; border: 1px solid var(--line-2);
-  background: var(--surface); text-decoration: none; font-weight: 600; font-size: .92rem }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .75rem }
-.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: .85rem 1rem; display: flex; flex-direction: column; gap: .2rem; min-width: 0 }
-.tile .k { font-size: .82rem; color: var(--fg-2); font-weight: 600 }
-.tile .v { font-size: 1.3rem; font-weight: 500; letter-spacing: -.02em; white-space: nowrap }
-.tile .n { font-size: .82rem; color: var(--muted) }
-.alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem }
-.alert { display: flex; gap: .75rem; align-items: flex-start; padding: .7rem .9rem; border-radius: 8px; background: var(--info-soft); border-left: 4px solid var(--line-2) }
-.alert.high { background: var(--high-soft); border-left-color: var(--high) }
-.alert.medium { background: var(--med-soft); border-left-color: var(--med) }
-.sev { flex: none; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; min-width: 4.6rem; padding-top: .12rem }
-.alert.high .sev { color: var(--high) }
-.alert.medium .sev { color: var(--med) }
-.alert.info .sev { color: var(--muted) }
-.calm { padding: .8rem 1rem; border-radius: 8px; background: var(--surface); border: 1px solid var(--line) }
-.tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 10px; background: var(--surface) }
-table { border-collapse: collapse; width: 100%; font-size: .9rem }
-th, td { padding: .6rem .75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line) }
-tr:last-child td { border-bottom: 0 }
-th { font-size: .78rem; font-weight: 700; color: var(--fg-2); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; background: var(--surface); position: sticky; top: 0 }
-td.num, th.num { text-align: right; white-space: nowrap }
-td.nowrap, td.who { white-space: nowrap }
-.who .count { display: block; font-size: .8rem; padding-left: 1rem }
-details summary { cursor: pointer; list-style: none; min-height: 28px }
-details summary::-webkit-details-marker { display: none }
-details summary::before { content: "▸ "; color: var(--muted) }
-details[open] summary::before { content: "▾ " }
-.wallets { margin: .4rem 0 0; padding: 0; list-style: none; font-family: var(--f-mono); font-size: .8rem; columns: 2 13rem; column-gap: 1rem }
-.tag { display: inline-block; font-size: .75rem; padding: .05rem .5rem; margin: 0 .25rem .25rem 0; border-radius: 999px; border: 1px solid var(--line-2); color: var(--fg-2); white-space: nowrap }
-.tag.kind { font-weight: 700; color: var(--fg); border-color: var(--fg-2) }
-.live { color: var(--good); font-weight: 700; font-size: .78rem }
-.st { font-size: .85rem; white-space: nowrap }
-.st.hold { color: var(--good); font-weight: 600 }
-.st.cex { color: var(--high); font-weight: 600 }
-.st.sold { color: var(--med); font-weight: 600 }
-.barcell { min-width: 9rem; width: 34% }
-.bar { height: 10px; border-radius: 0 4px 4px 0; background: var(--bar); min-width: 2px }
-.bartrack { background: var(--bar-track); border-radius: 0 4px 4px 0; margin-top: .35rem }
-.history { display: flex; flex-direction: column; gap: .9rem }
-.run h3 { font: 600 .85rem/1.3 var(--f-body); color: var(--fg-2); margin: 0 0 .35rem }
-.note { font-size: .88rem; color: var(--fg-2) }
-footer { font-size: .85rem; color: var(--muted); display: flex; flex-direction: column; gap: .5rem; border-top: 1px solid var(--line); padding-top: 1.2rem }
-#err { display: none; padding: 1rem; border-radius: 8px; background: var(--high-soft); color: var(--high) }
-@media (max-width: 560px) { th, td { padding: .55rem .6rem } .tile .v { font-size: 1.15rem } .tiles { grid-template-columns: 1fr 1fr } .wallets { columns: 1 } }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--s1); outline-offset: 3px; border-radius: 3px }
+
+/* Chapters: one idea per screen */
+.ch { min-height: 92vh; display: flex; flex-direction: column; justify-content: center; gap: 1.4rem;
+  padding: 4.5rem max(16px, env(safe-area-inset-right, 0px)) 4.5rem max(16px, env(safe-area-inset-left, 0px));
+  max-width: 76rem; margin: 0 auto }
+.kicker { font: 500 .8rem/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.kicker b { color: var(--accent); font-weight: 500 }
+h1, h2 { font-family: var(--f-display); font-stretch: 78%; line-height: 1.02; margin: 0; letter-spacing: -.015em; text-wrap: balance }
+h1 { font-size: clamp(3rem, 11vw, 7.5rem); font-weight: 900 }
+h2 { font-size: clamp(2rem, 6vw, 3.9rem); font-weight: 900; max-width: 18ch }
+h2 em { font-style: normal; color: var(--accent) }
+.cap { font-size: clamp(1rem, 2.2vw, 1.2rem); color: var(--fg-2); max-width: 48ch; margin: 0 }
+.viz { width: 100%; position: relative; min-height: 120px }
+.viz svg { display: block; width: 100%; overflow: visible }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: clamp(.75rem, 2.4vw, 1.5rem) }
+.stats { display: flex; flex-wrap: wrap; gap: 1.2rem 2.6rem }
+.stat { display: flex; flex-direction: column; gap: .15rem; min-width: 0 }
+.stat .v { font: 900 clamp(2rem, 6vw, 3.4rem)/1 var(--f-display); font-stretch: 78%; font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap }
+.stat .k { font-size: .85rem; color: var(--muted) }
+.stat.red .v { color: var(--accent) }
+.two { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 2rem; align-items: center }
+@media (max-width: 820px) { .two { grid-template-columns: 1fr } }
+
+/* Hero */
+.hero { min-height: 100vh; justify-content: flex-end; gap: 1.6rem }
+.hero .sub { font-size: clamp(1.05rem, 2.6vw, 1.4rem); color: var(--fg-2); margin: 0; max-width: 40ch }
+.fresh { display: inline-flex; align-items: center; gap: .45rem; font: 500 .8rem/1 var(--f-mono); color: var(--muted) }
+.fresh i { width: .55rem; height: .55rem; border-radius: 50%; background: var(--good) }
+.fresh.stale { color: var(--crit) } .fresh.stale i { background: var(--crit) }
+.cue { font: 500 .8rem/1 var(--f-mono); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; animation: bob 2.4s ease-in-out infinite }
+@keyframes bob { 50% { transform: translateY(6px) } }
+@media (prefers-reduced-motion: reduce) { .cue { animation: none } }
+
+/* Axes and marks */
+.axis text, .lbl { font: 400 11px var(--f-mono); fill: var(--muted) }
+.axis line, .axis path { stroke: var(--line) }
+.axis .domain { display: none }
+.gridl line { stroke: var(--grid) } .gridl .domain { display: none }
+.dlbl { font: 600 12px var(--f-body); fill: var(--fg) }
+.dlbl.muted { fill: var(--muted); font-weight: 400 }
+.bigl { font: 900 22px var(--f-display); font-stretch: 78%; fill: var(--fg) }
+.xhair { stroke: var(--fg-2); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none }
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; font-size: .85rem; color: var(--fg-2); margin-top: .8rem }
+.legend span { display: inline-flex; align-items: center; gap: .45rem }
+.legend i { width: .8rem; height: .8rem; border-radius: 3px; flex: none }
+.legend i.line { height: 3px; border-radius: 2px }
+
+/* Tooltip */
+#tip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 10px; padding: .55rem .7rem; font-size: .82rem; line-height: 1.35; box-shadow: 0 8px 24px rgb(0 0 0 / .18);
+  opacity: 0; transition: opacity .12s; max-width: 280px }
+#tip b { font-family: var(--f-mono); font-weight: 500 }
+#tip .row { display: flex; align-items: center; gap: .45rem; justify-content: space-between }
+#tip .row i { width: .6rem; height: .6rem; border-radius: 2px; display: inline-block }
+
+/* Reveal */
+.rv { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease }
+.in .rv { opacity: 1; transform: none }
+.in .rv:nth-child(2) { transition-delay: .08s } .in .rv:nth-child(3) { transition-delay: .16s } .in .rv:nth-child(4) { transition-delay: .24s }
+@media (prefers-reduced-motion: reduce) { .rv { opacity: 1; transform: none; transition: none } }
+
+/* Side nav + progress */
+#bar { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); width: 0; z-index: 40 }
+#dots { position: fixed; right: 14px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: .55rem; z-index: 30 }
+#dots a { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: block; position: relative }
+#dots a.on { background: var(--accent) }
+#dots a span { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); white-space: nowrap; font: 500 .72rem/1 var(--f-mono);
+  color: var(--fg-2); background: var(--surface); border: 1px solid var(--line); padding: .3rem .45rem; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity .15s }
+#dots a:hover span, #dots a:focus-visible span { opacity: 1 }
+@media (max-width: 900px) { #dots { display: none } }
+
+/* Pool calculator */
+.calc { display: flex; flex-direction: column; gap: 1rem }
+.calc input[type=range] { width: 100%; accent-color: var(--accent); height: 40px }
+.readout { display: flex; flex-wrap: wrap; gap: 1rem 2.2rem; align-items: baseline }
+.presets { display: flex; flex-wrap: wrap; gap: .5rem }
+.presets button { min-height: 40px; padding: 0 .95rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 600 .9rem var(--f-body); cursor: pointer }
+.presets button.on { border-color: var(--accent); color: var(--accent) }
+
+/* Supply bar */
+.sbar { display: flex; gap: 2px; height: clamp(56px, 9vw, 88px); border-radius: 10px; overflow: hidden }
+.sbar div { height: 100%; transition: filter .15s; min-width: 2px }
+.sbar div:hover { filter: brightness(1.12) }
+.sleg { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: .65rem 1.4rem; margin-top: 1.1rem }
+.sleg div { display: grid; grid-template-columns: .9rem 1fr auto; gap: .55rem; align-items: center; font-size: .9rem; color: var(--fg-2) }
+.sleg i { width: .9rem; height: .9rem; border-radius: 3px }
+.sleg b { font: 500 .95rem var(--f-mono); color: var(--fg) }
+
+/* Holding wallets */
+.hw { display: grid; grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr) minmax(8.5rem, auto); gap: .55rem 1rem; align-items: center; font-size: .88rem }
+.hw .addr { font-family: var(--f-mono); font-size: .82rem }
+.hw .track { position: relative; height: 16px; background: var(--grid); border-radius: 0 4px 4px 0 }
+.hw .track div { position: absolute; inset: 0 auto 0 0; border-radius: 0 4px 4px 0 }
+.st { font-weight: 600; white-space: nowrap; font-size: .82rem }
+.st.hold { color: var(--good) } .st.sold { color: var(--s2) } .st.cex { color: var(--crit) } .st.moved { color: var(--muted) }
+
+/* Alerts + verdict */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .8rem }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .45rem; border-top: 4px solid var(--line) }
+.card .sev { font: 600 .72rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.card.high { border-top-color: var(--crit) } .card.high .sev { color: var(--crit) }
+.card.medium { border-top-color: var(--warn) } .card.medium .sev { color: #a96f00 }
+:root[data-theme="dark"] .card.medium .sev { color: var(--warn) }
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .card.medium .sev { color: var(--warn) } }
+.card .who { font-weight: 600 }
+.card .amt { font: 900 1.7rem/1.05 var(--f-display); font-stretch: 78% }
+.card .what { color: var(--fg-2); font-size: .9rem }
+.verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem }
+@media (max-width: 700px) { .verdict { grid-template-columns: 1fr } }
+.verdict ul { list-style: none; margin: .6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .7rem }
+.verdict li { display: grid; grid-template-columns: 1.6rem 1fr; gap: .4rem; font-size: 1rem }
+.verdict .ic { font-weight: 900; font-size: 1.05rem }
+.verdict .pro .ic { color: var(--good) } .verdict .con .ic { color: var(--crit) }
+.verdict h3 { font: 800 1.15rem var(--f-display); margin: 0 }
+.chips { display: flex; flex-wrap: wrap; gap: .5rem }
+.chip { padding: .45rem .8rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: .88rem }
+.btns { display: flex; flex-wrap: wrap; gap: .7rem }
+.btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 1.2rem; border-radius: 999px; background: var(--fg); color: var(--bg); text-decoration: none; font-weight: 600 }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line) }
+details.tables { border-top: 1px solid var(--line); padding-top: 1rem }
+details.tables summary { cursor: pointer; font-weight: 600; min-height: 40px; display: flex; align-items: center }
+.tw { overflow-x: auto; margin-top: .8rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface) }
+table { border-collapse: collapse; width: 100%; font-size: .85rem }
+th, td { padding: .5rem .7rem; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap }
+th { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-2) }
+td.n { text-align: right; font-family: var(--f-mono) }
+footer { max-width: 76rem; margin: 0 auto; padding: 2rem max(16px, env(safe-area-inset-right, 0px)) 4rem max(16px, env(safe-area-inset-left, 0px)); color: var(--muted); font-size: .85rem; display: flex; flex-direction: column; gap: .4rem }
+#err { display: none; margin: 1rem; padding: 1rem; border-radius: 10px; background: var(--surface); border: 1px solid var(--crit); color: var(--crit) }
 </style>
 </head>
 <body>
+<div id="bar"></div>
+<nav id="dots" aria-label="Chapters"></nav>
+<div id="err" role="alert"></div>
+
 <main>
-  <header>
-    <h1>GME on Ethereum · daily watch</h1>
-    <p class="sub">Who is quietly accumulating, what the focus wallet's cluster is doing, and whether any watched group is heading for an exchange. Rebuilt every day from the public transfer history.</p>
-    <div class="topline">
-      <span id="fresh" class="pill"><span class="dot"></span><span>loading…</span></span>
-      <a class="btn" href="/study.html">Read the full study</a>
-      <a href="https://etherscan.io/token/0xc56C7A0eAA804f854B536A5F3D5f49D2EC4B12b8" target="_blank" rel="noopener">Contract on Etherscan ↗</a>
+  <section class="ch hero" id="c-hero" data-t="Start">
+    <span class="fresh rv" id="fresh"><i></i><span>loading…</span></span>
+    <h1 class="rv">GME on Ethereum</h1>
+    <p class="sub rv">Who bought it, who sold it, and who is quietly buying now. The whole story from the blockchain, in 12 charts.</p>
+    <div class="stats rv" id="hero-stats"></div>
+    <div class="viz panel rv" id="v-price" style="min-height:300px"></div>
+    <span class="cue">↓ scroll</span>
+  </section>
+
+  <section class="ch" id="c-launch" data-t="The launch">
+    <div class="kicker rv"><b>01</b> · The launch</div>
+    <h2 class="rv">Day one: <em>42%</em> of supply, for 2.5 ETH</h2>
+    <div class="two rv">
+      <div><div class="viz" id="v-launch"></div></div>
+      <div class="stats" id="launch-stats" style="flex-direction:column;gap:1.4rem"></div>
     </div>
-  </header>
-  <div id="err" role="alert"></div>
-
-  <section aria-labelledby="h-now">
-    <h2 id="h-now">Right now</h2>
-    <div class="tiles" id="tiles"></div>
+    <p class="cap rv">One block after trading opened, a bundle of wallets owned 42% of all GME. They sold every coin within weeks.</p>
   </section>
 
-  <section aria-labelledby="h-alerts">
-    <h2 id="h-alerts">Since the last run</h2>
-    <p class="note" id="alerts-note"></p>
-    <ul class="alerts" id="alerts"></ul>
+  <section class="ch" id="c-focus" data-t="The focus wallet">
+    <div class="kicker rv"><b>02</b> · The focus wallet</div>
+    <h2 class="rv">One wallet kept buying, <em>and never sold</em> on the DEX</h2>
+    <div class="stats rv" id="focus-stats"></div>
+    <div class="viz panel rv" id="v-focus" style="min-height:420px"></div>
   </section>
 
-  <section aria-labelledby="h-acc">
-    <h2 id="h-acc">Quiet accumulators (last 90 days)</h2>
-    <p class="note">Owners (one wallet or a linked group) that added at least 0.1% of supply in 90 days and sold less than 15% of it. Tap an owner to see its wallets. A group is a lower bound on what one person controls; it does not prove who owns it.</p>
-    <div class="tablewrap"><table id="acc"></table></div>
+  <section class="ch" id="c-net" data-t="Its network">
+    <div class="kicker rv"><b>03</b> · Its network</div>
+    <h2 class="rv" id="net-h">It isn't alone</h2>
+    <div class="stats rv" id="net-stats"></div>
+    <div class="viz panel rv" id="v-net" style="min-height:460px"></div>
+    <p class="cap rv">Each dot is a wallet, sized by what it holds. Lines are the evidence that links them. Drag to explore; tap a dot to open it on Etherscan.</p>
   </section>
 
-  <section aria-labelledby="h-vaults">
-    <h2 id="h-vaults">Buy-and-hide holding wallets</h2>
-    <p class="note">Fresh wallets (first GME in the last 90 days) that received at least 10M GME from wallets that bought on the DEX and forwarded at least 80% of it. At this market cap, $10k–20k in this pattern is someone building a position. Not all of them keep it: "Since then" shows whether the coins are still there, were sold on the DEX, went to an exchange, or moved to other wallets.</p>
-    <p class="note" id="vaults-note"></p>
-    <div class="tablewrap"><table id="vaults"></table></div>
+  <section class="ch" id="c-cex" data-t="Where it sold">
+    <div class="kicker rv"><b>04</b> · Where it sold</div>
+    <h2 class="rv">The selling went <em>to exchanges</em>, around the top</h2>
+    <div class="stats rv" id="cex-stats"></div>
+    <div class="viz panel rv" id="v-cex" style="min-height:400px"></div>
   </section>
 
-  <section aria-labelledby="h-groups">
-    <h2 id="h-groups">Watched groups, current holdings</h2>
-    <p class="note">Every group the daily run compares against the previous day. A drop of 0.05% of supply or more raises an alert.</p>
-    <div class="tablewrap"><table id="groups"></table></div>
+  <section class="ch" id="c-pool" data-t="A thin pool">
+    <div class="kicker rv"><b>05</b> · A thin pool</div>
+    <h2 class="rv">Small money <em>moves the price</em></h2>
+    <div class="two rv">
+      <div class="calc panel">
+        <span class="kicker">If someone buys</span>
+        <div class="readout"><div class="stat"><span class="v" id="calc-usd">$20,000</span><span class="k">of GME on Uniswap</span></div></div>
+        <input type="range" id="calc-range" min="0" max="1000" value="600" aria-label="Amount to buy in dollars">
+        <div class="presets" id="calc-presets"></div>
+        <div class="readout">
+          <div class="stat red"><span class="v" id="calc-up">+0%</span><span class="k">price moves</span></div>
+          <div class="stat"><span class="v" id="calc-sup">0%</span><span class="k">of all GME bought</span></div>
+        </div>
+      </div>
+      <div class="viz" id="v-pool" style="min-height:300px"></div>
+    </div>
+    <p class="cap rv" id="pool-cap"></p>
   </section>
 
-  <section aria-labelledby="h-float">
-    <h2 id="h-float">Who holds the supply</h2>
-    <p class="note" id="float-note"></p>
-    <div class="tablewrap"><table id="float"></table></div>
+  <section class="ch" id="c-supply" data-t="Who holds it">
+    <div class="kicker rv"><b>06</b> · Who holds it</div>
+    <h2 class="rv" id="supply-h">Linked groups hold <em>more than the pool</em></h2>
+    <div class="panel rv"><div class="sbar" id="v-supply"></div><div class="sleg" id="supply-leg"></div></div>
   </section>
 
-  <section aria-labelledby="h-flow">
-    <h2 id="h-flow">Buyers and sellers on the DEX</h2>
-    <p class="note">Wallets that net-bought or net-sold against the pool in each window. Exchanges, pools and routers are excluded.</p>
-    <div class="tablewrap"><table id="flow"></table></div>
+  <section class="ch" id="c-urpd" data-t="Underwater">
+    <div class="kicker rv"><b>07</b> · Underwater</div>
+    <h2 class="rv" id="urpd-h">Most holders paid more than today's price</h2>
+    <div class="viz panel rv" id="v-urpd" style="min-height:340px"></div>
+    <p class="cap rv">Every coin still held, placed at the price it was bought for. Few holders are in profit, so few have a reason to sell into a small rise.</p>
   </section>
 
-  <section aria-labelledby="h-hist">
-    <h2 id="h-hist">Alert history</h2>
-    <p class="note">Every past run that raised a medium or high alert, newest first.</p>
-    <div class="history" id="history"></div>
+  <section class="ch" id="c-cohorts" data-t="The early crowd">
+    <div class="kicker rv"><b>08</b> · The early crowd</div>
+    <h2 class="rv" id="coh-h">Almost everyone who was early has left</h2>
+    <div class="viz panel rv" id="v-cohorts" style="min-height:320px"></div>
   </section>
 
-  <footer>
-    <p>Method: every transfer of the GME contract is pulled from public Ethereum nodes and replayed wallet by wallet. Pools, routers, exchanges and burns are excluded from "holders". Wallets are linked only by GME transfers and by ETH sent between wallets already on the watchlist; two wallets funded by the same exchange are never linked. Prices are daily closes from DeFiLlama.</p>
-    <p>Everything here is a description of positions on a public blockchain. It is not financial advice.</p>
-    <p id="built"></p>
-  </footer>
+  <section class="ch" id="c-acc" data-t="Quiet buyers">
+    <div class="kicker rv"><b>09</b> · Quiet buyers</div>
+    <h2 class="rv" id="acc-h">Some wallets are <em>quietly accumulating</em></h2>
+    <div class="stats rv" id="acc-stats"></div>
+    <div class="viz panel rv" id="v-acc" style="min-height:420px"></div>
+    <p class="cap rv">Last 90 days. Each bubble is an owner (one wallet or a linked group) that added at least 0.1% of supply and kept almost all of it. Bigger bubble, more dollars spent. Tap to open on Etherscan.</p>
+  </section>
+
+  <section class="ch" id="c-hide" data-t="Buy and hide">
+    <div class="kicker rv"><b>10</b> · Buy and hide</div>
+    <h2 class="rv" id="hide-h">Buy with a fresh wallet, hide it in another</h2>
+    <div class="panel rv"><div class="hw" id="v-hide"></div><div class="legend" id="hide-leg"></div></div>
+  </section>
+
+  <section class="ch" id="c-today" data-t="Today">
+    <div class="kicker rv"><b>11</b> · Today</div>
+    <h2 class="rv" id="today-h">Since the last check</h2>
+    <p class="cap rv" id="today-cap"></p>
+    <div class="cards rv" id="v-today"></div>
+  </section>
+
+  <section class="ch" id="c-verdict" data-t="Verdict">
+    <div class="kicker rv"><b>12</b> · Verdict</div>
+    <h2 class="rv">A bet on what <em>one group</em> does next</h2>
+    <div class="verdict rv">
+      <div class="panel pro"><h3>In favour</h3><ul>
+        <li><span class="ic">✓</span><span>Clean contract: renounced, 0% tax, liquidity burned.</span></li>
+        <li><span class="ic">✓</span><span>Most coins are underwater and haven't moved in a year. Few sellers.</span></li>
+        <li><span class="ic">✓</span><span>The biggest holder keeps adding, and quiet buyers are positioning.</span></li>
+      </ul></div>
+      <div class="panel con"><h3>Against</h3><ul>
+        <li><span class="ic">✕</span><span>One group owns more than the pool, so it sets the price.</span></li>
+        <li><span class="ic">✕</span><span>It already sold into the last top, through exchanges.</span></li>
+        <li><span class="ic">✕</span><span>Flat demand, a thin pool and no exchange listing. Your exit is their exit.</span></li>
+      </ul></div>
+    </div>
+    <div class="rv"><div class="kicker" style="margin-bottom:.7rem">Watched every day</div>
+      <div class="chips">
+        <span class="chip">▲ Any linked wallet sending to an exchange</span>
+        <span class="chip">▲ The focus wallet selling on the DEX</span>
+        <span class="chip">● New buy-and-hide wallets</span>
+        <span class="chip">● Holders rising for weeks</span>
+      </div></div>
+    <p class="cap rv">If you take a position: money you can lose entirely, small pieces, tight slippage.</p>
+    <div class="btns rv"><a class="btn" href="/study.html">Read the full study</a><a class="btn ghost" href="https://etherscan.io/token/0xc56C7A0eAA804f854B536A5F3D5f49D2EC4B12b8" target="_blank" rel="noopener">Contract on Etherscan ↗</a></div>
+    <details class="tables rv"><summary>All the numbers (tables)</summary><div id="tables"></div></details>
+  </section>
 </main>
+
+<footer>
+  <p>Rebuilt daily from every GME transfer on public Ethereum nodes; prices from DeFiLlama. Wallet links are evidence of shared control, not proof of who owns them.</p>
+  <p>A reading of public on-chain data, not financial advice.</p>
+  <p id="built"></p>
+</footer>
+<div id="tip" role="status" aria-live="polite"></div>
+
 <script>
 (() => {
-  const SUPPLY = 420.69e9;
-  const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const short = (a) => a ? a.slice(0, 6) + "…" + a.slice(-4) : "";
-  const addr = (a) => `<a class="mono" href="https://etherscan.io/address/${esc(a)}" target="_blank" rel="noopener" title="${esc(a)}">${esc(short(a))}</a>`;
-  const tok = (t) => t == null ? "—" : Math.abs(t) >= 1e9 ? (t / 1e9).toFixed(2) + "B" : Math.abs(t) >= 1e6 ? (t / 1e6).toFixed(0) + "M" : Math.round(t).toLocaleString("en-US");
-  const pct = (p, d = 2) => p == null ? "—" : p.toFixed(p < 0.1 && p > 0 ? 3 : d) + "%";
-  const usd = (u) => u == null ? "—" : u >= 1e6 ? "$" + (u / 1e6).toFixed(2) + "M" : "$" + Math.round(u).toLocaleString("en-US");
-  const price = (p) => p == null ? "—" : "$" + p.toFixed(Math.max(2, 2 - Math.floor(Math.log10(p))));
-  const date = (s) => s ? new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC" : "—";
-  const day = (s) => s ? new Date(s.length === 10 ? s + "T00:00:00Z" : s).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
-  const SEV = { high: "▲ High", medium: "● Medium", info: "· Info" };
+"use strict";
+const SUPPLY = 420.69e9;
+const $ = (id) => document.getElementById(id);
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const short = (a) => a ? a.slice(0, 6) + "…" + a.slice(-4) : "";
+const B = (t) => t == null ? "—" : Math.abs(t) >= 1e9 ? (t / 1e9).toFixed(t >= 1e10 ? 1 : 2) + "B" : Math.abs(t) >= 1e6 ? Math.round(t / 1e6) + "M" : Math.round(t).toLocaleString("en-US");
+const pc = (p, d = 1) => (p == null ? "—" : (p > 0 && p < 0.1 ? p.toFixed(2) : p.toFixed(d)) + "%");
+const usd = (u) => u == null ? "—" : Math.abs(u) >= 1e6 ? "$" + (u / 1e6).toFixed(2) + "M" : Math.abs(u) >= 1e4 ? "$" + Math.round(u / 1e3) + "k" : "$" + Math.round(u).toLocaleString("en-US");
+const price = (p) => "$" + p.toFixed(Math.max(2, 2 - Math.floor(Math.log10(p))));
+const pd = d3.utcParse("%Y-%m-%d");
+const fdate = d3.utcFormat("%-d %b %Y");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ETHERSCAN = (a) => `https://etherscan.io/address/${a}`;
+const holding = (v) => v.bal != null && v.bal >= 0.8 * v.tok && (v.soldDex || 0) + (v.toCex || 0) <= 0.2 * v.tok;
+const tickP = (v) => "$" + v.toFixed(Math.max(0, -Math.floor(Math.log10(v) + 1e-9)));
+const mant = (v) => Math.round(v / 10 ** Math.floor(Math.log10(v) + 1e-9));
+const logTicks = (sc) => { const [a, b] = sc.domain(); return [1, 2, 5].flatMap((k) => d3.range(-9, 0).map((e) => k * 10 ** e)).filter((v) => v >= a && v <= b).sort((p, q) => p - q); };
 
-  fetch("/site.json", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("site.json " + r.status); return r.json(); }).then(render).catch((e) => {
-    $("err").style.display = "block"; $("err").textContent = "Could not load the data (" + e.message + ").";
-  });
+// ---------- tooltip ----------
+const tip = $("tip");
+function showTip(html, ev) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const r = tip.getBoundingClientRect(), pad = 14;
+  let x = ev.clientX + pad, y = ev.clientY + pad;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - pad;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - pad;
+  tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px";
+}
+const hideTip = () => { tip.style.opacity = 0; };
+const row = (color, k, v) => `<div class="row"><span>${color ? `<i style="background:${color}"></i> ` : ""}${esc(k)}</span><b>${esc(v)}</b></div>`;
 
-  function render(d) {
-    // Freshness: never show yesterday's numbers as if they were current.
-    const ageH = d.asOf ? (Date.now() - new Date(d.asOf)) / 3.6e6 : Infinity;
-    const f = $("fresh");
-    f.querySelector("span:last-child").textContent = "Data as of " + date(d.asOf) + (ageH > 36 ? ` · ${Math.floor(ageH / 24)} days old, the daily run may have failed` : "");
-    if (ageH > 36) f.classList.add("stale");
+// ---------- svg frame ----------
+function frame(el, h, m) {
+  el.innerHTML = "";
+  const W = el.clientWidth || 600;
+  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${h}`).attr("height", h);
+  return { svg, W, H: h, w: W - m.l - m.r, h: h - m.t - m.b, g: svg.append("g").attr("transform", `translate(${m.l},${m.t})`) };
+}
+const mobile = () => innerWidth < 640;
+function drawIn(path) {
+  if (reduce) return;
+  const n = path.node(); if (!n || !n.getTotalLength) return;
+  const L = n.getTotalLength();
+  path.attr("stroke-dasharray", `${L} ${L}`).attr("stroke-dashoffset", L).transition().duration(1100).ease(d3.easeCubicOut).attr("stroke-dashoffset", 0)
+    .on("end", () => path.attr("stroke-dasharray", null));
+}
 
-    const focus = d.groups.find((g) => /^Focus wallet/.test(g.name));
-    const indep = d.accumulators.filter((a) => a.kind === "independent");
-    const tiles = [
-      ["Price", price(d.price), "daily close"],
-      ["Market cap", usd(d.mcap), "420.69B supply"],
-      ["In the Uniswap pool", tok(d.pool), pct(d.poolPct, 1) + " of supply"],
-      ["Holders", d.holders ? d.holders.n.toLocaleString("en-US") : "—", d.holders && d.holders3m ? `${d.holders.n - d.holders3m.n >= 0 ? "+" : ""}${(d.holders.n - d.holders3m.n).toLocaleString("en-US")} vs 3 months ago` : ""],
-      ["Focus wallet's cluster", focus ? pct(focus.pct, 1) : "—", focus ? tok(focus.tok) + " GME" : ""],
-      ["Quiet accumulators", String(indep.length), "independent owners, 90 days"],
-    ];
-    $("tiles").innerHTML = tiles.map(([k, v, n]) => `<div class="tile"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span><span class="n">${esc(n)}</span></div>`).join("");
+let D; // site.json
+const charts = {};
+fetch("/site.json", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("site.json " + r.status); return r.json(); }).then((d) => {
+  D = d; prepare(); observe();
+}).catch((e) => { $("err").style.display = "block"; $("err").textContent = "Could not load the data (" + e.message + ")."; });
 
-    const order = { high: 0, medium: 1, info: 2 };
-    const al = [...d.alerts].sort((a, b) => order[a.severity] - order[b.severity]);
-    const highs = al.filter((a) => a.severity === "high").length;
-    $("alerts-note").textContent = `Window: ${date(d.since)} → ${date(d.asOf)}. ` +
-      (highs ? `${highs} high alert${highs > 1 ? "s" : ""}: a watched group sent coins to an exchange or sold them on the DEX.` : "No watched group sent coins to an exchange or sold on the DEX.");
-    $("alerts").innerHTML = al.length ? al.map((a) => `<li class="alert ${esc(a.severity)}"><span class="sev">${SEV[a.severity] || esc(a.severity)}</span><span>${esc(a.text)}</span></li>`).join("")
-      : `<li class="calm">Nothing moved in any watched group.</li>`;
+// ---------- static text that depends on data ----------
+function prepare() {
+  const J = D.journey;
+  const ageH = D.asOf ? (Date.now() - new Date(D.asOf)) / 3.6e6 : Infinity;
+  $("fresh").lastElementChild.textContent = "Data as of " + d3.utcFormat("%-d %b %Y, %H:%M UTC")(new Date(D.asOf)) + (ageH > 36 ? ` · ${Math.floor(ageH / 24)} days old` : "");
+  if (ageH > 36) $("fresh").classList.add("stale");
+  const last = J.price[J.price.length - 1][1];
+  $("hero-stats").innerHTML = stat(price(D.price ?? last), "price") + stat(usd(D.mcap), "market cap") +
+    stat("−" + Math.round(100 * (1 - (D.price ?? last) / J.ath.p)) + "%", "from the Dec 2024 top", true) +
+    (D.holders ? stat(D.holders.n.toLocaleString("en-US"), "holders") : "");
 
-    const kindTag = { focus: "Focus wallet's cluster", coinbase: "Coinbase group" };
-    $("acc").innerHTML = `<thead><tr><th>Owner</th><th class="num">Added</th><th class="num">% supply</th><th class="num">Spent</th><th class="num">Buys</th><th class="num">Holds</th><th>Last buy</th><th>Notes</th></tr></thead><tbody>` +
-      d.accumulators.map((a) => {
-        const tags = [a.kind !== "independent" ? `<span class="tag kind">${kindTag[a.kind]}</span>` : ""]
-          .concat(a.tags.filter((t) => !/cluster|Coinbase group/i.test(t)).map((t) => `<span class="tag">${esc(t)}</span>`)).join("");
-        const who = a.wallets.length > 1
-          ? `<details><summary>${addr(a.wallets[0])}<span class="muted count">${a.n} wallets</span></summary><ul class="wallets">${a.wallets.map((w) => `<li>${addr(w)}</li>`).join("")}</ul></details>`
-          : addr(a.owner);
-        return `<tr><td class="who">${who}</td><td class="num">${tok(a.net)}</td><td class="num">${pct(a.netPct)}</td><td class="num">${a.usd ? usd(a.usd) : "—"}</td>` +
-          `<td class="num">${a.buys ? `${a.buys} on ${a.buyDays}d` : "—"}</td><td class="num">${tok(a.held)} <span class="muted">(${pct(a.heldPct, 1)})</span></td>` +
-          `<td class="nowrap">${a.lastBuy ? day(a.lastBuy) : (a.cexin > 0 ? "from exchange" : a.xin > 0 ? "cross-chain" : "—")}${a.active ? ' <span class="live">ACTIVE</span>' : ""}</td><td>${tags}</td></tr>`;
-      }).join("") + "</tbody>";
+  const L = J.launch;
+  $("launch-stats").innerHTML = stat(String(L.wallets), "wallets in the first block") + stat(String(L.funders), "funders behind them") +
+    stat(L.eth.toFixed(1) + " ETH", "what they paid") + stat("0", "coins they still hold", true);
 
-    const since = (v) => {
-      const parts = [];
-      if (v.bal != null && v.bal >= 0.8 * v.tok) parts.push(`<span class="st hold">● Still holding</span>`);
-      if (v.toCex > 1e6) parts.push(`<span class="st cex">▲ ${tok(v.toCex)} sent to an exchange</span>`);
-      if (v.soldDex > 1e6) parts.push(`<span class="st sold">▼ ${tok(v.soldDex)} sold on the DEX</span>`);
-      if (v.other > 1e6) parts.push(`<span class="st">→ ${tok(v.other)} moved to other wallets</span>`);
-      return parts.join("<br>") || "—";
-    };
-    const holding = d.vaults.filter((v) => v.bal != null && v.bal >= 0.8 * v.tok).length;
-    $("vaults-note").textContent = d.vaults.length ? `${holding} of ${d.vaults.length} still hold what they received.` : "";
-    $("vaults").innerHTML = `<thead><tr><th>Holding wallet</th><th class="num">Received</th><th class="num">Bought for</th><th class="num">Holds now</th><th>Since then</th><th>Fed by</th><th>Active</th></tr></thead><tbody>` +
-      (d.vaults.length ? d.vaults.map((v) => `<tr><td class="who">${addr(v.a)}</td><td class="num">${tok(v.tok)}</td><td class="num">${usd(v.usd)}</td>` +
-        `<td class="num">${v.bal == null ? "—" : v.bal < 1e6 ? "0" : `${tok(v.bal)} <span class="muted">(${pct(v.balPct)})</span>`}</td><td>${since(v)}</td>` +
-        `<td><details><summary>${v.feeders.length} buyer wallet${v.feeders.length > 1 ? "s" : ""}</summary><ul class="wallets">${v.feeders.map((w) => `<li>${addr(w)}</li>`).join("")}</ul></details></td>` +
-        `<td class="nowrap">${day(v.first)}${v.last && v.last.slice(0, 10) !== v.first.slice(0, 10) ? " → " + day(v.last) : ""}</td></tr>`).join("")
-        : `<tr><td colspan="7" class="muted">None in the last 90 days.</td></tr>`) + "</tbody>";
+  const fNow = J.focus[J.focus.length - 1] * 1e9, cNow = J.cluster[J.cluster.length - 1] * 1e9;
+  $("focus-stats").innerHTML = stat(B(fNow), "GME in the focus wallet") + stat(pc(100 * fNow / SUPPLY), "of all supply") + stat("0", "sales on the DEX", true);
+  const others = J.graph.nodes.length - 1;
+  $("net-h").innerHTML = `It isn't alone: <em>${others} linked wallets</em>`;
+  $("net-stats").innerHTML = stat(String(J.graph.nodes.length), "wallets") + stat(B(cNow), "GME together") + stat(pc(100 * cNow / SUPPLY), "of supply") +
+    stat(B(D.pool), "GME in the whole pool");
 
-    const live = d.groups.filter((g) => g.tok >= 1e6), empty = d.groups.filter((g) => g.tok < 1e6);
-    $("groups").innerHTML = `<thead><tr><th>Group</th><th class="num">Holds</th><th class="num">% supply</th></tr></thead><tbody>` +
-      live.map((g) => `<tr><td>${esc(g.name)}</td><td class="num">${tok(g.tok)}</td><td class="num">${pct(g.pct)}</td></tr>`).join("") +
-      (empty.length ? `<tr><td colspan="3"><details><summary>${empty.length} more watched wallet${empty.length > 1 ? "s" : ""} now hold nothing (watched in case coins come back)</summary><ul class="wallets">${empty.map((g) => `<li>${esc(g.name)}</li>`).join("")}</ul></details></td></tr>` : "") + "</tbody>";
+  const tot = d3.sum(J.clusterToCex, (d) => d[1]);
+  const athM = d3.utcMonth.floor(pd(J.ath.d));
+  const near = d3.sum(J.clusterToCex.filter((d) => Math.abs(d3.utcMonth.count(athM, d3.utcParse("%Y-%m")(d[0]))) <= 3), (d) => d[1]);
+  $("cex-stats").innerHTML = stat(usd(tot), "sent to exchanges by the group") + stat(usd(near), "within 3 months of the top", true) +
+    stat(Math.round(100 * near / tot) + "%", "of it");
 
-    const fl = [...d.float].sort((a, b) => b.tok - a.tok);
-    const maxP = Math.max(...fl.map((g) => g.pct), 1);
-    $("float-note").textContent = "All 420.69B GME, split by who holds it. Groups are the linked-wallet owners found by the clustering; \"independent\" wallets are not linked to anyone else.";
-    $("float").innerHTML = `<thead><tr><th>Holder</th><th class="num">GME</th><th class="num">% supply</th><th class="barcell"><span class="muted" style="font-weight:600">share</span></th></tr></thead><tbody>` +
-      fl.map((g) => `<tr title="${esc(g.name)}: ${pct(g.pct, 1)} of supply"><td>${esc(g.name)}</td><td class="num">${tok(g.tok)}</td><td class="num">${pct(g.pct, 1)}</td>` +
-        `<td class="barcell"><div class="bartrack"><div class="bar" style="width:${(100 * g.pct / maxP).toFixed(1)}%"></div></div></td></tr>`).join("") + "</tbody>";
+  // Supply headline from the data
+  const fl = D.float, get = (re) => d3.sum(fl.filter((g) => re.test(g.name)), (g) => g.pct);
+  const linked = get(/cluster|extension|Coinbase|multi-wallet/i), pool = get(/Uniswap/i);
+  $("supply-h").innerHTML = `Linked groups hold <em>${Math.round(linked)}%</em>. The pool holds ${Math.round(pool)}%.`;
 
-    $("flow").innerHTML = `<thead><tr><th>Window</th><th class="num">Net buyers</th><th class="num">Net sellers</th><th class="num">Bought</th><th class="num">Sold</th><th class="num">New buyers</th><th class="num">Focus cluster net</th></tr></thead><tbody>` +
-      d.windows.map((w) => `<tr><td class="nowrap">Last ${w.days} days</td><td class="num">${w.buyers}</td><td class="num">${w.sellers}</td><td class="num">${usd(w.buyUsd)}</td><td class="num">${usd(w.sellUsd)}</td><td class="num">${w.newBuyers}</td>` +
-        `<td class="num">${w.clusterNet >= 0 ? "+" : "−"}${usd(Math.abs(w.clusterNet))}</td></tr>`).join("") + "</tbody>";
-
-    $("history").innerHTML = d.history.length ? d.history.map((r) => `<div class="run"><h3>${date(r.since)} → ${date(r.asOf)}</h3><ul class="alerts">` +
-      r.alerts.map((a) => `<li class="alert ${esc(a.severity)}"><span class="sev">${SEV[a.severity]}</span><span>${esc(a.text)}</span></li>`).join("") + "</ul></div>").join("")
-      : `<p class="calm">No medium or high alerts yet.</p>`;
-
-    $("built").textContent = "Page built " + date(d.builtAt) + ".";
+  if (J.urpd) {
+    const uw = d3.sum(J.urpd.buckets.filter((b) => Math.sqrt(b.lo * b.hi) > J.urpd.spot), (b) => b.pct);
+    $("urpd-h").innerHTML = `<em>${Math.round(uw)}%</em> of held coins are underwater`;
   }
+  const c1 = J.cohorts.find((c) => /day 1/.test(c.name));
+  if (c1) $("coh-h").innerHTML = `Of ${c1.wallets.toLocaleString("en-US")} day-one buyers, <em>${c1.holdNow}</em> still hold`;
+
+  const ind = D.accumulators.filter((a) => a.kind === "independent");
+  $("acc-h").innerHTML = `${ind.length} quiet buyers added <em>${pc(d3.sum(ind, (a) => a.netPct))}</em> of supply`;
+  $("acc-stats").innerHTML = stat(String(ind.length), "independent owners") + stat(pc(d3.sum(ind, (a) => a.netPct)), "of supply added") +
+    stat(usd(d3.sum(ind, (a) => a.usd)), "spent on the DEX") + stat(String(ind.filter((a) => a.active).length), "bought in the last 2 weeks");
+
+  const hold = D.vaults.filter(holding);
+  $("hide-h").innerHTML = `${D.vaults.length} hidden buys in 90 days. <em>${hold.length}</em> still holding.`;
+
+  const hi = D.alerts.filter((a) => a.kind === "flow" && a.severity === "high").length;
+  const buys = D.alerts.filter((a) => (a.kind === "flow" && /^bought|^from exchange/.test(a.what)) || /^new_/.test(a.kind)).length;
+  $("today-h").innerHTML = hi ? `<em>${hi} exit alert${hi > 1 ? "s" : ""}</em> since the last check` : `No exits. <em>${buys} buying signal${buys === 1 ? "" : "s"}</em>.`;
+  $("today-cap").textContent = `${d3.utcFormat("%-d %b %H:%M")(new Date(D.since))} → ${d3.utcFormat("%-d %b %H:%M UTC")(new Date(D.asOf))}. ${D.groups.length} watched groups, compared every day.`;
+  $("built").textContent = "Page built " + d3.utcFormat("%-d %b %Y, %H:%M UTC")(new Date(D.builtAt)) + ".";
+
+  // chapter dots
+  const secs = [...document.querySelectorAll(".ch")];
+  $("dots").innerHTML = secs.map((s) => `<a href="#${s.id}" aria-label="${esc(s.dataset.t)}"><span>${esc(s.dataset.t)}</span></a>`).join("");
+  tables(); calcInit();
+}
+const stat = (v, k, red) => `<div class="stat${red ? " red" : ""}"><span class="v">${esc(v)}</span><span class="k">${esc(k)}</span></div>`;
+
+// ---------- lazy render on scroll ----------
+const RENDER = {
+  "c-hero": () => chartPrice(), "c-launch": () => chartLaunch(), "c-focus": () => chartFocus(), "c-net": () => chartNet(),
+  "c-cex": () => chartCex(), "c-pool": () => chartPool(), "c-supply": () => chartSupply(), "c-urpd": () => chartUrpd(),
+  "c-cohorts": () => chartCohorts(), "c-acc": () => chartAcc(), "c-hide": () => chartHide(), "c-today": () => chartToday(),
+};
+const drawn = new Set();
+function observe() {
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add("in");
+    const id = e.target.id;
+    if (!drawn.has(id) && RENDER[id]) { drawn.add(id); try { RENDER[id](); } catch (err) { console.error(id, err); } }
+  }), { rootMargin: "0px 0px -15% 0px", threshold: 0.05 });
+  document.querySelectorAll(".ch").forEach((s) => io.observe(s));
+  const dots = () => [...document.querySelectorAll("#dots a")];
+  const spy = new IntersectionObserver((es) => es.forEach((e) => {
+    if (e.isIntersecting) dots().forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id));
+  }), { rootMargin: "-45% 0px -50% 0px" });
+  document.querySelectorAll(".ch").forEach((s) => spy.observe(s));
+  addEventListener("scroll", () => { const h = document.documentElement; $("bar").style.width = (100 * h.scrollTop / (h.scrollHeight - h.clientHeight)) + "%"; }, { passive: true });
+  let t; const redraw = () => { clearTimeout(t); t = setTimeout(() => drawn.forEach((id) => { try { RENDER[id](true); } catch (e) { console.error(e); } }), 180); };
+  addEventListener("resize", (() => { let w = innerWidth; return () => { if (innerWidth !== w) { w = innerWidth; redraw(); } }; })());
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", redraw);
+  new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+}
+
+// ---------- 00 price ----------
+function chartPrice() {
+  const J = D.journey, data = J.price.map(([d, p]) => ({ d: pd(d), p })).filter((x) => x.p > 0);
+  const el = $("v-price"), m = { t: 26, r: mobile() ? 12 : 60, b: 28, l: mobile() ? 64 : 74 };
+  const f = frame(el, mobile() ? 280 : 360, m);
+  const x = d3.scaleUtc(d3.extent(data, (d) => d.d), [0, f.w]);
+  const y = d3.scaleLog([d3.min(data, (d) => d.p) * 0.8, d3.max(data, (d) => d.p) * 1.6], [f.h, 0]);
+  const runs = J.runs.filter((r) => /Run/.test(r.name));
+  f.g.append("g").selectAll("rect").data(runs).join("rect").attr("x", (r) => x(pd(r.a))).attr("width", (r) => Math.max(2, x(pd(r.b)) - x(pd(r.a))))
+    .attr("y", 0).attr("height", f.h).attr("fill", css("--s2")).attr("opacity", 0.12);
+  let lastX = -1e9;
+  const shown = runs.filter((r) => { const X = x(pd(r.a)); if (X - lastX < 38) return false; lastX = X; return true; });
+  f.g.append("g").selectAll("text").data(shown).join("text").attr("class", "dlbl").attr("x", (r) => x(pd(r.a)) + 4).attr("y", 14)
+    .text((r) => "×" + r.mult.toFixed(1));
+  const pt = logTicks(y).filter((v, i, a) => a.length < 6 || mant(v) !== 2);
+  f.g.append("g").attr("class", "gridl").call(d3.axisLeft(y).tickValues(pt).tickSize(-f.w).tickFormat(""));
+  f.g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(pt).tickFormat(tickP));
+  f.g.append("g").attr("class", "axis").attr("transform", `translate(0,${f.h})`).call(d3.axisBottom(x).ticks(mobile() ? 4 : 7));
+  const area = d3.area().x((d) => x(d.d)).y0(f.h).y1((d) => y(d.p)).curve(d3.curveMonotoneX);
+  const grad = f.svg.append("defs").append("linearGradient").attr("id", "pg").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+  grad.append("stop").attr("offset", "0%").attr("stop-color", css("--s1")).attr("stop-opacity", 0.28);
+  grad.append("stop").attr("offset", "100%").attr("stop-color", css("--s1")).attr("stop-opacity", 0);
+  f.g.append("path").datum(data).attr("d", area).attr("fill", "url(#pg)");
+  const line = f.g.append("path").datum(data).attr("d", d3.line().x((d) => x(d.d)).y((d) => y(d.p)).curve(d3.curveMonotoneX))
+    .attr("fill", "none").attr("stroke", css("--s1")).attr("stroke-width", 2);
+  drawIn(line);
+  const ath = { d: pd(J.ath.d), p: J.ath.p }, now = data[data.length - 1];
+  f.g.append("circle").attr("cx", x(ath.d)).attr("cy", y(ath.p)).attr("r", 5).attr("fill", css("--fg")).attr("stroke", css("--surface")).attr("stroke-width", 2);
+  f.g.append("text").attr("class", "dlbl").attr("x", x(ath.d) + 9).attr("y", y(ath.p) + 4).text("top " + price(ath.p));
+  f.g.append("circle").attr("cx", x(now.d)).attr("cy", y(now.p)).attr("r", 5).attr("fill", css("--accent")).attr("stroke", css("--surface")).attr("stroke-width", 2);
+  f.g.append("text").attr("class", "dlbl").attr("text-anchor", mobile() ? "end" : "start").attr("x", x(now.d) + (mobile() ? -9 : 9)).attr("y", y(now.p) - 9).text("now");
+  hoverLine(f, x, data.map((d) => d.d), (i) => [[css("--s1"), "Price", price(data[i].p)]], (i) => y(data[i].p));
+  addLegend(el, [[css("--s2"), "pump (× = how much price rose)", "band"]], "price-leg");
+}
+
+// shared crosshair: f = frame, x scale, dates array, rows(i) → [[color, label, value]], ys(i) → y of the dot(s)
+function hoverLine(f, x, dates, rows, ys) {
+  const bis = d3.bisector((d) => d).center;
+  const lines = [f.g.append("line").attr("class", "xhair").attr("y1", 0).attr("y2", f.h).style("opacity", 0)];
+  const dot = f.g.append("circle").attr("r", 4).attr("fill", css("--fg")).style("opacity", 0).style("pointer-events", "none");
+  f.svg.append("rect").attr("x", 0).attr("y", 0).attr("width", f.W).attr("height", f.H).attr("fill", "transparent").style("touch-action", "pan-y")
+    .on("pointermove", (ev) => {
+      const [mx] = d3.pointer(ev, f.g.node()); const i = Math.max(0, Math.min(dates.length - 1, bis(dates, x.invert(mx))));
+      const X = x(dates[i]); lines.forEach((l) => l.attr("x1", X).attr("x2", X).style("opacity", 1));
+      const yy = ys && ys(i); if (yy != null) dot.attr("cx", X).attr("cy", yy).style("opacity", 1);
+      showTip(`<div style="font-weight:600;margin-bottom:.2rem">${fdate(dates[i])}</div>` + rows(i).map((r) => row(...r)).join(""), ev);
+    })
+    .on("pointerleave", () => { lines.forEach((l) => l.style("opacity", 0)); dot.style("opacity", 0); hideTip(); });
+}
+function addLegend(el, items, id) {
+  let L = $(id);
+  if (!L) { L = document.createElement("div"); L.className = "legend"; L.id = id; el.after(L); }
+  L.innerHTML = items.map(([c, t, kind]) => `<span><i class="${kind === "line" ? "line" : ""}" style="background:${c}${kind === "band" ? ";opacity:.35" : ""}"></i>${esc(t)}</span>`).join("");
+}
+
+// ---------- 01 launch waffle ----------
+function chartLaunch() {
+  const steps = D.journey.launch.steps, b0 = steps[0][2], b34 = steps[steps.length - 1][2];
+  const parts = [[Math.round(b0), css("--s8"), `First block · ${D.journey.launch.wallets} wallets`], [Math.round(b34) - Math.round(b0), css("--s2"), `Next ${steps.length - 1} blocks (~7 min)`],
+    [100 - Math.round(b34), css("--neutral"), "Not bought in the first 7 minutes"]];
+  const el = $("v-launch"), size = Math.min(el.clientWidth || 360, 460), gap = 4, cell = (size - gap * 9) / 10;
+  const f = frame(el, size, { t: 0, r: 0, b: 0, l: 0 });
+  f.svg.attr("viewBox", `0 0 ${size} ${size}`).style("max-width", size + "px");
+  const cells = []; parts.forEach(([n, c, t]) => { for (let k = 0; k < n; k++) cells.push({ c, t, n }); });
+  f.g.selectAll("rect").data(cells).join("rect").attr("x", (d, i) => (i % 10) * (cell + gap)).attr("y", (d, i) => Math.floor(i / 10) * (cell + gap))
+    .attr("width", cell).attr("height", cell).attr("rx", 4).attr("fill", (d) => d.c)
+    .style("opacity", reduce ? 1 : 0).on("pointermove", (ev, d) => showTip(row(d.c, d.t, d.n + "% of supply"), ev)).on("pointerleave", hideTip)
+    .transition().delay((d, i) => reduce ? 0 : i * 12).duration(300).style("opacity", 1);
+  addLegend(el, parts.map(([n, c, t]) => [c, `${t} — ${n}%`]), "launch-leg");
+}
+
+// ---------- 02 focus wallet: holdings (stacked) + price panel, shared x ----------
+function chartFocus() {
+  const J = D.journey, dates = J.days.map(pd), pmap = new Map(J.price.map(([d, p]) => [d, p])), others = J.graph.nodes.length - 1;
+  const rows = J.days.map((d, i) => ({ d: dates[i], f: Math.max(0, J.focus[i]), r: Math.max(0, J.cluster[i] - J.focus[i]), p: pmap.get(d) }));
+  const el = $("v-focus"), mob = mobile(), H = mob ? 380 : 440, m = { t: 14, r: mob ? 10 : 70, b: 26, l: mob ? 40 : 52 };
+  const f = frame(el, H, m), gapH = 26, h1 = Math.round((f.h - gapH) * 0.68), h2 = f.h - gapH - h1;
+  const x = d3.scaleUtc(d3.extent(dates), [0, f.w]);
+  const y = d3.scaleLinear([0, d3.max(rows, (d) => d.f + d.r) * 1.08], [h1, 0]).nice();
+  const cF = css("--s1"), cR = css("--s2");
+  f.g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(4).tickSize(-f.w).tickFormat(""));
+  f.g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4).tickFormat((v) => v + "B"));
+  const st = d3.stack().keys(["f", "r"])(rows);
+  f.g.selectAll(".ly").data(st).join("path").attr("fill", (s, i) => (i ? cR : cF)).attr("opacity", 0.9)
+    .attr("d", d3.area().x((d) => x(d.data.d)).y0((d) => y(d[0])).y1((d) => y(d[1])).curve(d3.curveStepAfter));
+  const last = rows[rows.length - 1];
+  if (!mob) {
+    f.g.append("text").attr("class", "dlbl").attr("x", f.w + 6).attr("y", y(last.f / 2) + 4).text("focus wallet");
+    f.g.append("text").attr("class", "dlbl").attr("x", f.w + 6).attr("y", y(last.f + last.r / 2) + 4).text(`${others} others`);
+  }
+  const g2 = f.g.append("g").attr("transform", `translate(0,${h1 + gapH})`);
+  const pr = rows.filter((d) => d.p > 0);
+  const y2 = d3.scaleLog(d3.extent(pr, (d) => d.p), [h2, 0]);
+  g2.append("text").attr("class", "lbl").attr("y", -8).text("GME price");
+  g2.append("path").datum(pr).attr("fill", "none").attr("stroke", css("--fg-2")).attr("stroke-width", 1.5).attr("d", d3.line().x((d) => x(d.d)).y((d) => y2(d.p)));
+  g2.append("g").attr("class", "axis").attr("transform", `translate(0,${h2})`).call(d3.axisBottom(x).ticks(mob ? 4 : 7));
+  hoverLine(f, x, dates, (i) => [[cF, "Focus wallet", B(rows[i].f * 1e9)], [cR, `${others} linked wallets`, B(rows[i].r * 1e9)], ["", "Price", rows[i].p ? price(rows[i].p) : "—"]],
+    (i) => y(rows[i].f + rows[i].r));
+  addLegend(el, [[cF, "Focus wallet"], [cR, `Its ${others} linked wallets`], [css("--fg-2"), "Price", "line"]], "focus-leg");
+}
+
+// ---------- 03 network ----------
+function chartNet() {
+  const G = D.journey.graph, el = $("v-net"), mob = mobile(), H = mob ? 440 : 560;
+  const f = frame(el, H, { t: 0, r: 0, b: 0, l: 0 });
+  const FOCUS = "0xe14767042159e5bd2bf16f81a0fe387ab153fbb4";
+  const nodes = G.nodes.map((n) => ({ ...n, id: n.a })), ids = new Set(nodes.map((n) => n.id));
+  const links = G.links.filter((l) => ids.has(l.s) && ids.has(l.t)).map((l) => ({ source: l.s, target: l.t, kind: l.kind }));
+  const KC = { gme: css("--s1"), deposit: css("--s2"), eth: css("--s3") };
+  const KN = { gme: "Sent GME (seeded or emptied into)", deposit: "Shared an exchange deposit address", eth: "Got ETH from the focus wallet" };
+  const r = d3.scaleSqrt([0, d3.max(nodes, (n) => n.bal)], [3, mob ? 30 : 42]);
+  const sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id((d) => d.id).distance((l) => (l.kind === "deposit" ? 55 : 70)).strength(0.5))
+    .force("charge", d3.forceManyBody().strength(mob ? -45 : -70))
+    .force("collide", d3.forceCollide((d) => r(d.bal) + 2))
+    .force("x", d3.forceX(f.W / 2).strength(0.07)).force("y", d3.forceY(H / 2).strength(0.09));
+  const L = f.g.append("g").selectAll("line").data(links).join("line").attr("stroke", (d) => KC[d.kind]).attr("stroke-width", 1.6).attr("stroke-opacity", 0.75);
+  const N = f.g.append("g").selectAll("circle").data(nodes).join("circle")
+    .attr("r", (d) => r(d.bal)).attr("fill", (d) => (d.id === FOCUS ? css("--accent") : css("--neutral")))
+    .attr("stroke", css("--surface")).attr("stroke-width", 2).style("cursor", "pointer")
+    .on("pointermove", (ev, d) => showTip(`<div style="font-weight:600">${d.id === FOCUS ? "Focus wallet" : "Linked wallet"}</div>` +
+      row("", short(d.id), "") + row("", "Holds", B(d.bal * 1e9) + " GME") + (d.cexOut ? row("", "Sent to exchanges", B(d.cexOut * 1e9)) : "") +
+      (d.kinds.length ? `<div style="margin-top:.25rem;color:var(--fg-2)">${d.kinds.map((k) => KN[k] || k).join("<br>")}</div>` : ""), ev))
+    .on("pointerleave", hideTip).on("click", (ev, d) => open(ETHERSCAN(d.id), "_blank", "noopener"))
+    .call(d3.drag().on("start", (ev, d) => { if (!ev.active) sim.alphaTarget(0.25).restart(); d.fx = d.x; d.fy = d.y; })
+      .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; }).on("end", (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = d.fy = null; }));
+  const lbl = f.g.append("text").attr("class", "dlbl").attr("text-anchor", "middle").text("focus wallet");
+  const clamp = (d) => { const rr = r(d.bal) + 2; d.x = Math.max(rr, Math.min(f.W - rr, d.x)); d.y = Math.max(rr, Math.min(H - rr, d.y)); };
+  const tick = () => {
+    nodes.forEach(clamp);
+    L.attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y).attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y);
+    N.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+    const fn = nodes.find((n) => n.id === FOCUS); if (fn) lbl.attr("x", fn.x).attr("y", fn.y + r(fn.bal) + 15);
+  };
+  if (reduce) { sim.stop(); for (let i = 0; i < 300; i++) sim.tick(); tick(); } else sim.on("tick", tick);
+  addLegend(el, [[css("--accent"), "Focus wallet"], [css("--neutral"), "Linked wallet (size = GME held)"],
+    ...Object.keys(KN).map((k) => [KC[k], KN[k], "line"])], "net-leg");
+}
+
+// ---------- 04 sends to exchanges (bars) + price, shared x ----------
+function chartCex() {
+  const J = D.journey, mo = d3.utcParse("%Y-%m");
+  const months = d3.utcMonths(d3.utcMonth.floor(pd(J.days[0])), d3.utcMonth.offset(d3.utcMonth.floor(pd(J.days[J.days.length - 1])), 1));
+  const m2 = new Map(J.clusterToCex.map(([k, v]) => [k, v]));
+  const bars = months.map((d) => ({ d, v: m2.get(d3.utcFormat("%Y-%m")(d)) || 0 }));
+  const pr = J.price.map(([d, p]) => ({ d: pd(d), p })).filter((x) => x.p > 0);
+  const el = $("v-cex"), mob = mobile(), H = mob ? 360 : 420, m = { t: 14, r: mob ? 10 : 24, b: 26, l: mob ? 44 : 56 };
+  const f = frame(el, H, m), gapH = 26, h1 = Math.round((f.h - gapH) * 0.6), h2 = f.h - gapH - h1;
+  const x = d3.scaleUtc([months[0], d3.utcMonth.offset(months[months.length - 1], 1)], [0, f.w]);
+  const y = d3.scaleLinear([0, d3.max(bars, (d) => d.v) * 1.1], [h1, 0]).nice();
+  const c = css("--s2");
+  f.g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(4).tickSize(-f.w).tickFormat(""));
+  f.g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4).tickFormat((v) => usd(v)));
+  const bw = Math.max(2, f.w / months.length - 3);
+  f.g.append("g").selectAll("path").data(bars.filter((b) => b.v > 0)).join("path").attr("fill", c)
+    .attr("d", (b) => { const x0 = x(b.d) + 1.5, h = h1 - y(b.v), rr = Math.min(4, bw / 2, h); return `M${x0},${h1}V${h1 - h + rr}Q${x0},${h1 - h} ${x0 + rr},${h1 - h}H${x0 + bw - rr}Q${x0 + bw},${h1 - h} ${x0 + bw},${h1 - h + rr}V${h1}Z`; })
+    .on("pointermove", (ev, b) => showTip(`<div style="font-weight:600">${d3.utcFormat("%b %Y")(b.d)}</div>` + row(c, "Sent to exchanges", usd(b.v)), ev)).on("pointerleave", hideTip);
+  const athX = x(pd(J.ath.d));
+  f.g.append("line").attr("x1", athX).attr("x2", athX).attr("y1", 0).attr("y2", f.h).attr("stroke", css("--fg-2")).attr("stroke-dasharray", "3 3");
+  f.g.append("text").attr("class", "dlbl").attr("x", athX + 6).attr("y", 12).text("price top");
+  const g2 = f.g.append("g").attr("transform", `translate(0,${h1 + gapH})`);
+  const y2 = d3.scaleLog(d3.extent(pr, (d) => d.p), [h2, 0]);
+  g2.append("text").attr("class", "lbl").attr("y", -8).text("GME price");
+  g2.append("path").datum(pr).attr("fill", "none").attr("stroke", css("--fg-2")).attr("stroke-width", 1.5).attr("d", d3.line().x((d) => x(d.d)).y((d) => y2(d.p)));
+  g2.append("g").attr("class", "axis").attr("transform", `translate(0,${h2})`).call(d3.axisBottom(x).ticks(mob ? 4 : 7));
+  addLegend(el, [[c, "GME the linked wallets sent to exchanges, per month ($)"], [css("--fg-2"), "Price", "line"]], "cex-leg");
+}
+
+// ---------- 05 pool calculator ----------
+let calcV = 20000;
+const amt = (v) => Math.round(500 * Math.pow(500, v / 1000) / 100) * 100; // $500 → $250k, log scale
+const inv = (u) => Math.round(1000 * Math.log(u / 500) / Math.log(500));
+function impact(u) {
+  const P = D.journey.pool, x0 = P.weth, y0 = P.gme, dx = u / P.ethUsd;
+  const y1 = (x0 * y0) / (x0 + dx * 0.997), x1 = x0 + dx;
+  return { up: ((x1 / y1) / (x0 / y0) - 1) * 100, sup: ((y0 - y1) / SUPPLY) * 100 };
+}
+function calcInit() {
+  const presets = [5000, 10000, 20000, 50000, 100000];
+  $("calc-presets").innerHTML = presets.map((p) => `<button type="button" data-v="${p}">${usd(p)}</button>`).join("");
+  $("calc-presets").onclick = (e) => { const b = e.target.closest("button"); if (b) { calcV = +b.dataset.v; $("calc-range").value = inv(calcV); calcUpd(); } };
+  $("calc-range").value = inv(calcV);
+  $("calc-range").oninput = (e) => { calcV = amt(+e.target.value); calcUpd(); };
+  const P = D.journey.pool;
+  const one = d3.bisector((u) => impact(u).sup).left(d3.range(500, 400000, 500), 1);
+  $("pool-cap").textContent = `The only market is one Uniswap pool: ${P.weth.toFixed(0)} ETH against ${B(P.gme)} GME. About ${usd(500 * (one + 1))} buys 1% of all GME.`;
+  calcUpd();
+}
+function calcUpd() {
+  const r = impact(calcV);
+  $("calc-usd").textContent = "$" + calcV.toLocaleString("en-US");
+  $("calc-up").textContent = "+" + (r.up >= 100 ? Math.round(r.up) : r.up.toFixed(1)) + "%";
+  $("calc-sup").textContent = r.sup.toFixed(2) + "%";
+  document.querySelectorAll("#calc-presets button").forEach((b) => b.classList.toggle("on", +b.dataset.v === calcV));
+  if (charts.pool) charts.pool(calcV);
+}
+function chartPool() {
+  const el = $("v-pool"), mob = mobile(), m = { t: 16, r: 16, b: 34, l: 48 };
+  const f = frame(el, mob ? 260 : 320, m);
+  const xs = d3.range(0, 251, 2.5).map((k) => k * 1000);
+  const x = d3.scaleLinear([0, 250000], [0, f.w]), y = d3.scaleLinear([0, impact(250000).up * 1.05], [f.h, 0]).nice();
+  f.g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(5).tickSize(-f.w).tickFormat(""));
+  f.g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(5).tickFormat((v) => "+" + v + "%"));
+  f.g.append("g").attr("class", "axis").attr("transform", `translate(0,${f.h})`).call(d3.axisBottom(x).ticks(mob ? 3 : 5).tickFormat((v) => usd(v)));
+  f.g.append("text").attr("class", "lbl").attr("x", f.w).attr("y", f.h + 30).attr("text-anchor", "end").text("dollars bought");
+  const ln = f.g.append("path").datum(xs).attr("fill", "none").attr("stroke", css("--accent")).attr("stroke-width", 2.5)
+    .attr("d", d3.line().x((u) => x(u)).y((u) => y(impact(u).up)));
+  drawIn(ln);
+  const g = f.g.append("g"), vl = g.append("line").attr("class", "xhair"), dot = g.append("circle").attr("r", 7).attr("fill", css("--accent")).attr("stroke", css("--surface")).attr("stroke-width", 2);
+  const t = g.append("text").attr("class", "dlbl");
+  charts.pool = (u) => { const X = x(Math.min(u, 250000)), Y = y(impact(Math.min(u, 250000)).up);
+    vl.attr("x1", X).attr("x2", X).attr("y1", Y).attr("y2", f.h); dot.attr("cx", X).attr("cy", Y);
+    t.attr("x", X + (X > f.w * 0.7 ? -10 : 10)).attr("text-anchor", X > f.w * 0.7 ? "end" : "start").attr("y", Y - 10).text("+" + impact(u).up.toFixed(0) + "%"); };
+  charts.pool(calcV);
+}
+
+// ---------- 06 supply ----------
+function chartSupply() {
+  const fl = D.float, get = (re) => d3.sum(fl.filter((g) => re.test(g.name)), (g) => g.tok);
+  const parts = [
+    ["Focus wallet's cluster", get(/^Focus wallet's cluster/i), "--s1"], ["Its looser extension", get(/extension/i), "--s2"],
+    ["Other linked groups", get(/multi-wallet|Coinbase/i), "--s3"], ["Independent, bought or sold in 90 days", get(/active last 90/i), "--s4"],
+    ["Independent, quiet 3+ months", get(/untouched|quiet 3/i), "--s5"], ["Small wallets (<100M)", get(/Small wallets/i), "--s6"],
+    ["Uniswap pool", get(/Uniswap/i), "--s7"], ["Burned, exchanges & contracts", get(/Burned|Exchanges/i), "--s8"],
+  ];
+  const tot = d3.sum(parts, (p) => p[1]);
+  $("v-supply").innerHTML = parts.map(([n, t, c]) => `<div style="flex:${t};background:var(${c})" data-n="${esc(n)}" data-p="${(100 * t / tot).toFixed(1)}" data-t="${B(t)}"></div>`).join("");
+  $("v-supply").querySelectorAll("div").forEach((d) => {
+    d.onpointermove = (ev) => showTip(row(getComputedStyle(d).backgroundColor, d.dataset.n, d.dataset.p + "%") + row("", "GME", d.dataset.t), ev);
+    d.onpointerleave = hideTip;
+  });
+  $("supply-leg").innerHTML = parts.map(([n, t, c]) => `<div><i style="background:var(${c})"></i><span>${esc(n)}</span><b>${(100 * t / tot).toFixed(1)}%</b></div>`).join("");
+}
+
+// ---------- 07 cost basis ----------
+function chartUrpd() {
+  const U = D.journey.urpd; if (!U) return;
+  const el = $("v-urpd"), mob = mobile(), m = { t: 24, r: 14, b: 34, l: 40 };
+  const f = frame(el, mob ? 300 : 360, m);
+  const bs = U.buckets.filter((b) => b.pct > 0);
+  const x = d3.scaleLog([d3.min(bs, (b) => b.lo), d3.max(bs, (b) => b.hi)], [0, f.w]);
+  const y = d3.scaleLinear([0, d3.max(bs, (b) => b.pct) * 1.1], [f.h, 0]).nice();
+  const cP = css("--s1"), cU = css("--s8");
+  f.g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(4).tickSize(-f.w).tickFormat(""));
+  f.g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4).tickFormat((v) => v + "%"));
+  f.g.append("g").attr("class", "axis").attr("transform", `translate(0,${f.h})`).call(d3.axisBottom(x).tickValues(logTicks(x).filter((v) => (mob ? mant(v) === 1 : mant(v) !== 2))).tickFormat(tickP));
+  f.g.append("text").attr("class", "lbl").attr("x", f.w).attr("y", f.h + 30).attr("text-anchor", "end").text("price paid per GME →");
+  f.g.append("g").selectAll("rect").data(bs).join("rect").attr("x", (b) => x(b.lo) + 1).attr("width", (b) => Math.max(1, x(b.hi) - x(b.lo) - 2))
+    .attr("y", f.h).attr("height", 0).attr("rx", 2).attr("fill", (b) => (Math.sqrt(b.lo * b.hi) > U.spot ? cU : cP))
+    .on("pointermove", (ev, b) => showTip(row(Math.sqrt(b.lo * b.hi) > U.spot ? cU : cP, Math.sqrt(b.lo * b.hi) > U.spot ? "Underwater" : "In profit", b.pct.toFixed(1) + "% of held coins") +
+      row("", "Bought at", price(b.lo) + "–" + price(b.hi)), ev)).on("pointerleave", hideTip)
+    .transition().duration(reduce ? 0 : 700).delay((b, i) => (reduce ? 0 : i * 8)).attr("y", (b) => y(b.pct)).attr("height", (b) => f.h - y(b.pct));
+  const sx = x(U.spot);
+  f.g.append("line").attr("x1", sx).attr("x2", sx).attr("y1", -10).attr("y2", f.h).attr("stroke", css("--fg")).attr("stroke-width", 1.5);
+  f.g.append("text").attr("class", "dlbl").attr("x", sx + 6).attr("y", -12).text("today " + price(U.spot));
+  addLegend(el, [[cP, "Bought below today's price (in profit)"], [cU, "Bought above it (underwater)"]], "urpd-leg");
+}
+
+// ---------- 08 cohorts ----------
+function chartCohorts() {
+  const C = D.journey.cohorts.map((c) => ({ ...c, pct: (100 * c.holdNow) / c.wallets }));
+  const el = $("v-cohorts"), mob = mobile(), rowH = 34, m = { t: 6, r: mob ? 70 : 150, b: 8, l: mob ? 112 : 170 };
+  const f = frame(el, C.length * rowH + m.t + m.b, m);
+  const x = d3.scaleLinear([0, Math.max(25, d3.max(C, (c) => c.pct))], [0, f.w]);
+  const y = d3.scaleBand(C.map((c) => c.name), [0, f.h]).padding(0.3);
+  const c1 = css("--s1");
+  f.g.append("g").selectAll("text").data(C).join("text").attr("class", "dlbl").attr("x", -10).attr("y", (c) => y(c.name) + y.bandwidth() / 2 + 4)
+    .attr("text-anchor", "end").text((c) => c.name.replace("the run (Oct 24–Jan 25)", "the big run"));
+  f.g.append("g").selectAll("rect.tr").data(C).join("rect").attr("x", 0).attr("y", (c) => y(c.name)).attr("width", f.w).attr("height", y.bandwidth()).attr("fill", css("--grid")).attr("rx", 4);
+  f.g.append("g").selectAll("rect.v").data(C).join("rect").attr("x", 0).attr("y", (c) => y(c.name)).attr("height", y.bandwidth()).attr("rx", 4).attr("fill", c1)
+    .attr("width", 0).on("pointermove", (ev, c) => showTip(`<div style="font-weight:600">${esc(c.name)}</div>` + row("", "Wallets", c.wallets.toLocaleString("en-US")) +
+      row(c1, "Still holding", c.holdNow.toLocaleString("en-US")) + row("", "They bought", usd(c.buyUsd)) + row("", "They sold", usd(c.sellUsd)), ev)).on("pointerleave", hideTip)
+    .transition().duration(reduce ? 0 : 800).delay((c, i) => (reduce ? 0 : i * 70)).attr("width", (c) => Math.max(c.pct > 0 ? 3 : 0, x(c.pct)));
+  f.g.append("g").selectAll("text.v").data(C).join("text").attr("class", "dlbl").attr("x", f.w + 8).attr("y", (c) => y(c.name) + y.bandwidth() / 2 + 4)
+    .text((c) => mob ? pc(c.pct, 0) : `${pc(c.pct, 0)} · ${c.holdNow} of ${c.wallets.toLocaleString("en-US")}`);
+  addLegend(el, [[c1, "Share of each group of buyers that still holds GME (grouped by when they first bought)"]], "coh-leg");
+}
+
+// ---------- 09 quiet accumulators (bubbles) ----------
+function chartAcc() {
+  const A = D.accumulators.map((a) => ({ ...a, when: pd(a.lastBuy || a.first) })).filter((a) => a.when);
+  const el = $("v-acc"), mob = mobile(), m = { t: 20, r: 24, b: 34, l: 48 };
+  const f = frame(el, mob ? 380 : 440, m);
+  const now = pd(D.asOf.slice(0, 10)), x = d3.scaleUtc([d3.utcDay.offset(now, -95), d3.utcDay.offset(now, 4)], [0, f.w]);
+  const y = d3.scaleLog([0.05, d3.max(A, (a) => a.netPct) * 1.6], [f.h, 0]);
+  const r = d3.scaleSqrt([0, d3.max(A, (a) => a.usd || 0)], [5, mob ? 26 : 36]);
+  const color = (a) => (a.kind === "independent" ? css("--s1") : css("--neutral"));
+  f.g.append("g").attr("class", "gridl").call(d3.axisLeft(y).tickValues([0.1, 0.25, 0.5, 1]).tickSize(-f.w).tickFormat(""));
+  f.g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues([0.1, 0.25, 0.5, 1]).tickFormat((v) => v + "%"));
+  f.g.append("g").attr("class", "axis").attr("transform", `translate(0,${f.h})`).call(d3.axisBottom(x).ticks(mob ? 3 : 5).tickFormat(d3.utcFormat("%-d %b")));
+  f.g.append("text").attr("class", "lbl").attr("x", 0).attr("y", -8).text("% of supply added ↑");
+  f.g.append("text").attr("class", "lbl").attr("x", f.w).attr("y", f.h + 30).attr("text-anchor", "end").text("last buy →");
+  const s = [...A].sort((p, q) => (q.usd || 0) - (p.usd || 0));
+  const kindLbl = { focus: "focus wallet's cluster", coinbase: "Coinbase group" };
+  f.g.append("g").selectAll("circle").data(s).join("circle").attr("cx", (a) => x(a.when)).attr("cy", (a) => y(Math.max(0.05, a.netPct)))
+    .attr("r", 0).attr("fill", color).attr("fill-opacity", 0.78).attr("stroke", css("--surface")).attr("stroke-width", 2).style("cursor", "pointer")
+    .on("pointermove", (ev, a) => showTip(`<div style="font-weight:600">${a.kind === "independent" ? short(a.wallets[0] || a.owner) : kindLbl[a.kind]}</div>` +
+      row("", "Wallets", String(a.n)) + row("", "Added", B(a.net) + " · " + pc(a.netPct, 2)) + row("", "Spent", a.usd ? usd(a.usd) : "—") +
+      row("", "Holds", B(a.held) + " · " + pc(a.heldPct, 2)) + row("", "Last buy", a.lastBuy ? fdate(pd(a.lastBuy)) : (a.cexin ? "from an exchange" : "—")) +
+      (a.tags.length ? `<div style="margin-top:.25rem;color:var(--fg-2)">${a.tags.map(esc).join(" · ")}</div>` : ""), ev))
+    .on("pointerleave", hideTip).on("click", (ev, a) => open(ETHERSCAN(a.wallets[0] || a.owner), "_blank", "noopener"))
+    .transition().duration(reduce ? 0 : 600).delay((a, i) => (reduce ? 0 : i * 40)).attr("r", (a) => r(a.usd || 0));
+  // Keep a label only if its box doesn't overlap one already placed.
+  const txt = (a) => (a.kind === "independent" ? short(a.wallets[0] || a.owner) : kindLbl[a.kind]);
+  const placed = [];
+  const lab = s.filter((a) => a.kind !== "independent" || (a.usd || 0) >= 9000).filter((a) => {
+    const X = x(a.when), Y = y(Math.max(0.05, a.netPct)), rr = r(a.usd || 0), wd = txt(a).length * 7.2, left = X > f.w * 0.75;
+    const box = left ? [X - rr - 6 - wd, X - rr - 6] : [X + rr + 6, X + rr + 6 + wd];
+    if (placed.some(([b0, b1, py]) => box[0] < b1 && b0 < box[1] && Math.abs(py - Y) < 16)) return false;
+    placed.push([box[0], box[1], Y]); return true; }).slice(0, mob ? 4 : 7);
+  f.g.append("g").selectAll("text").data(lab).join("text").attr("class", (a) => "dlbl" + (a.kind === "independent" ? "" : " muted"))
+    .attr("x", (a) => x(a.when) + (x(a.when) > f.w * 0.75 ? -(r(a.usd || 0) + 6) : r(a.usd || 0) + 6)).attr("text-anchor", (a) => (x(a.when) > f.w * 0.75 ? "end" : "start"))
+    .attr("y", (a) => y(Math.max(0.05, a.netPct)) + 4).text((a) => (a.kind === "independent" ? short(a.wallets[0] || a.owner) : kindLbl[a.kind]));
+  addLegend(el, [[css("--s1"), "Independent buyer"], [css("--neutral"), "Known group (for comparison)"]], "acc-leg");
+}
+
+// ---------- 10 buy and hide ----------
+function chartHide() {
+  const V = D.vaults, mx = d3.max(V, (v) => Math.max(v.tok, v.bal || 0));
+  const status = (v) => holding(v) ? ["hold", "● Holding", "--good"] : v.toCex > 1e6 ? ["cex", "▲ To an exchange", "--crit"]
+    : v.soldDex > 1e6 ? ["sold", "▼ Sold on the DEX", "--s2"] : ["moved", "→ Moved on", "--muted"];
+  $("v-hide").innerHTML = V.map((v) => { const [k, t, c] = status(v);
+    return `<a class="addr" href="${ETHERSCAN(v.a)}" target="_blank" rel="noopener">${short(v.a)}</a>` +
+      `<div class="track" data-a="${v.a}" title=""><div style="width:${(100 * v.tok / mx).toFixed(1)}%;background:transparent;border:1.5px solid var(${c});box-sizing:border-box"></div>` +
+      `<div style="width:${(100 * (v.bal || 0) / mx).toFixed(1)}%;background:var(${c})"></div></div><span class="st ${k}">${t}</span>`; }).join("");
+  $("v-hide").querySelectorAll(".track").forEach((el) => { const v = V.find((x) => x.a === el.dataset.a);
+    el.onpointermove = (ev) => showTip(`<div style="font-weight:600">${short(v.a)}</div>` + row("", "Received", B(v.tok) + " for " + usd(v.usd)) + row("", "Holds now", B(v.bal || 0)) +
+      (v.soldDex > 1e6 ? row("", "Sold on the DEX", B(v.soldDex)) : "") + (v.toCex > 1e6 ? row("", "Sent to an exchange", B(v.toCex)) : "") +
+      (v.other > 1e6 ? row("", "Moved to other wallets", B(v.other)) : "") + row("", "Fed by", v.feeders.length + " buyer wallet" + (v.feeders.length > 1 ? "s" : "")), ev);
+    el.onpointerleave = hideTip; });
+  $("hide-leg").innerHTML = `<span><i style="border:1.5px solid var(--fg-2);background:transparent"></i>Outline: what it received</span><span><i style="background:var(--fg-2)"></i>Fill: what it still holds</span>`;
+}
+
+// ---------- 11 today ----------
+function chartToday() {
+  const money = (t) => { const m = t.match(/\(~(\$[\d,]+), ([\d.]+)% of supply\)/); return m ? ` · ${m[1]} · ${m[2]}% of supply` : ""; };
+  const card = (a) => {
+    if (a.kind === "flow") {
+      const exit = /exchange$|sold on DEX/.test(a.what) && !/from/.test(a.what);
+      const lab = exit ? (a.severity === "high" ? "▲ Exit alert" : "▲ Small exit") : /^bought|^from exchange/.test(a.what) ? "◆ Buying" : "● Coins moved";
+      return { cls: exit ? (a.severity === "high" ? "high" : "medium") : a.severity === "medium" ? "medium" : "info", lab, who: a.group, amt: B(a.tokens) + " GME", what: a.what.replace("DEX", "the DEX") + money(a.text) };
+    }
+    if (a.kind === "balance") { const m = a.text.match(/holdings ([+-][\d.]+B)/); return { cls: a.severity, lab: a.severity === "medium" ? "● Holdings down" : "◆ Holdings up", who: a.group, amt: m ? m[1] + " GME" : "", what: "since the last check" }; }
+    if (a.kind === "new_vault") return { cls: "medium", lab: "★ New hidden buyer", who: "", amt: "", what: a.text };
+    if (a.kind === "new_accumulator") return { cls: "medium", lab: "★ New quiet buyer", who: "", amt: "", what: a.text };
+    return { cls: "info", lab: "· Info", who: "", amt: "", what: a.text };
+  };
+  const rank = { high: 0, medium: 1, info: 2 };
+  const cs = D.alerts.filter((a) => a.kind !== "pool").map(card).sort((p, q) => rank[p.cls] - rank[q.cls]);
+  $("v-today").innerHTML = cs.length ? cs.map((c) => `<div class="card ${c.cls}"><span class="sev">${esc(c.lab)}</span>${c.who ? `<span class="who">${esc(c.who)}</span>` : ""}` +
+      `${c.amt ? `<span class="amt">${esc(c.amt)}</span>` : ""}<span class="what">${esc(c.what)}</span></div>`).join("")
+    : `<div class="card"><span class="sev">All quiet</span><span class="what">No watched wallet moved.</span></div>`;
+}
+
+// ---------- tables (accessibility + detail) ----------
+function tables() {
+  const acc = D.accumulators.map((a) => `<tr><td><a href="${ETHERSCAN(a.wallets[0] || a.owner)}" target="_blank" rel="noopener">${short(a.wallets[0] || a.owner)}</a></td><td>${a.kind === "independent" ? "" : a.kind === "focus" ? "Focus cluster" : "Coinbase group"}</td><td class="n">${a.n}</td><td class="n">${B(a.net)}</td><td class="n">${pc(a.netPct, 2)}</td><td class="n">${a.usd ? usd(a.usd) : "—"}</td><td class="n">${B(a.held)}</td><td>${a.lastBuy || "—"}</td></tr>`).join("");
+  const vt = D.vaults.map((v) => `<tr><td><a href="${ETHERSCAN(v.a)}" target="_blank" rel="noopener">${short(v.a)}</a></td><td class="n">${B(v.tok)}</td><td class="n">${usd(v.usd)}</td><td class="n">${B(v.bal || 0)}</td><td class="n">${B(v.soldDex)}</td><td class="n">${B(v.toCex)}</td><td class="n">${B(v.other)}</td><td class="n">${v.feeders.length}</td></tr>`).join("");
+  const gt = D.groups.filter((g) => g.tok >= 1e6).map((g) => `<tr><td>${esc(g.name)}</td><td class="n">${B(g.tok)}</td><td class="n">${pc(g.pct, 2)}</td></tr>`).join("");
+  $("tables").innerHTML = `<h3 style="margin:1rem 0 0">Quiet accumulators</h3><div class="tw"><table><thead><tr><th>Owner</th><th>Group</th><th>Wallets</th><th>Added</th><th>% supply</th><th>Spent</th><th>Holds</th><th>Last buy</th></tr></thead><tbody>${acc}</tbody></table></div>` +
+    `<h3 style="margin:1.2rem 0 0">Buy-and-hide holding wallets</h3><div class="tw"><table><thead><tr><th>Wallet</th><th>Received</th><th>Bought for</th><th>Holds</th><th>Sold DEX</th><th>To exchange</th><th>Moved on</th><th>Feeders</th></tr></thead><tbody>${vt}</tbody></table></div>` +
+    `<h3 style="margin:1.2rem 0 0">Watched groups</h3><div class="tw"><table><thead><tr><th>Group</th><th>Holds</th><th>% supply</th></tr></thead><tbody>${gt}</tbody></table></div>`;
+}
 })();
 </script>
 </body>
