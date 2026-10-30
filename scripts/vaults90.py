@@ -39,7 +39,14 @@ def after(a):
             if r in CEX: to_cex += v
             elif r in infra and r not in LP: sold += v
     return dict(bal=max(bal, 0.0), sent=sent, toCex=to_cex, soldDex=sold)
-out = {v: dict(feeders=sorted(x["feeders"]), tok=x["tok"], usd=x["usd"], first=x["first"], last=x["last"], sources=x["sources"], **after(v))
-       for v, x in sorted(vault.items(), key=lambda kv: -kv[1]["tok"])}
+allv = {v: dict(feeders=sorted(x["feeders"]), tok=x["tok"], usd=x["usd"], first=x["first"], last=x["last"], sources=x["sources"], **after(v))
+        for v, x in sorted(vault.items(), key=lambda kv: -kv[1]["tok"])}
+# A buy-and-forward target only counts as a holding wallet while it keeps the coins: ≥80% of what it received is still
+# there and no more than 20% was sold on a DEX or sent to an exchange. The rest bought and then sold or passed the coins
+# on (relays); they are not accumulation, so they stay out of the accumulator cohort and the watch groups.
+holds = lambda x: x["bal"] >= 0.8 * x["tok"] and x["soldDex"] + x["toCex"] <= 0.2 * x["tok"]
+out = {v: x for v, x in allv.items() if holds(x)}
+json.dump({v: x for v, x in allv.items() if not holds(x)}, open(os.path.join(D, "vaults90_relays.json"), "w"))
 json.dump(out, open(os.path.join(D, "vaults90.json"), "w"))
-print(f"{len(out)} holding wallets fed by fresh buy-and-forward wallets in the last 90 days (to {NOW[:16]})")
+print(f"{len(out)} holding wallets still holding what fresh buy-and-forward wallets sent them in the last 90 days "
+      f"({len(allv) - len(out)} relays that sold or passed it on, to {NOW[:16]})")

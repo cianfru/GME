@@ -127,6 +127,25 @@ details.grp summary::-webkit-details-marker { display: none }
 #scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .45); z-index: 35; display: none }
 #scrim.on { display: block }
 
+/* monitor + bubble map */
+.ctl { display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden }
+.seg button { background: none; border: 0; border-right: 1px solid var(--line); padding: .35rem .65rem; font: 600 11px "IBM Plex Mono", monospace; color: var(--muted); cursor: pointer; min-height: 34px }
+.seg button:last-child { border-right: 0 }
+.seg button.on { background: var(--panel-2); color: var(--fg) }
+.chip { background: none; border: 1px solid var(--line); border-radius: 999px; padding: .3rem .7rem; font: 500 12px "IBM Plex Mono", monospace; color: var(--fg-2); cursor: pointer; min-height: 34px }
+.chip.on { border-color: var(--fg-2); color: var(--fg) }
+.chip b { font-weight: 600 }
+input.q, select.q { background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; color: var(--fg); padding: .4rem .6rem; font: 500 12px "IBM Plex Mono", monospace; min-height: 34px }
+input.q { width: 14rem; max-width: 100% }
+select.q { max-width: 100% }
+.st-acc { color: var(--up) } .st-sell { color: var(--down) } .st-move { color: var(--warn) } .st-int, .st-flat, .st-dorm { color: var(--muted) }
+tr.r-acc td:first-child { box-shadow: inset 3px 0 var(--up) } tr.r-sell td:first-child { box-shadow: inset 3px 0 var(--down) } tr.r-move td:first-child { box-shadow: inset 3px 0 var(--warn) }
+.how { white-space: normal; min-width: 14rem }
+.how span { display: inline-block; margin: 0 .5rem .1rem 0; font: 500 11px "IBM Plex Mono", monospace }
+.sumline { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; font: 500 12.5px "IBM Plex Mono", monospace }
+.ownlink { background: none; border: 0; padding: 0; color: var(--fg-2); cursor: pointer; font: inherit; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px }
+#bub svg text { pointer-events: none }
 #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px;
   padding: .5rem .65rem; font-size: 12px; box-shadow: 0 8px 24px rgb(0 0 0 / .35); opacity: 0; transition: opacity .1s; max-width: 300px }
 #tip .r { display: flex; justify-content: space-between; gap: 1rem; align-items: center }
@@ -200,7 +219,7 @@ let S, T, DD, N;          // site.json, terminal data, parsed dates, length
 const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { range = +(localStorage.getItem("gme-range") ?? 90); } catch (e) {}
-const TABS = [["overview", "OVERVIEW"], ["valuation", "VALUATION"], ["holders", "HOLDERS"], ["flows", "FLOWS"], ["insiders", "INSIDERS"], ["watchlist", "WATCHLIST"]];
+const TABS = [["overview", "OVERVIEW"], ["wallets", "WALLETS"], ["bubbles", "BUBBLE MAP"], ["insiders", "INSIDERS"], ["watchlist", "WATCHLIST"], ["valuation", "VALUATION"], ["holders", "HOLDERS"], ["flows", "FLOWS"]];
 let tab = (location.hash.slice(1) || "overview");
 const draws = [];        // chart draw functions for the current tab (re-run on resize/theme/range)
 
@@ -261,7 +280,7 @@ function render() {
   document.querySelectorAll(".tabs a").forEach((a) => a.classList.toggle("on", a.dataset.t === tab));
   draws.length = 0;
   $("view").innerHTML = "";
-  ({ overview, valuation, holders, flows, insiders, watchlist })[tab]();
+  ({ overview, wallets, bubbles, valuation, holders, flows, insiders, watchlist })[tab]();
   redraw();
   scrollTo({ top: 0 });
 }
@@ -594,7 +613,7 @@ function watchlist() {
   // buy and hide
   const hold = (v) => v.bal != null && v.bal >= 0.8 * v.tok && (v.soldDex || 0) + (v.toCex || 0) <= 0.2 * v.tok;
   const st = (v) => hold(v) ? `<span class="up">● holding</span>` : v.toCex > 1e6 ? `<span class="down">▲ sent to exchange</span>` : v.soldDex > 1e6 ? `<span class="down">▼ sold on DEX</span>` : `<span class="flat">→ moved on</span>`;
-  card({ title: "Buy-and-hide holding wallets · last 90 days", wide: true, sub: "Fresh wallets fed by wallets that bought on the DEX and forwarded ≥80% of it.", body: `<div class="tw"><table><thead><tr><th>Holding wallet</th><th class="n">Received</th><th class="n">Bought for</th><th class="n">Holds now</th><th>Status</th><th class="n">Feeders</th><th>Active</th></tr></thead><tbody>` +
+  card({ title: "Buy-and-hide holding wallets · last 90 days", wide: true, sub: `Fresh wallets fed by wallets that bought on the DEX and forwarded ≥80% of it, and still holding it. ${S.relays ? S.relays + " more received coins this way but already sold them or passed them on; they are not counted." : ""}`, body: `<div class="tw"><table><thead><tr><th>Holding wallet</th><th class="n">Received</th><th class="n">Bought for</th><th class="n">Holds now</th><th>Status</th><th class="n">Feeders</th><th>Active</th></tr></thead><tbody>` +
     S.vaults.map((v) => `<tr><td><button class="addr" data-addr="${v.a}">${short(v.a)}</button></td><td class="n">${fB(v.tok)}</td><td class="n">${fU(v.usd)}</td><td class="n">${fB(v.bal || 0)}</td><td>${st(v)}</td><td class="n">${v.feeders.length}</td><td class="num">${(v.first || "").slice(0, 10)} → ${(v.last || "").slice(0, 10)}</td></tr>`).join("") + `</tbody></table></div>` });
   // top holders
   card({ title: "Top 50 holders", wide: false, body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>#</th><th>Wallet</th><th class="n">Holds</th><th class="n">%</th><th>Group</th><th>Last active</th></tr></thead><tbody>` +
@@ -602,6 +621,216 @@ function watchlist() {
   // alert log
   const log = S.history || [];
   card({ title: "Alert log", wide: false, sub: "Every run that raised a medium or high alert.", body: `<ul class="alist" style="max-height:520px;overflow-y:auto">${log.length ? log.flatMap((r) => r.alerts.map((a) => `<li><span class="sev ${a.severity}">${d3.utcFormat("%-d %b")(new Date(r.asOf))}</span><span>${esc(a.text)}</span></li>`)).join("") : `<li><span class="sev info">—</span><span>Nothing yet.</span></li>`}</ul>` });
+}
+
+// ---------- the monitor: wallets with ≥0.1% of supply ----------
+const WIN = [["1D", 24], ["7D", 168], ["30D", 720], ["90D", 2160]];
+let monWin = 168, monView = "wallets", monFilter = "all", monQ = "", monSort = "move";
+let bubOwner = 0, bubWin = 720;
+const isW = (i) => typeof i === "number" && T.mon.M[i];
+const ownerOf = (i) => (isW(i) ? T.mon.M[i][1] : -1);
+const sameOwner = (a, b) => isW(a) && isW(b) && ownerOf(a) >= 0 && ownerOf(a) === ownerOf(b);
+const CAT = { D: "DEX (Uniswap & routers)", C: "Exchanges", L: "Liquidity", B: "Burn", T: "Token contract", O: "Other wallets" };
+const CATS = { D: "DEX", C: "Exchanges", L: "Liquidity", B: "Burn", T: "Token", O: "Other wallets" };
+function monStats(W) {
+  const M = T.mon, h0 = M.hours - W, S = new Map();
+  const get = (i) => { let x = S.get(i); if (!x) S.set(i, (x = { net: 0, dexIn: 0, dexOut: 0, cexIn: 0, cexOut: 0, wIn: 0, wOut: 0, intIn: 0, intOut: 0, oIn: 0, oOut: 0, n: 0 })); return x; };
+  for (const [h, a, b, v] of M.e) {
+    if (h < h0) continue;
+    if (isW(a)) { const x = get(a); x.net -= v; x.n++;
+      if (b === "D") x.dexOut += v; else if (b === "C") x.cexOut += v; else if (typeof b === "string") x.oOut += v; else if (sameOwner(a, b)) x.intOut += v; else x.wOut += v; }
+    if (isW(b)) { const x = get(b); x.net += v; x.n++;
+      if (a === "D") x.dexIn += v; else if (a === "C") x.cexIn += v; else if (typeof a === "string") x.oIn += v; else if (sameOwner(a, b)) x.intIn += v; else x.wIn += v; }
+  }
+  return S;
+}
+function stOf(x, bal) {
+  if (!x || !x.n) return ["dorm", "· dormant"];
+  const thr = Math.max(0.001, 0.005 * bal);
+  if (x.net > thr) return ["acc", "▲ accumulating"];
+  if (x.net < -thr) { const out = x.dexOut + x.cexOut + x.wOut + x.intOut + x.oOut;
+    if (x.dexOut + x.cexOut >= 0.5 * out) return ["sell", "▼ selling"];
+    if (x.intOut >= 0.5 * out) return ["int", "↔ own wallets"];
+    return ["move", "→ moved out"]; }
+  return ["flat", "• flat"];
+}
+function howChips(x) {
+  if (!x || !x.n) return "";
+  const c = [];
+  if (x.dexIn > 1e-3) c.push(`<span class="up">+${fBb(x.dexIn)} DEX buy</span>`);
+  if (x.cexIn > 1e-3) c.push(`<span class="up">+${fBb(x.cexIn)} from exch.</span>`);
+  if (x.wIn > 1e-3) c.push(`<span>+${fBb(x.wIn)} from wallets</span>`);
+  if (x.intIn > 1e-3) c.push(`<span class="flat">+${fBb(x.intIn)} own wallets</span>`);
+  if (x.dexOut > 1e-3) c.push(`<span class="down">−${fBb(x.dexOut)} DEX sell</span>`);
+  if (x.cexOut > 1e-3) c.push(`<span class="down">−${fBb(x.cexOut)} to exch.</span>`);
+  if (x.wOut > 1e-3) c.push(`<span class="st-move">−${fBb(x.wOut)} to wallets</span>`);
+  if (x.intOut > 1e-3) c.push(`<span class="flat">−${fBb(x.intOut)} own wallets</span>`);
+  if (x.oOut + x.oIn > 1e-3) c.push(`<span class="flat">±${fBb(x.oOut + x.oIn)} liquidity/other</span>`);
+  return c.join("");
+}
+let dailyNet = null;    // tracked wallet → 90 daily net changes (for sparklines)
+function balPath(i) {
+  if (!dailyNet) { dailyNet = new Map(); const M = T.mon;
+    for (const [h, a, b, v] of M.e) { const d = Math.min(89, Math.floor(h / 24));
+      for (const [k, sg] of [[a, -1], [b, 1]]) if (isW(k)) { let arr = dailyNet.get(k); if (!arr) dailyNet.set(k, (arr = new Float64Array(90))); arr[d] += sg * v; } } }
+  const arr = dailyNet.get(i), out = new Array(91); let b = T.mon.M[i][0]; out[90] = b;
+  for (let d = 89; d >= 0; d--) { b -= arr ? arr[d] : 0; out[d] = Math.max(0, b); }
+  return out;
+}
+function segBtns(list, cur, attr) { return `<div class="seg">${list.map(([l, v]) => `<button type="button" data-${attr}="${v}" class="${v === cur ? "on" : ""}">${l}</button>`).join("")}</div>`; }
+function wallets() {
+  grid();
+  card({ title: "Wallet monitor · every wallet with ≥0.1% of supply", wide: true, body: `<div id="monbox"></div>`,
+    note: "Wallets that hold ≥0.1% of supply now or held it at any point in the last 90 days, plus their linked side wallets. \"Own wallets\" = moves between wallets of the same owner (not buying or selling). Status needs a change of at least 0.5% of the wallet's balance. Tap a wallet for its history, an owner for its bubble map." });
+  drawMon();
+}
+function drawMon() {
+  const box = $("monbox"); if (!box) return;
+  const M = T.mon, Ws = Object.fromEntries(WIN.map(([l, h]) => [h, monStats(h)])), S0 = Ws[monWin];
+  let rows;
+  if (monView === "wallets") {
+    rows = M.A.map((a, i) => ({ i, a })).filter(({ i }) => M.M[i] && (M.M[i][2] || M.M[i][0] > 0.05)).map(({ i, a }) => {
+      const bal = M.M[i][0], x = S0.get(i), st = stOf(x, bal);
+      return { i, a, key: a, bal, own: ownerOf(i), st, x, d: WIN.map(([, h]) => Ws[h].get(i)?.net ?? 0), last: M.M[i][4], path: balPath(i) };
+    });
+  } else {
+    const by = new Map();
+    M.A.forEach((a, i) => { if (!M.M[i]) return; const o = ownerOf(i), k = o >= 0 ? "o" + o : "w" + i; if (o < 0 && !M.M[i][2]) return;
+      let r = by.get(k); if (!r) by.set(k, (r = { k, own: o, i, a, n: 0, bal: 0, xs: [], d: [0, 0, 0, 0], path: new Array(91).fill(0), last: "" }));
+      r.n++; r.bal += M.M[i][0]; WIN.forEach(([, h], j) => (r.d[j] += Ws[h].get(i)?.net ?? 0)); const p = balPath(i); p.forEach((v, j) => (r.path[j] += v));
+      if (M.M[i][4] > r.last) r.last = M.M[i][4]; const x = S0.get(i); if (x) r.xs.push([i, x]); });
+    rows = [...by.values()].map((r) => {   // owner-level flows: moves between its own wallets cancel out
+      const x = { net: 0, dexIn: 0, dexOut: 0, cexIn: 0, cexOut: 0, wIn: 0, wOut: 0, intIn: 0, intOut: 0, oIn: 0, oOut: 0, n: 0 };
+      r.xs.forEach(([, y]) => Object.keys(x).forEach((k) => (x[k] += y[k])));
+      x.intIn = x.intOut = 0;
+      return { ...r, key: r.k, x, st: stOf(x, r.bal) };
+    });
+  }
+  const counts = { all: rows.length, acc: 0, sell: 0, move: 0, dorm: 0 }; let accB = 0, sellB = 0;
+  rows.forEach((r) => { if (counts[r.st[0]] != null) counts[r.st[0]]++; if (r.st[0] === "acc") accB += r.x.net; if (r.st[0] === "sell" || r.st[0] === "move") sellB += r.x.net; });
+  const q = monQ.trim().toLowerCase();
+  let vis = rows.filter((r) => (monFilter === "all" || r.st[0] === monFilter) && (!q || r.a.includes(q) || (r.own >= 0 && M.owners[r.own].name.toLowerCase().includes(q))));
+  const wi = WIN.findIndex(([, h]) => h === monWin);
+  const sorters = { move: (a, b) => Math.abs(b.d[wi]) - Math.abs(a.d[wi]) || b.bal - a.bal, bal: (a, b) => b.bal - a.bal, d0: (a, b) => b.d[0] - a.d[0], d1: (a, b) => b.d[1] - a.d[1], d2: (a, b) => b.d[2] - a.d[2], d3: (a, b) => b.d[3] - a.d[3], last: (a, b) => (b.last > a.last ? 1 : -1) };
+  vis.sort(sorters[monSort] || sorters.move);
+  const wl = WIN[wi][0];
+  const th = (k, l, n) => `<th class="s${n ? " n" : ""}" data-sort="${k}">${l}${monSort === k ? " ↓" : ""}</th>`;
+  const dc = (v) => `<td class="n ${Math.abs(v) < 1e-3 ? "flat" : cls(v)}">${Math.abs(v) < 1e-3 ? "—" : sgn(v, fBb)}</td>`;
+  const sp = (p, st) => { const W = 96, H = 24, x = d3.scaleLinear([0, 90], [1, W - 1]), [lo, hi] = d3.extent(p), y = d3.scaleLinear([lo, hi === lo ? lo + 1 : hi], [H - 2, 2]);
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><path d="${d3.line().x((v, j) => x(j)).y((v) => y(v))(p)}" fill="none" style="stroke:var(${st === "acc" ? "--up" : st === "sell" ? "--down" : st === "move" ? "--warn" : "--muted"})" stroke-width="1.4"/></svg>`; };
+  const ownCell = (o) => (o >= 0 ? `<button class="ownlink" data-owner="${o}">${esc(M.owners[o].name)}</button>` : `<span class="flat">unlinked</span>`);
+  box.innerHTML = `<div class="ctl">${segBtns(WIN, monWin, "mw")}${segBtns([["Wallets", "wallets"], ["Owners", "owners"]], monView, "mv")}
+      <input class="q" id="monq" type="search" placeholder="Search address or owner" value="${esc(monQ)}" aria-label="Search"></div>
+    <div class="ctl" style="margin-top:.6rem">${[["all", "All"], ["acc", "▲ Accumulating"], ["sell", "▼ Selling"], ["move", "→ Moved out"], ["dorm", "· Dormant"]].map(([k, l]) => `<button type="button" class="chip${monFilter === k ? " on" : ""}" data-mf="${k}">${l} <b>${counts[k]}</b></button>`).join("")}</div>
+    <div class="sumline" style="margin:.7rem 0 .3rem"><span>Last ${wl}:</span><span class="up">▲ ${counts.acc} accumulating ${sgn(accB, fBb)}</span><span class="down">▼ ${counts.sell + counts.move} reducing ${sgn(sellB, fBb)}</span><span class="flat">· ${counts.dorm} dormant</span></div>
+    <div class="tw" style="max-height:70vh;overflow-y:auto"><table><thead><tr><th>${monView === "wallets" ? "Wallet" : "Owner"}</th>${monView === "wallets" ? "<th>Owner</th>" : '<th class="n">Wallets</th>'}${th("bal", "Holds", 1)}<th class="n">%</th>${th("d0", "1D", 1)}${th("d1", "7D", 1)}${th("d2", "30D", 1)}${th("d3", "90D", 1)}<th>Status ${wl}</th><th>How (${wl})</th><th>90 days</th>${th("last", "Last active")}</tr></thead><tbody>` +
+    vis.map((r) => `<tr class="r-${r.st[0]}"><td>${monView === "wallets" ? `<button class="addr" data-addr="${r.a}">${short(r.a)}</button>${r.a === FOCUS ? ' <span class="tag">focus</span>' : ""}` : r.own >= 0 ? ownCell(r.own) : `<button class="addr" data-addr="${r.a}">${short(r.a)}</button>`}</td>` +
+      (monView === "wallets" ? `<td>${ownCell(r.own)}</td>` : `<td class="n">${r.n}</td>`) +
+      `<td class="n">${fBb(r.bal)}</td><td class="n">${fPct((100 * r.bal * 1e9) / SUPPLY, 2)}</td>${r.d.map(dc).join("")}<td class="st-${r.st[0]}" style="font:600 11.5px 'IBM Plex Mono',monospace">${r.st[1]}</td><td class="how">${howChips(r.x)}</td><td>${sp(r.path, r.st[0])}</td><td class="num">${r.last}</td></tr>`).join("") +
+    `</tbody></table></div>`;
+  box.onclick = (e) => {
+    const t = e.target.closest("[data-mw],[data-mv],[data-mf],[data-sort],[data-owner]"); if (!t) return;
+    if (t.dataset.mw) monWin = +t.dataset.mw; else if (t.dataset.mv) monView = t.dataset.mv; else if (t.dataset.mf) monFilter = t.dataset.mf; else if (t.dataset.sort) monSort = t.dataset.sort;
+    else if (t.dataset.owner) { bubOwner = +t.dataset.owner; location.hash = "#bubbles"; return; }
+    drawMon();
+  };
+  const qi = $("monq"); qi.oninput = () => { monQ = qi.value; const pos = qi.selectionStart; drawMon(); const n = $("monq"); n.focus(); n.setSelectionRange(pos, pos); };
+}
+
+// ---------- bubble map ----------
+function bubbles() {
+  grid();
+  card({ title: "Bubble map", wide: true, body: `<div id="bubctl"></div><div class="sumline" id="bubsum" style="margin:.6rem 0"></div><div class="chart" id="bub"></div><div class="legend" id="bub-l"></div><div id="bubflows" style="margin-top:.8rem"></div>`,
+    note: "Bubbles = the owner's wallets, sized by what they hold now; green = holdings grew in the window, red = shrank, grey = no change (dormant if no transfers at all). Arrows = GME that moved in the window: green from the DEX (bought), red to the DEX or an exchange (sold / deposited), blue from an exchange (withdrawn), dashed grey between the owner's own wallets, solid grey to or from other wallets." });
+  draws.push(drawBub);
+}
+function drawBub() {
+  const ctl = $("bubctl"); if (!ctl) return;
+  const M = T.mon, opts = M.owners.map((o, k) => [k, o]).filter(([k, o]) => o.n >= 2 || k === 0);
+  ctl.innerHTML = `<div class="ctl"><select class="q" id="bubsel" aria-label="Owner">${opts.map(([k, o]) => `<option value="${k}"${k === bubOwner ? " selected" : ""}>${esc(o.name)} · ${o.n} wallets</option>`).join("")}<option value="-1"${bubOwner === -1 ? " selected" : ""}>All monitored wallets (≥0.1%)</option></select>${segBtns(WIN, bubWin, "bw")}</div>`;
+  $("bubsel").onchange = (e) => { bubOwner = +e.target.value; drawBub(); };
+  ctl.onclick = (e) => { const b = e.target.closest("[data-bw]"); if (b) { bubWin = +b.dataset.bw; drawBub(); } };
+  const S = monStats(bubWin), h0 = M.hours - bubWin;
+  const inSet = (i) => isW(i) && (bubOwner === -1 ? M.M[i][2] === 1 : ownerOf(i) === bubOwner);
+  const members = M.A.map((a, i) => i).filter((i) => inSet(i) && (M.M[i][0] > 0.001 || S.get(i)?.n));
+  const memSet = new Set(members);
+  // aggregate the window's flows touching members; other ends become category nodes, other tracked wallets, or "other wallets"
+  const big = 0.0002 * SUPPLY / 1e9;
+  const agg = new Map(), extTot = new Map();
+  const endKey = (i) => (memSet.has(i) ? i : typeof i === "string" ? i : isW(i) ? i : "x" + i);
+  for (const [h, a, b, v] of M.e) {
+    if (h < h0 || !(memSet.has(a) || memSet.has(b))) continue;
+    const k = endKey(a) + ">" + endKey(b); agg.set(k, (agg.get(k) || 0) + v);
+    for (const z of [a, b]) if (!memSet.has(z) && typeof z === "number") extTot.set(z, (extTot.get(z) || 0) + v);
+  }
+  const nodeKey = (k) => { if (typeof k === "number" || /^\d+$/.test(k)) { const i = +k; return memSet.has(i) || (isW(i) && extTot.get(i) >= big / 4) ? i : "O"; }
+    if (k[0] === "x") { const i = +k.slice(1); return extTot.get(i) >= big ? "x" + i : "O"; } return k; };
+  const links = new Map();
+  agg.forEach((v, k) => { const [a, b] = k.split(">"); const s = nodeKey(a), t = nodeKey(b); if (s === t) return; const kk = s + ">" + t; links.set(kk, (links.get(kk) || 0) + v); });
+  const nodes = new Map();
+  const addNode = (k) => { if (nodes.has(k)) return;
+    if (typeof k === "number") nodes.set(k, { id: k, kind: memSet.has(k) ? "m" : "t", a: M.A[k], bal: M.M[k][0], x0: S.get(k) });
+    else if (k[0] === "x") { const i = +k.slice(1); nodes.set(k, { id: k, kind: "x", a: M.A[i], bal: 0 }); }
+    else nodes.set(k, { id: k, kind: "c", label: CAT[k] || k }); };
+  members.forEach(addNode);
+  links.forEach((v, k) => { const [s, t] = k.split(">"); addNode(/^\d+$/.test(s) ? +s : s); addNode(/^\d+$/.test(t) ? +t : t); });
+  const L = [...links].map(([k, v]) => { const [s, t] = k.split(">"); return { source: /^\d+$/.test(s) ? +s : s, target: /^\d+$/.test(t) ? +t : t, v }; });
+  // summary
+  const tot = members.reduce((acc, i) => { const x = S.get(i); acc.bal += M.M[i][0]; if (x) { acc.net += x.net; acc.dexIn += x.dexIn; acc.dexOut += x.dexOut; acc.cexIn += x.cexIn; acc.cexOut += x.cexOut; acc.wIn += x.wIn; acc.wOut += x.wOut; acc.act += 1; } return acc; },
+    { bal: 0, net: 0, dexIn: 0, dexOut: 0, cexIn: 0, cexOut: 0, wIn: 0, wOut: 0, act: 0 });
+  const wl = WIN.find(([, h]) => h === bubWin)[0];
+  $("bubsum").innerHTML = `<span>${members.length} wallets · ${fBb(tot.bal)} GME (${fPct((100 * tot.bal * 1e9) / SUPPLY, 2)})</span><span class="${cls(tot.net)}">${wl}: ${sgn(tot.net, fBb)}</span>` +
+    `<span class="up">DEX bought ${fBb(tot.dexIn)}</span><span class="up">from exchanges ${fBb(tot.cexIn)}</span><span class="down">DEX sold ${fBb(tot.dexOut)}</span><span class="down">to exchanges ${fBb(tot.cexOut)}</span><span class="flat">${tot.act} active · ${members.length - tot.act} dormant</span>`;
+  // draw
+  const el = $("bub"); el.innerHTML = "";
+  const mob = mobile(), W = el.clientWidth || 800, H = mob ? 480 : 620;
+  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H);
+  const N2 = [...nodes.values()], maxB = d3.max(N2, (n) => n.bal) || 1;
+  const r = d3.scaleSqrt([0, maxB], [mob ? 4 : 5, mob ? 34 : 46]);
+  const R = (n) => (n.kind === "c" ? 18 : n.kind === "x" ? 6 : r(n.bal));
+  const pin = { D: [0.08, 0.5], C: [0.92, 0.5], O: [0.5, 0.95], L: [0.1, 0.08], B: [0.9, 0.08], T: [0.5, 0.05] };
+  N2.forEach((n) => { if (n.kind === "c" && pin[n.id]) { n.fx = pin[n.id][0] * W; n.fy = pin[n.id][1] * H; } });
+  const sim = d3.forceSimulation(N2)
+    .force("link", d3.forceLink(L).id((d) => d.id).distance((l) => (l.source.kind === "c" || l.target.kind === "c" ? 160 : 60)).strength(0.15))
+    .force("charge", d3.forceManyBody().strength(bubOwner === -1 ? -30 : -80))
+    .force("collide", d3.forceCollide((d) => R(d) + 3)).force("x", d3.forceX(W / 2).strength(0.05)).force("y", d3.forceY(H / 2).strength(0.07)).stop();
+  for (let i = 0; i < 360; i++) sim.tick();
+  N2.forEach((d) => { const rr = R(d) + 2; d.x = Math.max(rr, Math.min(W - rr, d.x)); d.y = Math.max(rr, Math.min(H - rr, d.y)); });
+  const stC = (n) => { if (n.kind === "x") return C("--muted"); const st = stOf(n.x0, n.bal)[0]; return st === "acc" ? C("--up") : st === "sell" ? C("--down") : st === "move" ? C("--warn") : C("--neutral"); };
+  const edgeC = (l) => { const s = l.source.id, t = l.target.id;
+    if (s === "D") return [C("--up"), ""]; if (t === "D") return [C("--down"), ""]; if (t === "C") return [C("--crit"), ""]; if (s === "C") return [C("--s1"), ""];
+    if (typeof s === "number" && typeof t === "number" && sameOwner(s, t)) return [C("--muted"), "5 4"]; return [C("--fg-2"), ""]; };
+  const wS = d3.scaleSqrt([0, d3.max(L, (l) => l.v) || 1], [1, 9]);
+  const defs = svg.append("defs"), marks = new Map();
+  const marker = (c) => { if (marks.has(c)) return marks.get(c); const id = "ar" + marks.size; marks.set(c, id);
+    defs.append("marker").attr("id", id).attr("viewBox", "0 -5 10 10").attr("refX", 9).attr("refY", 0).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+      .append("path").attr("d", "M0,-4L10,0L0,4").attr("fill", c); return id; };
+  const path = (l) => { const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, d = Math.hypot(dx, dy) || 1;
+    const rs = R(l.source) + 2, rt = R(l.target) + 4, x1 = l.source.x + (dx * rs) / d, y1 = l.source.y + (dy * rs) / d, x2 = l.target.x - (dx * rt) / d, y2 = l.target.y - (dy * rt) / d;
+    const mx = (x1 + x2) / 2 - dy * 0.12, my = (y1 + y2) / 2 + dx * 0.12; return `M${x1},${y1}Q${mx},${my} ${x2},${y2}`; };
+  svg.append("g").selectAll("path").data(L).join("path").attr("d", path).attr("fill", "none")
+    .attr("stroke", (l) => edgeC(l)[0]).attr("stroke-dasharray", (l) => edgeC(l)[1] || null).attr("stroke-width", (l) => wS(l.v)).attr("stroke-opacity", 0.8)
+    .attr("marker-end", (l) => `url(#${marker(edgeC(l)[0])})`)
+    .on("pointermove", (ev, l) => showTip(`<div class="h">${esc(nlabel(l.source))} → ${esc(nlabel(l.target))}</div>` + trow(edgeC(l)[0], "GME", fBb(l.v)) + trow("", "≈ $", fU(l.v * 1e9 * (lastVal(col("price")) || 0))), ev)).on("pointerleave", hideTip);
+  function nlabel(n) { return n.kind === "c" ? n.label : short(n.a) + (n.a === FOCUS ? " (focus)" : ""); }
+  const g = svg.append("g").selectAll("g").data(N2).join("g").attr("transform", (d) => `translate(${d.x},${d.y})`).style("cursor", (d) => (d.kind === "c" ? "default" : "pointer"))
+    .on("pointermove", (ev, n) => { if (n.kind === "c") return showTip(`<div class="h">${esc(n.label)}</div>`, ev); const x = n.x0;
+      showTip(`<div class="h">${n.kind === "m" ? (n.a === FOCUS ? "FOCUS WALLET" : "OWNER'S WALLET") : "OTHER WALLET"}</div>` + trow("", short(n.a), "") + (n.kind !== "x" ? trow("", "holds", fBb(n.bal)) + trow("", wl + " change", x ? sgn(x.net, fBb) : "—") + trow("", "status", stOf(x, n.bal)[1]) : "") + (x ? `<div style="margin-top:.25rem">${howChips(x)}</div>` : ""), ev); })
+    .on("pointerleave", hideTip).on("click", (ev, n) => { if (n.kind !== "c") openWallet(n.a); });
+  g.filter((d) => d.kind === "c").append("rect").attr("x", -18).attr("y", -18).attr("width", 36).attr("height", 36).attr("rx", 7)
+    .attr("fill", (d) => (d.id === "D" ? C("--s7") : d.id === "C" ? C("--s4") : C("--neutral"))).attr("stroke", C("--panel")).attr("stroke-width", 2);
+  g.filter((d) => d.kind === "c").append("text").attr("class", "lbl").attr("text-anchor", "middle").attr("y", (d) => (d.fy > H * 0.6 ? -24 : 32)).text((d) => CATS[d.id] || d.label);
+  g.filter((d) => d.kind !== "c").append("circle").attr("r", R).attr("fill", stC).attr("fill-opacity", (d) => (d.kind === "m" ? 0.88 : 0.5))
+    .attr("stroke", (d) => (d.a === FOCUS ? C("--fg") : d.kind === "t" ? C("--fg-2") : C("--panel"))).attr("stroke-width", (d) => (d.a === FOCUS ? 2.5 : d.kind === "t" ? 1.5 : 1)).attr("stroke-dasharray", (d) => (d.kind === "t" ? "3 2" : null));
+  g.filter((d) => d.kind !== "c" && (d.a === FOCUS || R(d) > 16)).append("text").attr("class", "lbl").attr("text-anchor", "middle").attr("y", (d) => R(d) + 12).text((d) => (d.a === FOCUS ? "focus" : short(d.a)));
+  $("bub-l").innerHTML = `<span><i style="background:${C("--up")}"></i>grew</span><span><i style="background:${C("--down")}"></i>sold / deposited</span><span><i style="background:${C("--warn")}"></i>moved to other wallets</span><span><i style="background:${C("--neutral")}"></i>no change</span>` +
+    `<span><i style="background:${C("--s7")}"></i>DEX</span><span><i style="background:${C("--s4")}"></i>exchanges</span><span><i class="ln" style="background:${C("--muted")}"></i>own wallets (dashed)</span><span><i style="border:1.5px dashed ${C("--fg-2")};background:transparent"></i>another monitored owner</span>`;
+  const top = [...L].sort((a, b) => b.v - a.v).slice(0, 25);
+  const nl = (n) => (n.kind === "c" ? `<span class="flat">${esc(n.label)}</span>` : `<button class="addr" data-addr="${n.a}">${short(n.a)}</button>`);
+  $("bubflows").innerHTML = top.length ? `<div class="tw"><table><thead><tr><th>From</th><th>To</th><th class="n">GME</th><th>What it was</th></tr></thead><tbody>` +
+    top.map((l) => { const s = l.source.id, t = l.target.id, kind = s === "D" ? '<span class="up">bought on the DEX</span>' : t === "D" ? '<span class="down">sold on the DEX</span>' : t === "C" ? '<span class="down">deposited to an exchange</span>' : s === "C" ? '<span class="up">withdrawn from an exchange</span>' : typeof s === "number" && typeof t === "number" && sameOwner(s, t) ? '<span class="flat">between own wallets</span>' : "wallet to wallet";
+      return `<tr><td>${nl(l.source)}</td><td>${nl(l.target)}</td><td class="n">${fBb(l.v)}</td><td>${kind}</td></tr>`; }).join("") + `</tbody></table></div>`
+    : `<p class="sub">No GME moved in or out of these wallets in the last ${wl}.</p>`;
 }
 
 // ---------- wallet drawer ----------

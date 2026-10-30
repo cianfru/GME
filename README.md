@@ -45,6 +45,8 @@ Everything is rebuilt from the public transfer history, with free data only. The
 
 **https://gme-terminal.vercel.app** is a monitoring terminal built from `data/` on every push to `main`, so each daily data commit refreshes it.
 - **Ticker:** price, market cap, pool, holders, MVRV, the focus cluster's share and the insider status, each with its recent change.
+- **Wallets:** every wallet with ≥0.1% of supply, with its 1D/7D/30D/90D change and whether it is accumulating, selling, moving coins out or dormant (and how: DEX, exchanges, other wallets, its own wallets).
+- **Bubble map:** an owner's wallets coloured by what they did in the chosen window, with arrows to the DEX, exchanges and other wallets.
 - **Overview:** the insider watch, what changed over 1/7/30 days, and today's alerts.
 - **Valuation:** realized price, MVRV, supply in profit, SOPR, NRPL and cost basis.
 - **Holders:** count, new wallets, size bands, holding age, concentration and cohorts.

@@ -166,8 +166,68 @@ if pool_weth is None: pool_weth = (daily["price"][-1] or daily["price"][-2]) * p
 urpd = json.load(open(os.path.join(D, "engine", "urpd.json"))) if os.path.exists(os.path.join(D, "engine", "urpd.json")) else None
 cohorts = json.load(open(os.path.join(D, "cohorts.json")))["cohorts"] if os.path.exists(os.path.join(D, "cohorts.json")) else {}
 runs = json.load(open(os.path.join(D, "runs.json"))) if os.path.exists(os.path.join(D, "runs.json")) else []
+# ---- the monitor: every wallet with ≥0.1% of supply now or at any point in the last 90 days, plus every watched /
+#      owner-group wallet, and all their transfers in those 90 days (hourly, by counterparty) ---------------------------
+H90 = 90 * 24
+t0 = datetime.datetime.fromisoformat(NOW[:19]) - datetime.timedelta(hours=H90)
+t0s = t0.strftime("%Y-%m-%dT%H:%M:%SZ")
+thr_mon = 0.001 * SUPPLY
+recent = [x for x in T if x[2] > t0s]
+start = collections.Counter(bal)
+for s, r, ts, v, b in recent: start[s] += v; start[r] -= v
+run, peak = collections.Counter(start), set()
+for s, r, ts, v, b in recent:
+    run[s] -= v; run[r] += v
+    if run[r] >= thr_mon: peak.add(r)
+MON = {a for a in set(bal) | peak if a not in infra and (bal[a] >= thr_mon or start[a] >= thr_mon or a in peak)}
+
+# Owner groups, most specific first: the focus cluster, the watched groups, then the linked-wallet groups found by
+# cluster_all.py that hold a monitored wallet. Groups flagged as over-merged (>60 wallets) are never used.
+owners, owner_of = [], {}
+def add_owner(name, ws, kind):
+    ws = [a for a in sorted(ws) if a not in infra and a not in owner_of]
+    if len(ws) < 1: return
+    k = len(owners); owners.append(dict(name=name, kind=kind, n=len(ws)))
+    for a in ws: owner_of[a] = k
+add_owner("Focus wallet's cluster", FOC, "focus")
+for g, ws in sorted(MEMBERS.items(), key=lambda kv: -cur.get(kv[0], 0)):
+    if g != "Focus wallet's cluster": add_owner(g, ws, "coinbase" if g.startswith("Coinbase") else "watched")
+ENT = json.load(open(os.path.join(D, "entities_all.json")))["entities"] if os.path.exists(os.path.join(D, "entities_all.json")) else []
+for e in ENT:
+    ws = set(e["wallets"])
+    if e.get("flagged") or not (ws & MON): continue
+    lead = max(ws, key=lambda a: bal[a])
+    add_owner(f"Linked group {lead[:6]}…{lead[-4:]}", ws, "linked")
+TRACK = MON | set(owner_of)
+TRACK -= infra
+def cat(a):
+    if is_cex(a): return "C"
+    if a in LP: return "L"
+    if a in (DEAD, NULL): return "B"
+    if a == TOKEN: return "T"
+    if is_dex(a): return "D"
+    return None
+A, ai = [], {}
+def idx(a):
+    if a not in ai: ai[a] = len(A); A.append(a)
+    return ai[a]
+for a in sorted(TRACK, key=lambda a: -bal[a]): idx(a)
+edges = collections.Counter()
+for s, r, ts, v, b in recent:
+    if s == r or not (s in TRACK or r in TRACK): continue
+    h = int((datetime.datetime.fromisoformat(ts[:19]) - t0).total_seconds() // 3600)
+    src = idx(s) if s in TRACK else (cat(s) or idx(s))
+    dst = idx(r) if r in TRACK else (cat(r) or idx(r))
+    edges[(h, src, dst)] += v
+mon = dict(
+    start=t0s, hours=H90, A=A,
+    M=[[round(bal[a] / 1e9, 4), owner_of.get(a, -1), int(a in MON), first.get(a, "")[:10], last.get(a, "")[:10]] if a in TRACK else None for a in A],
+    owners=owners,
+    e=[[h, s_, d_, round(v / 1e9, 5)] for (h, s_, d_), v in sorted(edges.items(), key=lambda kv: (kv[0][0], str(kv[0][1]), str(kv[0][2])))],
+)
+
 out = dict(
-    asOf=NOW, daily=daily, insider=insider, groups=groups, top=top, cluster=cluster,
+    asOf=NOW, daily=daily, insider=insider, groups=groups, top=top, cluster=cluster, mon=mon,
     pool=dict(gme=pool_gme, weth=pool_weth, ethUsd=eth[-1][1]),
     urpd=dict(spot=urpd["spot"], buckets=[dict(lo=x["lo"], hi=x["hi"], pct=x["pct"]) for x in urpd["buckets"]]) if urpd else None,
     cohorts=[dict(name=k.split(" ", 1)[1], wallets=v["wallets"], holdNow=v["holdNow"], buyUsd=v["buyUsd"], sellUsd=v["sellUsd"]) for k, v in sorted(cohorts.items())],
@@ -177,7 +237,7 @@ json.dump(out, open(os.path.join(D, "terminal.json"), "w"), separators=(",", ":"
 
 # ---- per-wallet history for the drill-down ---------------------------------------------------------------------------
 watch = set().union(*MEMBERS.values()) if MEMBERS else set()
-watch |= {t["a"] for t in top} | FOC
+watch |= {t["a"] for t in top} | FOC | TRACK
 watch -= infra
 ev = collections.defaultdict(list)
 for s, r, ts, v, b in T:
@@ -206,5 +266,5 @@ for a in watch:
 json.dump(wallets, open(os.path.join(D, "wallets.json"), "w"), separators=(",", ":"))
 
 print(f"terminal.json: {N} days · insider {status} ({why}){' · TRIPWIRE ' + '; '.join(tripwire) if tripwire else ''} · "
-      f"{len(groups)} groups · pool {pool_gme/1e9:.2f}B / {pool_weth:.1f} WETH · focus wallet DEX sells ever {sum(focus_dexsell)/1e9:.2f}B")
+      f"{len(groups)} groups · monitor {len(MON)} wallets ≥0.1% ({len(TRACK)} tracked, {len(owners)} owners, {len(edges)} flow edges) · pool {pool_gme/1e9:.2f}B / {pool_weth:.1f} WETH · focus wallet DEX sells ever {sum(focus_dexsell)/1e9:.2f}B")
 print(f"wallets.json: {len(wallets)} wallets, {sum(w_['n'] for w_ in wallets.values())} events")

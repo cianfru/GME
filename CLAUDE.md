@@ -65,7 +65,19 @@ Read this file first. It is enough to continue without the original conversation
     - **HOLDERS:** holders, new wallets, holders by $ position size, HODL waves, concentration, cohort survival.
     - **FLOWS:** DEX buys vs sells, net flow, buyers vs sellers, GME in the pool, exchange balances, liveliness.
     - **INSIDERS:** status, cluster holdings, daily cluster flows (bought, from exchanges, to exchanges, sold), cluster → exchanges $, network graph, members table.
-    - **WATCHLIST:** watched groups with 1d/7d/30d change and 180-day sparklines, quiet accumulators, buy-and-hide wallets, top 50 holders, alert log.
+    - **WALLETS** (the monitor; owner asked for "a list of all the wallets … day, weekly, monthly, accumulating or selling"):
+      - one row per wallet holding ≥0.1% of supply now or at any point in 90 days, plus their linked side wallets;
+      - columns: 1D/7D/30D/90D change, a status, "how" chips, a 90-day sparkline;
+      - status: ▲ accumulating, ▼ selling (DEX or exchange), → moved out (to other wallets), ↔ own wallets, · dormant;
+      - "how" chips break the move down: DEX buy, from exchanges, from or to other wallets, own wallets, DEX sell, to exchanges;
+      - an **Owners** view sums each owner's wallets, so moves between its own wallets cancel out;
+      - filters and search.
+    - **BUBBLE MAP:** pick an owner (default: the focus wallet's cluster, or "all monitored wallets") and a window (1D/7D/30D/90D).
+      - Bubbles = its wallets, sized by holdings. Green = grew, red = sold or deposited, amber = moved to other wallets, grey = no change.
+      - Pinned nodes for DEX, exchanges and other wallets.
+      - Arrows: green = DEX buy, red = DEX sell or exchange deposit, blue = exchange withdrawal, dashed grey = between its own wallets.
+      - A table below lists the window's largest flows.
+    - **WATCHLIST:** watched groups with 1d/7d/30d change and 180-day sparklines, quiet accumulators, buy-and-hide wallets (only those still holding), top 50 holders, alert log.
   - **Wallet drawer:** every address opens it, with stats, a balance + price chart (buys and sells marked) and the activity list. It reads `wallets.json`, fetched lazily.
 - **Data:** `scripts/terminal.py` runs daily, after `watch.py`, and reads each group's members from `watch_state.json`. It writes:
   - **`data/terminal.json`:**
@@ -73,7 +85,14 @@ Read this file first. It is enough to continue without the original conversation
     - the insider status;
     - 180-day group histories;
     - the cluster graph and members;
-    - the top 50 holders and live pool reserves.
+    - the top 50 holders and live pool reserves;
+    - **`mon`**, the monitor and bubble map data:
+      - `A` = addresses;
+      - `M[i]` = [balance B, owner index, monitored flag, first seen, last active] for tracked wallets;
+      - `owners` = focus cluster → watched groups → unflagged linked groups from `entities_all.json` that hold a monitored wallet;
+      - `e` = every transfer touching a tracked wallet in the last 90 days, aggregated per hour as [hour, from, to, GME in billions]. A counterparty that isn't tracked is a category: D = DEX, C = exchange, L = liquidity, B = burn, T = token contract, or its address.
+      
+      The page computes every window, status and map from `e`.
   - **`data/wallets.json`:** per-wallet daily balance + transfer events (merged per day / type / counterparty) for every watched wallet, cluster member and top holder.
   
   `scripts/build-site.mjs` puts terminal.json into `dist/site.json` as `T`, next to alerts, accumulators, holding wallets and float, and copies wallets.json alongside.
@@ -94,7 +113,9 @@ Read this file first. It is enough to continue without the original conversation
 - `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Every push to `main`, including the daily data commit, redeploys. **Production URL: https://gme-terminal.vercel.app** (Vercel project `gme-terminal`, team cianfru's projects, repo `cianfru/GME`). Deployment protection is standard: the production domain is public, preview URLs require Vercel login.
 - **Password is optional (owner: "keep it simple, a side project").** `middleware.js` adds HTTP Basic auth only when the `SITE_PASSWORD` env var is set. Without it the site is open, and `noindex` keeps it out of search. Tests: `npm test`.
 - **Freshness:** the brand dot and the footer turn red after 36 hours without new data.
-- **"Still holding"** (a buy-and-hide wallet) means it kept ≥80% of what it received AND sold or deposited ≤20% of it. A trader that refills, like `0x859f…d9d1` which sold 3.3B, is not a hider.
+- **"Still holding"** (a buy-and-hide wallet) means it kept ≥80% of what it received AND sold or deposited ≤20% of it.
+  - Since 2026-10-30, `vaults90.py` keeps ONLY those in `vaults90.json`, so they alone feed the accumulator tags and the watch groups. The relays that bought and then sold or passed the coins on go to `vaults90_relays.json` and are just counted on the page.
+  - Owner: "bought and sold is not accumulation." A trader that refills, like `0x859f…d9d1` which sold 3.3B, is not a hider.
 
 ## 4. Linking rules (what makes two wallets one owner)
 
@@ -137,6 +158,10 @@ Guards:
   - Several were relays that sold on the DEX: `0xc71f…` 1.49B and `0x8d56…` 0.93B, both in the 90-day top sellers.
   - Three small ones went to exchanges.
   - `vaults90.py` now records `bal`, `soldDex`, `toCex` and `sent` for each, so the page shows which is which. Judge a holding wallet by what it still holds, not by what it received.
+- **Wallet monitor, first read (7 days to 2026-10-30):**
+  - 22 monitored wallets accumulating (+8.76B) vs 4 reducing (−1.60B); the rest dormant.
+  - The #2 holder `0x8d10…a8c8` (14.2B, 3.4%, not linked to anyone) has been selling on the DEX: −1.8B in 90 days, −740M in 7 days.
+  - Linked group `0xd657…2f48` bought and sold back.
 - **First watch run (24 hours to 2026-10-30):**
   - the focus cluster took 1.25B from an exchange and bought 0.69B on the DEX;
   - accumulators `0x4553`, `0x7465` and `0xfa67` bought on the DEX;
