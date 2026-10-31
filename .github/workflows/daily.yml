@@ -125,4 +125,5 @@ jobs:
           git add data
           if git diff --cached --quiet; then echo "no changes"; exit 0; fi
           git commit -m "data: daily refresh $(date -u +%F)"
-          git push
+          # main may have moved while this ran (a code push); the data commit only touches data/, so rebase onto it.
+          for i in 1 2 3; do git pull --rebase origin main && git push && exit 0; sleep 5; done; exit 1

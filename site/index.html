@@ -800,16 +800,16 @@ function drawBub() {
   const edgeC = (l) => { const s = l.source.id, t = l.target.id;
     if (s === "D") return [C("--up"), ""]; if (t === "D") return [C("--down"), ""]; if (t === "C") return [C("--crit"), ""]; if (s === "C") return [C("--s1"), ""];
     if (typeof s === "number" && typeof t === "number" && sameOwner(s, t)) return [C("--muted"), "5 4"]; return [C("--fg-2"), ""]; };
-  const wS = d3.scaleSqrt([0, d3.max(L, (l) => l.v) || 1], [1, 9]);
+  const wS = d3.scaleSqrt([0, d3.max(L, (l) => l.v) || 1], [0.8, 3.5]);
   const defs = svg.append("defs"), marks = new Map();
   const marker = (c) => { if (marks.has(c)) return marks.get(c); const id = "ar" + marks.size; marks.set(c, id);
-    defs.append("marker").attr("id", id).attr("viewBox", "0 -5 10 10").attr("refX", 9).attr("refY", 0).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+    defs.append("marker").attr("id", id).attr("viewBox", "0 -5 10 10").attr("refX", 9).attr("refY", 0).attr("markerUnits", "userSpaceOnUse").attr("markerWidth", 7).attr("markerHeight", 7).attr("orient", "auto")
       .append("path").attr("d", "M0,-4L10,0L0,4").attr("fill", c); return id; };
   const path = (l) => { const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, d = Math.hypot(dx, dy) || 1;
     const rs = R(l.source) + 2, rt = R(l.target) + 4, x1 = l.source.x + (dx * rs) / d, y1 = l.source.y + (dy * rs) / d, x2 = l.target.x - (dx * rt) / d, y2 = l.target.y - (dy * rt) / d;
     const mx = (x1 + x2) / 2 - dy * 0.12, my = (y1 + y2) / 2 + dx * 0.12; return `M${x1},${y1}Q${mx},${my} ${x2},${y2}`; };
   svg.append("g").selectAll("path").data(L).join("path").attr("d", path).attr("fill", "none")
-    .attr("stroke", (l) => edgeC(l)[0]).attr("stroke-dasharray", (l) => edgeC(l)[1] || null).attr("stroke-width", (l) => wS(l.v)).attr("stroke-opacity", 0.8)
+    .attr("stroke", (l) => edgeC(l)[0]).attr("stroke-dasharray", (l) => edgeC(l)[1] || null).attr("stroke-width", (l) => wS(l.v)).attr("stroke-opacity", 0.75)
     .attr("marker-end", (l) => `url(#${marker(edgeC(l)[0])})`)
     .on("pointermove", (ev, l) => showTip(`<div class="h">${esc(nlabel(l.source))} → ${esc(nlabel(l.target))}</div>` + trow(edgeC(l)[0], "GME", fBb(l.v)) + trow("", "≈ $", fU(l.v * 1e9 * (lastVal(col("price")) || 0))), ev)).on("pointerleave", hideTip);
   function nlabel(n) { return n.kind === "c" ? n.label : short(n.a) + (n.a === FOCUS ? " (focus)" : ""); }
