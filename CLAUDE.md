@@ -117,7 +117,10 @@ Read this file first. It is enough to continue without the original conversation
   - colours are passed as CSS variable names, so the theme toggle repaints.
 - `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Every push to `main`, including the daily data commit, redeploys. **Production URL: https://gme-terminal.vercel.app** (Vercel project `gme-terminal`, team cianfru's projects, repo `cianfru/GME`). Deployment protection is standard: the production domain is public, preview URLs require Vercel login.
 - **Password is optional (owner: "keep it simple, a side project").** `middleware.js` adds HTTP Basic auth only when the `SITE_PASSWORD` env var is set. Without it the site is open, and `noindex` keeps it out of search. Tests: `npm test`.
-- **Freshness:** the brand dot and the footer turn red after 36 hours without new data.
+- **Freshness:** after 36 hours without new data, a static red "STALE" label appears next to the logo and the footer says so.
+- **Header (owner, 2026-10-31):**
+  - The token logo (`site/logo.png`, CoinGecko's "GME (Ethereum)" image, also the favicon) + "GME on ETH".
+  - **No dots, no blinking or glowing indicators anywhere on the site.** The theme toggle is a text button (LIGHT/DARK).
 - **"Still holding"** (a buy-and-hide wallet) means it kept ≥80% of what it received AND sold or deposited ≤20% of it.
   - Since 2026-10-30, `vaults90.py` keeps ONLY those in `vaults90.json`, so they alone feed the accumulator tags and the watch groups. The relays that bought and then sold or passed the coins on go to `vaults90_relays.json` and are just counted on the page.
   - Owner: "bought and sold is not accumulation." A trader that refills, like `0x859f…d9d1` which sold 3.3B, is not a hider.

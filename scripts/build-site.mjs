@@ -88,6 +88,7 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 writeFileSync(join(OUT, "site.json"), JSON.stringify(site));
 copyFileSync(join(ROOT, "site/index.html"), join(OUT, "index.html"));
+copyFileSync(join(ROOT, "site/logo.png"), join(OUT, "logo.png"));   // the token's logo (CoinGecko "GME (Ethereum)")
 // Per-wallet histories: a separate file, fetched only when a wallet is opened.
 if (existsSync(join(D, "wallets.json")))
   writeFileSync(join(OUT, "wallets.json"), relabel(readFileSync(join(D, "wallets.json"), "utf8")));

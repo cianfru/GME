@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>GME Terminal</title>
+<link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
@@ -38,8 +39,9 @@ button { font: inherit; color: inherit }
 .bar { display: flex; align-items: stretch; gap: 0; max-width: 1400px; margin: 0 auto; padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px)) }
 .brand { display: flex; align-items: center; gap: .5rem; padding: .7rem 1rem .7rem 0; border-right: 1px solid var(--line); white-space: nowrap;
   font: 600 13px var(--font); letter-spacing: .08em }
-.brand i { width: 9px; height: 9px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent) }
-.brand.stale i { background: var(--crit); box-shadow: 0 0 0 3px color-mix(in srgb, var(--crit) 25%, transparent) }
+.brand img { width: 26px; height: 26px; display: block; flex: none }
+.brand .stale { display: none; font-size: 10px; padding: .1rem .35rem; border: 1px solid var(--crit); color: var(--crit) }
+.brand.stale .stale { display: inline-block }
 .tick { display: flex; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0 }
 .tick::-webkit-scrollbar { display: none }
 .tk { display: flex; flex-direction: column; justify-content: center; padding: .45rem 1rem; border-right: 1px solid var(--line); white-space: nowrap; min-width: max-content }
@@ -47,7 +49,7 @@ button { font: inherit; color: inherit }
 .tk .v { font: 600 15px var(--font) }
 .tk .d { font: 500 11px var(--font) }
 .up { color: var(--up) } .down { color: var(--down) } .flat { color: var(--muted) }
-.icon-btn { background: none; border: 0; border-left: 1px solid var(--line); padding: 0 .9rem; cursor: pointer; color: var(--fg-2); min-width: 44px }
+.icon-btn { background: none; border: 0; border-left: 1px solid var(--line); padding: 0 .9rem; cursor: pointer; color: var(--muted); min-width: 44px; font: 600 11px var(--font); letter-spacing: .08em }
 .tabsrow { display: flex; align-items: center; max-width: 1400px; margin: 0 auto; padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--line) }
 .tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0 }
 .tabs::-webkit-scrollbar { display: none }
@@ -156,15 +158,15 @@ tr.r-acc td:first-child { box-shadow: inset 3px 0 var(--up) } tr.r-sell td:first
 #tip .h { font: 600 11px var(--font); color: var(--muted); margin-bottom: .2rem }
 footer { max-width: 1400px; margin: 0 auto; padding: 0 16px 40px; color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: .4rem 1.4rem }
 #err { display: none; margin: 1rem; padding: 1rem; border-radius: 0; border: 1px solid var(--crit); color: var(--crit) }
-@media (max-width: 640px) { .tk { padding: .4rem .7rem } .card { padding: 12px } .brand { padding-right: .7rem } .brand span { display: none } }
+@media (max-width: 640px) { .tk { padding: .4rem .7rem } .card { padding: 12px } .brand { padding-right: .7rem } .brand b { display: none } }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="bar">
-    <div class="brand" id="brand" title=""><i></i><b style="font-weight:inherit">GME<span>/ETH TERMINAL</span></b></div>
+    <div class="brand" id="brand" title=""><img src="/logo.png" alt=""><b style="font-weight:inherit">GME on ETH</b><span class="stale">STALE</span></div>
     <div class="tick" id="tick"></div>
-    <button class="icon-btn" id="theme" aria-label="Switch light/dark">◐</button>
+    <button class="icon-btn" id="theme" aria-label="Switch light/dark">LIGHT</button>
   </div>
   <div class="tabsrow"><nav class="tabs" id="tabs" aria-label="Sections"></nav><div class="range" id="range" role="group" aria-label="Chart range"></div></div>
 </header>
@@ -270,7 +272,9 @@ function init() {
   $("range").innerHTML = RANGES.map(([l, d]) => `<button type="button" data-r="${d}">${l}</button>`).join("");
   $("range").addEventListener("click", (e) => { const b = e.target.closest("button[data-r]"); if (!b) return; range = +b.dataset.r; try { localStorage.setItem("gme-range", range); } catch (er) {} markRange(); redraw(); });
   addEventListener("hashchange", () => { tab = location.hash.slice(1) || "overview"; if (!TABS.some((t) => t[0] === tab)) tab = "overview"; render(); });
-  $("theme").onclick = () => { const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = t; try { localStorage.setItem("gme-theme", t); } catch (e) {} redraw(); };
+  const themeLabel = () => { $("theme").textContent = document.documentElement.dataset.theme === "dark" ? "LIGHT" : "DARK"; };
+  themeLabel();
+  $("theme").onclick = () => { const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = t; try { localStorage.setItem("gme-theme", t); } catch (e) {} themeLabel(); redraw(); };
   let w = innerWidth, rt; addEventListener("resize", () => { if (innerWidth === w) return; w = innerWidth; clearTimeout(rt); rt = setTimeout(redraw, 150); });
   document.addEventListener("click", (e) => { const a = e.target.closest("[data-addr]"); if (a) { e.preventDefault(); openWallet(a.dataset.addr); } });
   $("scrim").onclick = closeWallet; addEventListener("keydown", (e) => { if (e.key === "Escape") closeWallet(); });
