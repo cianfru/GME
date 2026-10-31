@@ -1,20 +1,34 @@
 {
  "summary": {
-  "asOf": "2026-10-30T12:48:47Z",
-  "since": "2026-10-30T11:52:47Z",
-  "price": 6.423129526436401e-06,
-  "mcap": 2702146.3604765297,
-  "pool": 49391298655.21679,
-  "watchedGroups": 17,
-  "alerts": 1,
+  "asOf": "2026-10-31T06:40:11Z",
+  "since": "2026-10-30T12:48:47Z",
+  "price": 6.5144590662932e-06,
+  "mcap": 2740567.7845988865,
+  "pool": 47816702134.94277,
+  "watchedGroups": 18,
+  "alerts": 3,
   "high": 0
  },
  "alerts": [
   {
+   "kind": "new_accumulator",
+   "severity": "medium",
+   "text": "New quiet accumulator 0x9579\u202666ab (1 wallet(s)): +0.75B in 90 days (0.18% of supply), spent $4,868; new to GME",
+   "wallet": "0x95792b125ed2b89994bd00b81c2146d6322466ab"
+  },
+  {
+   "kind": "flow",
+   "severity": "info",
+   "text": "Accumulator 0x9579\u202666ab: bought on DEX 0.75B GME (~$4,868, 0.18% of supply)",
+   "group": "Accumulator 0x9579\u202666ab",
+   "what": "bought on DEX",
+   "tokens": 747277915.391109
+  },
+  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME -0.00B since last run (net buying out of the pool); pool now 49.39B, price $6.423e-06",
-   "delta": -4480806.951507568
+   "text": "Pool GME -1.57B since last run (net buying out of the pool); pool now 47.82B, price $6.514e-06",
+   "delta": -1574596520.2740173
   }
  ]
 }

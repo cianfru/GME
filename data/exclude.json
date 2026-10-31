@@ -4786,5 +4786,9 @@
 "0x9ed845582218d494b60fb3a2296fd4f1864a0879": {
 "name": "contract",
 "kind": "mm"
+},
+"0xd6e5219f34a6d845d56608f1a48cc599ea97c6f8": {
+"name": "contract",
+"kind": "mm"
 }
 }
