@@ -7,10 +7,11 @@
 <title>GME Terminal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>try { const t = localStorage.getItem("gme-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <style>
+:root { --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif }
 :root, :root[data-theme="light"] {
   color-scheme: light;
   --bg: #f1f1ee; --panel: #fcfcfb; --panel-2: #f5f5f2; --fg: #0b0b0b; --fg-2: #52514e; --muted: #75746f; --line: #e0dfda; --grid: #ebeae6;
@@ -25,36 +26,37 @@
 }
 * { box-sizing: border-box }
 html { -webkit-text-size-adjust: 100% }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 "Public Sans", "Segoe UI", Roboto, Arial, sans-serif; overflow-x: hidden }
-.mono, .num { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--font); overflow-x: hidden; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1 }
+button, input, select, svg text { font-family: var(--font); font-variant-numeric: tabular-nums }
+.mono, .num { font-family: var(--font); font-variant-numeric: tabular-nums }
 a { color: inherit; text-underline-offset: 3px; text-decoration-color: var(--line) }
 button { font: inherit; color: inherit }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 0 }
 
 /* top bar */
 .top { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line) }
 .bar { display: flex; align-items: stretch; gap: 0; max-width: 1400px; margin: 0 auto; padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px)) }
 .brand { display: flex; align-items: center; gap: .5rem; padding: .7rem 1rem .7rem 0; border-right: 1px solid var(--line); white-space: nowrap;
-  font: 600 13px "IBM Plex Mono", monospace; letter-spacing: .08em }
+  font: 600 13px var(--font); letter-spacing: .08em }
 .brand i { width: 9px; height: 9px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent) }
 .brand.stale i { background: var(--crit); box-shadow: 0 0 0 3px color-mix(in srgb, var(--crit) 25%, transparent) }
 .tick { display: flex; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0 }
 .tick::-webkit-scrollbar { display: none }
 .tk { display: flex; flex-direction: column; justify-content: center; padding: .45rem 1rem; border-right: 1px solid var(--line); white-space: nowrap; min-width: max-content }
-.tk .k { font: 500 10px "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
-.tk .v { font: 600 15px "IBM Plex Mono", monospace }
-.tk .d { font: 500 11px "IBM Plex Mono", monospace }
+.tk .k { font: 500 10px var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.tk .v { font: 600 15px var(--font) }
+.tk .d { font: 500 11px var(--font) }
 .up { color: var(--up) } .down { color: var(--down) } .flat { color: var(--muted) }
 .icon-btn { background: none; border: 0; border-left: 1px solid var(--line); padding: 0 .9rem; cursor: pointer; color: var(--fg-2); min-width: 44px }
 .tabsrow { display: flex; align-items: center; max-width: 1400px; margin: 0 auto; padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px)); border-top: 1px solid var(--line) }
 .tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0 }
 .tabs::-webkit-scrollbar { display: none }
-.tabs a { padding: .65rem 1rem; font: 600 12px "IBM Plex Mono", monospace; letter-spacing: .08em; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; min-height: 40px; display: flex; align-items: center }
+.tabs a { padding: .65rem 1rem; font: 600 12px var(--font); letter-spacing: .08em; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; min-height: 40px; display: flex; align-items: center }
 .tabs a.on { color: var(--fg); border-bottom-color: var(--accent) }
 .tabs .sp { flex: 1 }
 .range { display: flex; align-items: center; gap: 2px; padding-left: .5rem; flex: none; border-left: 1px solid var(--line) }
 @media (max-width: 640px) { .tabs a { padding: .65rem .7rem } .range button { padding: .3rem .4rem } }
-.range button { background: none; border: 1px solid transparent; border-radius: 6px; padding: .3rem .55rem; font: 600 11px "IBM Plex Mono", monospace; color: var(--muted); cursor: pointer; min-height: 32px }
+.range button { background: none; border: 1px solid transparent; border-radius: 0; padding: .3rem .55rem; font: 600 11px var(--font); color: var(--muted); cursor: pointer; min-height: 32px }
 .range button.on { color: var(--fg); border-color: var(--line); background: var(--panel) }
 
 /* layout */
@@ -62,10 +64,10 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px max(12px, env(safe-area-
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
 .wide { grid-column: 1 / -1 }
 @media (max-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr) } }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 12px; min-width: 0; display: flex; flex-direction: column; gap: 6px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 0; padding: 14px 16px 12px; min-width: 0; display: flex; flex-direction: column; gap: 6px }
 .card > header { display: flex; justify-content: space-between; align-items: baseline; gap: .8rem; flex-wrap: wrap }
-.card h3 { margin: 0; font: 600 12px "IBM Plex Mono", monospace; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-2) }
-.card .val { font: 600 18px "IBM Plex Mono", monospace; white-space: nowrap }
+.card h3 { margin: 0; font: 600 12px var(--font); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-2) }
+.card .val { font: 600 18px var(--font); white-space: nowrap }
 .card .val small { font-size: 12px; margin-left: .4rem }
 .card .sub { margin: 0; color: var(--muted); font-size: 12.5px }
 .card .note { color: var(--muted); font-size: 11.5px; margin-top: 2px }
@@ -73,37 +75,37 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px max(12px, env(safe-area-
 .chart svg { display: block; width: 100%; overflow: visible }
 .legend { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: 12px; color: var(--fg-2) }
 .legend span { display: inline-flex; align-items: center; gap: .4rem }
-.legend i { width: 10px; height: 10px; border-radius: 2px; flex: none }
-.legend i.ln { height: 2px; width: 14px; border-radius: 1px }
-.axis text { font: 400 10.5px "IBM Plex Mono", monospace; fill: var(--muted) }
+.legend i { width: 10px; height: 10px; border-radius: 0; flex: none }
+.legend i.ln { height: 2px; width: 14px; border-radius: 0 }
+.axis text { font: 400 10.5px var(--font); fill: var(--muted) }
 .axis line { stroke: var(--line) } .axis .domain { display: none }
 .gridl line { stroke: var(--grid) } .gridl .domain { display: none }
-.lbl { font: 500 10.5px "IBM Plex Mono", monospace; fill: var(--fg-2) }
+.lbl { font: 500 10.5px var(--font); fill: var(--fg-2) }
 .xhair { stroke: var(--fg-2); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none }
 
 /* status */
 .status { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1.2rem }
-.badge { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .75rem; border-radius: 6px; font: 600 14px "IBM Plex Mono", monospace; letter-spacing: .06em; border: 1px solid }
+.badge { display: inline-flex; align-items: center; gap: .5rem; padding: .35rem .75rem; border-radius: 0; font: 600 14px var(--font); letter-spacing: .06em; border: 1px solid }
 .badge.ACCUMULATING { color: var(--up); border-color: var(--up) }
 .badge.HOLDING { color: var(--fg-2); border-color: var(--line) }
 .badge.SELLING { color: var(--warn); border-color: var(--warn) }
 .badge.DISTRIBUTING { color: var(--crit); border-color: var(--crit) }
-.trip { font: 500 12.5px "IBM Plex Mono", monospace; padding: .3rem .6rem; border-radius: 6px; border: 1px dashed var(--line); color: var(--fg-2) }
+.trip { font: 500 12.5px var(--font); padding: .3rem .6rem; border-radius: 0; border: 1px dashed var(--line); color: var(--fg-2) }
 .trip.armed { border-style: solid; border-color: var(--crit); color: var(--crit) }
 
 /* tables */
 .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px }
 table { border-collapse: collapse; width: 100%; font-size: 12.5px }
 th, td { padding: .42rem .55rem; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle }
-th { font: 600 10.5px "IBM Plex Mono", monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; background: var(--panel); cursor: default }
+th { font: 600 10.5px var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; background: var(--panel); cursor: default }
 th.s { cursor: pointer } th.s:hover { color: var(--fg) }
-td.n, th.n { text-align: right; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums }
+td.n, th.n { text-align: right; font-family: var(--font); font-variant-numeric: tabular-nums }
 tr:last-child td { border-bottom: 0 }
 tbody tr:hover { background: var(--panel-2) }
-.addr { font-family: "IBM Plex Mono", monospace; color: var(--accent); cursor: pointer; text-decoration: none; background: none; border: 0; padding: 0; font-size: inherit }
+.addr { font-family: var(--font); color: var(--accent); cursor: pointer; text-decoration: none; background: none; border: 0; padding: 0; font-size: inherit }
 .addr:hover { text-decoration: underline }
-.tag { display: inline-block; font: 500 10.5px "IBM Plex Mono", monospace; padding: .08rem .45rem; border-radius: 4px; border: 1px solid var(--line); color: var(--fg-2); margin-right: .25rem }
-.sev { font: 600 10.5px "IBM Plex Mono", monospace; letter-spacing: .05em }
+.tag { display: inline-block; font: 500 10.5px var(--font); padding: .08rem .45rem; border-radius: 0; border: 1px solid var(--line); color: var(--fg-2); margin-right: .25rem }
+.sev { font: 600 10.5px var(--font); letter-spacing: .05em }
 .sev.high { color: var(--crit) } .sev.medium { color: var(--warn) } .sev.info { color: var(--muted) }
 .alist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column }
 .alist li { display: grid; grid-template-columns: 6.2rem 1fr; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid var(--line); font-size: 12.5px }
@@ -119,48 +121,48 @@ details.grp summary::-webkit-details-marker { display: none }
 #drawer.open { transform: none }
 #drawer .dh { display: flex; align-items: center; gap: .8rem; padding: .8rem 1rem; border-bottom: 1px solid var(--line) }
 #drawer .db { overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem }
-#drawer .x { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 6px; min-width: 40px; min-height: 40px; cursor: pointer; font-size: 18px }
+#drawer .x { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 0; min-width: 40px; min-height: 40px; cursor: pointer; font-size: 18px }
 .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .6rem }
-.kv div { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .65rem }
-.kv b { display: block; font: 600 15px "IBM Plex Mono", monospace }
+.kv div { background: var(--panel-2); border: 1px solid var(--line); border-radius: 0; padding: .5rem .65rem }
+.kv b { display: block; font: 600 15px var(--font) }
 .kv span { font-size: 11px; color: var(--muted) }
 #scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .45); z-index: 35; display: none }
 #scrim.on { display: block }
 
 /* monitor + bubble map */
 .ctl { display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden }
-.seg button { background: none; border: 0; border-right: 1px solid var(--line); padding: .35rem .65rem; font: 600 11px "IBM Plex Mono", monospace; color: var(--muted); cursor: pointer; min-height: 34px }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 0; overflow: hidden }
+.seg button { background: none; border: 0; border-right: 1px solid var(--line); padding: .35rem .65rem; font: 600 11px var(--font); color: var(--muted); cursor: pointer; min-height: 34px }
 .seg button:last-child { border-right: 0 }
 .seg button.on { background: var(--panel-2); color: var(--fg) }
-.chip { background: none; border: 1px solid var(--line); border-radius: 999px; padding: .3rem .7rem; font: 500 12px "IBM Plex Mono", monospace; color: var(--fg-2); cursor: pointer; min-height: 34px }
+.chip { background: none; border: 1px solid var(--line); border-radius: 0; padding: .3rem .7rem; font: 500 12px var(--font); color: var(--fg-2); cursor: pointer; min-height: 34px }
 .chip.on { border-color: var(--fg-2); color: var(--fg) }
 .chip b { font-weight: 600 }
-input.q, select.q { background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; color: var(--fg); padding: .4rem .6rem; font: 500 12px "IBM Plex Mono", monospace; min-height: 34px }
+input.q, select.q { background: var(--panel-2); border: 1px solid var(--line); border-radius: 0; color: var(--fg); padding: .4rem .6rem; font: 500 12px var(--font); min-height: 34px }
 input.q { width: 14rem; max-width: 100% }
 select.q { max-width: 100% }
 .st-acc { color: var(--up) } .st-sell { color: var(--down) } .st-move { color: var(--warn) } .st-int, .st-flat, .st-dorm { color: var(--muted) }
 tr.r-acc td:first-child { box-shadow: inset 3px 0 var(--up) } tr.r-sell td:first-child { box-shadow: inset 3px 0 var(--down) } tr.r-move td:first-child { box-shadow: inset 3px 0 var(--warn) }
 .how { white-space: normal; min-width: 14rem }
-.how span { display: inline-block; margin: 0 .5rem .1rem 0; font: 500 11px "IBM Plex Mono", monospace }
-.sumline { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; font: 500 12.5px "IBM Plex Mono", monospace }
+.how span { display: inline-block; margin: 0 .5rem .1rem 0; font: 500 11px var(--font) }
+.sumline { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; font: 500 12.5px var(--font) }
 .ownlink { background: none; border: 0; padding: 0; color: var(--fg-2); cursor: pointer; font: inherit; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px }
 #bub svg text { pointer-events: none }
-#tip { position: fixed; z-index: 60; pointer-events: none; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px;
+#tip { position: fixed; z-index: 60; pointer-events: none; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 0;
   padding: .5rem .65rem; font-size: 12px; box-shadow: 0 8px 24px rgb(0 0 0 / .35); opacity: 0; transition: opacity .1s; max-width: 300px }
 #tip .r { display: flex; justify-content: space-between; gap: 1rem; align-items: center }
-#tip .r i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: .35rem }
-#tip b { font: 500 12px "IBM Plex Mono", monospace }
-#tip .h { font: 600 11px "IBM Plex Mono", monospace; color: var(--muted); margin-bottom: .2rem }
+#tip .r i { display: inline-block; width: 8px; height: 8px; border-radius: 0; margin-right: .35rem }
+#tip b { font: 500 12px var(--font) }
+#tip .h { font: 600 11px var(--font); color: var(--muted); margin-bottom: .2rem }
 footer { max-width: 1400px; margin: 0 auto; padding: 0 16px 40px; color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: .4rem 1.4rem }
-#err { display: none; margin: 1rem; padding: 1rem; border-radius: 8px; border: 1px solid var(--crit); color: var(--crit) }
+#err { display: none; margin: 1rem; padding: 1rem; border-radius: 0; border: 1px solid var(--crit); color: var(--crit) }
 @media (max-width: 640px) { .tk { padding: .4rem .7rem } .card { padding: 12px } .brand { padding-right: .7rem } .brand span { display: none } }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="bar">
-    <div class="brand" id="brand" title=""><i></i>GME<span>/ETH TERMINAL</span></div>
+    <div class="brand" id="brand" title=""><i></i><b style="font-weight:inherit">GME<span>/ETH TERMINAL</span></b></div>
     <div class="tick" id="tick"></div>
     <button class="icon-btn" id="theme" aria-label="Switch light/dark">◐</button>
   </div>
@@ -529,8 +531,8 @@ function cohortsCard() {
     const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
     const x = d3.scaleLinear([0, Math.max(25, d3.max(Co, (c) => c.pct))], [0, w]), y = d3.scaleBand(Co.map((c) => c.name), [0, H - m.t - m.b]).padding(0.28);
     g.selectAll("text.n").data(Co).join("text").attr("class", "lbl").attr("x", -8).attr("y", (c) => y(c.name) + y.bandwidth() / 2 + 4).attr("text-anchor", "end").text((c) => c.name.replace("the run (Oct 24–Jan 25)", "the big run"));
-    g.selectAll("rect.t").data(Co).join("rect").attr("x", 0).attr("y", (c) => y(c.name)).attr("width", w).attr("height", y.bandwidth()).attr("fill", C("--grid")).attr("rx", 3);
-    g.selectAll("rect.v").data(Co).join("rect").attr("x", 0).attr("y", (c) => y(c.name)).attr("width", (c) => Math.max(c.pct > 0 ? 2 : 0, x(c.pct))).attr("height", y.bandwidth()).attr("rx", 3).attr("fill", C("--s1"))
+    g.selectAll("rect.t").data(Co).join("rect").attr("x", 0).attr("y", (c) => y(c.name)).attr("width", w).attr("height", y.bandwidth()).attr("fill", C("--grid")).attr("rx", 0);
+    g.selectAll("rect.v").data(Co).join("rect").attr("x", 0).attr("y", (c) => y(c.name)).attr("width", (c) => Math.max(c.pct > 0 ? 2 : 0, x(c.pct))).attr("height", y.bandwidth()).attr("rx", 0).attr("fill", C("--s1"))
       .on("pointermove", (ev, c) => showTip(`<div class="h">${esc(c.name)}</div>` + trow("", "wallets", fN(c.wallets)) + trow(C("--s1"), "still holding", fN(c.holdNow)) + trow("", "they bought", fU(c.buyUsd)) + trow("", "they sold", fU(c.sellUsd)), ev)).on("pointerleave", hideTip);
     g.selectAll("text.v").data(Co).join("text").attr("class", "lbl").attr("x", w + 6).attr("y", (c) => y(c.name) + y.bandwidth() / 2 + 4).text((c) => (mob ? fPct(c.pct, 0) : `${fPct(c.pct, 0)} · ${c.holdNow} of ${fN(c.wallets)}`));
   });
@@ -726,7 +728,7 @@ function drawMon() {
     <div class="tw" style="max-height:70vh;overflow-y:auto"><table><thead><tr><th>${monView === "wallets" ? "Wallet" : "Owner"}</th>${monView === "wallets" ? "<th>Owner</th>" : '<th class="n">Wallets</th>'}${th("bal", "Holds", 1)}<th class="n">%</th>${th("d0", "1D", 1)}${th("d1", "7D", 1)}${th("d2", "30D", 1)}${th("d3", "90D", 1)}<th>Status ${wl}</th><th>How (${wl})</th><th>90 days</th>${th("last", "Last active")}</tr></thead><tbody>` +
     vis.map((r) => `<tr class="r-${r.st[0]}"><td>${monView === "wallets" ? `<button class="addr" data-addr="${r.a}">${short(r.a)}</button>${r.a === FOCUS ? ' <span class="tag">focus</span>' : ""}` : r.own >= 0 ? ownCell(r.own) : `<button class="addr" data-addr="${r.a}">${short(r.a)}</button>`}</td>` +
       (monView === "wallets" ? `<td>${ownCell(r.own)}</td>` : `<td class="n">${r.n}</td>`) +
-      `<td class="n">${fBb(r.bal)}</td><td class="n">${fPct((100 * r.bal * 1e9) / SUPPLY, 2)}</td>${r.d.map(dc).join("")}<td class="st-${r.st[0]}" style="font:600 11.5px 'IBM Plex Mono',monospace">${r.st[1]}</td><td class="how">${howChips(r.x)}</td><td>${sp(r.path, r.st[0])}</td><td class="num">${r.last}</td></tr>`).join("") +
+      `<td class="n">${fBb(r.bal)}</td><td class="n">${fPct((100 * r.bal * 1e9) / SUPPLY, 2)}</td>${r.d.map(dc).join("")}<td class="st-${r.st[0]}" style="font:600 11.5px var(--font)">${r.st[1]}</td><td class="how">${howChips(r.x)}</td><td>${sp(r.path, r.st[0])}</td><td class="num">${r.last}</td></tr>`).join("") +
     `</tbody></table></div>`;
   box.onclick = (e) => {
     const t = e.target.closest("[data-mw],[data-mv],[data-mf],[data-sort],[data-owner]"); if (!t) return;
@@ -817,7 +819,7 @@ function drawBub() {
     .on("pointermove", (ev, n) => { if (n.kind === "c") return showTip(`<div class="h">${esc(n.label)}</div>`, ev); const x = n.x0;
       showTip(`<div class="h">${n.kind === "m" ? (n.a === FOCUS ? "FOCUS WALLET" : "OWNER'S WALLET") : "OTHER WALLET"}</div>` + trow("", short(n.a), "") + (n.kind !== "x" ? trow("", "holds", fBb(n.bal)) + trow("", wl + " change", x ? sgn(x.net, fBb) : "—") + trow("", "status", stOf(x, n.bal)[1]) : "") + (x ? `<div style="margin-top:.25rem">${howChips(x)}</div>` : ""), ev); })
     .on("pointerleave", hideTip).on("click", (ev, n) => { if (n.kind !== "c") openWallet(n.a); });
-  g.filter((d) => d.kind === "c").append("rect").attr("x", -18).attr("y", -18).attr("width", 36).attr("height", 36).attr("rx", 7)
+  g.filter((d) => d.kind === "c").append("rect").attr("x", -18).attr("y", -18).attr("width", 36).attr("height", 36).attr("rx", 0)
     .attr("fill", (d) => (d.id === "D" ? C("--s7") : d.id === "C" ? C("--s4") : C("--neutral"))).attr("stroke", C("--panel")).attr("stroke-width", 2);
   g.filter((d) => d.kind === "c").append("text").attr("class", "lbl").attr("text-anchor", "middle").attr("y", (d) => (d.fy > H * 0.6 ? -24 : 32)).text((d) => CATS[d.id] || d.label);
   g.filter((d) => d.kind !== "c").append("circle").attr("r", R).attr("fill", stC).attr("fill-opacity", (d) => (d.kind === "m" ? 0.88 : 0.5))

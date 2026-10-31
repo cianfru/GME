@@ -57,6 +57,11 @@ Read this file first. It is enough to continue without the original conversation
 
 ### Website (Vercel): a monitoring terminal
 - **What the owner wants (2026-10-30):** a terminal to visit regularly and *see what's happening*, like the SPX/pepecoin work. Not a story: an earlier scrolling "visual journey" version was rejected. `site/index.html` is one static page, D3 v7 from cdnjs, dark by default with a light toggle.
+- **Type and shape (owner, 2026-10-31):**
+  - ONE font for everything, text, numbers, labels and chart axes: **Inter** with tabular figures (`--font`).
+  - **No JetBrains Mono, no mixing in a mono or second family.**
+  - **No pills:** every chip, tag, badge, button, input, card and bar is square (`border-radius: 0`); only status dots stay round.
+  - The study page gets the same font and square corners via an override that `build-site.mjs` injects.
 - **Layout:**
   - **Sticky ticker:** price (24h, 7d), market cap, pool (ETH and GME), holders (30d), MVRV + supply in profit, focus-cluster share (7d), insider status.
   - **Tabs** (hash routing), with a shared range selector (30D / 90D / 1Y / ALL, saved in localStorage):
