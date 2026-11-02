@@ -111,13 +111,7 @@ jobs:
         continue-on-error: true
         run: python3 scripts/terminal.py
 
-      - name: Upload archive
-        run: |
-          gzip -kf data/transfers.csv
-          gh release view gme-archive >/dev/null 2>&1 || \
-            gh release create gme-archive -t "Transfer archive" -n "Full GME transfer history (sender,receiver,time,value,block). Updated daily by the workflow."
-          gh release upload gme-archive data/transfers.csv.gz --clobber
-
+      # Data first: the site only needs data/, so a GitHub hiccup on the archive upload can't block it.
       - name: Commit data
         run: |
           git config user.name "gme-terminal bot"
@@ -127,3 +121,18 @@ jobs:
           git commit -m "data: daily refresh $(date -u +%F)"
           # main may have moved while this ran (a code push); the data commit only touches data/, so rebase onto it.
           for i in 1 2 3; do git pull --rebase origin main && git push && exit 0; sleep 5; done; exit 1
+
+      # The archive only saves the next run from re-pulling: if the upload fails (GitHub 5xx), the old asset stays
+      # and the next run pulls a slightly bigger delta. Retried, and never fails the run.
+      - name: Upload archive
+        continue-on-error: true
+        run: |
+          gzip -kf data/transfers.csv
+          gh release view gme-archive >/dev/null 2>&1 || \
+            gh release create gme-archive -t "Transfer archive" -n "Full GME transfer history (sender,receiver,time,value,block). Updated daily by the workflow."
+          for i in 1 2 3; do
+            gh release upload gme-archive data/transfers.csv.gz --clobber && exit 0
+            echo "upload attempt $i failed; retrying"; sleep $((20 * i))
+          done
+          echo "::warning::archive upload failed 3 times; the previous archive is kept and the next run pulls a bigger delta"
+          exit 1
