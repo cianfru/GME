@@ -1,42 +1,34 @@
 {
  "summary": {
-  "asOf": "2026-11-03T14:26:35Z",
-  "since": "2026-11-02T16:15:59Z",
-  "price": 7.584331222710105e-06,
-  "mcap": 3190652.302081914,
-  "pool": 44552293796.92797,
-  "watchedGroups": 22,
-  "alerts": 4,
-  "high": 1
+  "asOf": "2026-11-04T14:25:59Z",
+  "since": "2026-11-03T14:26:35Z",
+  "price": 7.944781998135348e-06,
+  "mcap": 3342290.3387955595,
+  "pool": 45460672133.96342,
+  "watchedGroups": 21,
+  "alerts": 3,
+  "high": 0
  },
  "alerts": [
   {
-   "kind": "new_vault",
-   "severity": "high",
-   "text": "New buy-and-forward holding wallet 0xa383\u2026617a: 1 fresh wallet(s) forwarded 0.07B (bought for $530)",
-   "wallet": "0xa3830381a8d29907b0f068a006ad4bb4b428617a"
-  },
-  {
    "kind": "flow",
    "severity": "info",
-   "text": "Accumulator 0x3d4d\u20263fed: bought on DEX 0.13B GME (~$982, 0.03% of supply)",
-   "group": "Accumulator 0x3d4d\u20263fed",
+   "text": "Your wallet's cluster: bought on DEX 0.27B GME (~$2,183, 0.07% of supply)",
+   "group": "Your wallet's cluster",
    "what": "bought on DEX",
-   "tokens": 129456054.28446737
-  },
-  {
-   "kind": "flow",
-   "severity": "info",
-   "text": "Holding wallet 0xa383\u2026617a: bought on DEX 0.07B GME (~$530, 0.02% of supply)",
-   "group": "Holding wallet 0xa383\u2026617a",
-   "what": "bought on DEX",
-   "tokens": 69909816.96304101
+   "tokens": 274825280.4445681
   },
   {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME -2.71B since last run (net buying out of the pool); pool now 44.55B, price $7.584e-06",
-   "delta": -2712832366.8529663
+   "text": "Pool GME +0.91B since last run (net selling into the pool); pool now 45.46B, price $7.945e-06",
+   "delta": 908378337.0354462
+  },
+  {
+   "kind": "balance",
+   "severity": "info",
+   "text": "Your wallet's cluster: holdings +0.27B since last run, now 64.98B (15.45%)",
+   "group": "Your wallet's cluster"
   }
  ]
 }
