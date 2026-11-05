@@ -4818,5 +4818,13 @@
 "0xaddc26a3854feabfd20d6bf658254088d83a425a": {
 "name": "contract",
 "kind": "mm"
+},
+"0x7aa0f48e77e3bb842b00ff0e19a10edcb439c42b": {
+"name": "contract",
+"kind": "mm"
+},
+"0xa243d7d2e2e7984511331dbbf2cf3acfe7dccc96": {
+"name": "contract",
+"kind": "mm"
 }
 }
