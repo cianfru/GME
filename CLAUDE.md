@@ -173,8 +173,41 @@ The full write-up is `report/gme-study.html` (also published as a private claude
 - **Gate's and MEXC's websites block scripts.** Check listings through their APIs. Bybit's API is blocked by region from here.
 - **"Buy and hide" looks like this:** a fresh wallet buys on the DEX, then forwards at least 80% to a holding wallet that never sells. At a $2.7M market cap, $10k to $20k in that pattern is someone building a position. Watch for it.
 
-## 7. Next ideas
+## 7. Roadmap (proposed 2026-11-05 after the redesign; waiting for the owner's go and order)
 
+Owner's goals: SPX-level depth on how the crowd moves, a hands-off scan that follows coins into fresh wallets, entity cards that show who is growing or shrinking, own-wallet moves never shown as selling, and a usable bubble map.
+
+**How fresh wallets are handled today (owner asked):** the clusters are rebuilt from the full transfer history on every daily run, so a fresh wallet joins on the next run if a rule fires (its first GME came from a member, ≥$2k; or a member sent it ≥90% of its balance). Gaps:
+- up to about a day of lag (cron 06:23 UTC, often hours late); until then the move shows as "→ moved out" (amber), never as selling;
+- the focus cluster stops 2 hops from the focus wallet (`cluster.py` tiers 1–2), so a wallet seeded by a tier-2 wallet is not added;
+- a partial split (<90%) into a wallet that already held GME, or anything under $2k, does not link;
+- the monitor only tracks wallets ≥0.1% of supply plus owner-group wallets.
+
+**1. Entities as first-class objects**
+- `entities.py`: a persistent registry with stable IDs, daily membership and size history, and events (wallet joined, split, consolidation, DEX buy/sell, exchange deposit). Flag >60 wallets as before.
+- Follow the coins: every run, check each entity's outflows to fresh wallets. Attach when a rule fires, with no hop limit from existing members (hub and size guards stay). Otherwise show the wallet as "provisional · received X from entity" (inferred, dashed), visible at once but not counted as owned.
+- Entity cards (Entities, default view): one card per entity with wallets, holdings and % supply, a 90-day sparkline, and 1D/7D/30D change split by channel (DEX buy, exchange in, DEX sell, exchange out, out to wallets outside the group, ↔ internal). Also status, entity cost basis and P/L (FIFO engine per entity), last activity and wallets that joined. A "forming" strip shows new or fast-growing entities.
+
+**2. Crowd behaviour (port from SPX / pepecoin)**
+- Buyer flow: daily net accumulation split into new, reactivated, adding and selling.
+- Exit flow: daily exits split into profit and loss.
+- Cohort survival as a time series.
+- Smart money: per-wallet realized P&L and ROI; are proven winners buying now?
+- URPD over time, plus a pool-and-overhang calculator: buy $X → new price, and how much underwater supply sits between today and that price.
+- Valuation composite (0–1, weights published).
+- A daily plain-language reading: positions, never signals.
+
+**3. Flow map v2:** two levels. An entity map (bubble = entity, arrows = flows between entities, DEX and exchanges, accumulators left and distributors right) opens into its wallets. Adds search/highlight, edge filters (hide internal, DEX/exchanges only), a minimum-flow slider and a day-by-day replay of the window.
+
+**4. Hands-off:**
+- A light intraday job every 3–4 h: delta pull, entity outflow check, alerts. The full rebuild stays daily.
+- The repo is private, so watch the 2,000 Actions minutes/month: measure run time first.
+- Per-entity tripwires: first exchange deposit, first DEX sale, split into fresh wallets.
+- An alert channel.
+- A freshness audit for every feed.
+
+**5. Quality:** per-chart "as of"; tests for every new builder; a Methods page entry for each new rule.
+
+Older ideas still open:
 - Track whether the accumulators' holding wallets ever send to an exchange. That is the exit tripwire.
-- Trace accumulators' ETH funding one or two hops back to see whether one source funds several of them.
-- If wanted, send alerts somewhere other than the run summary (an issue comment or email).
+- Trace accumulators' ETH funding one or two hops back, to see whether one source funds several of them.
