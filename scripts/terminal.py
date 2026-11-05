@@ -15,6 +15,9 @@ EX = json.load(open(os.path.join(D, "exclude.json"))); CEX = {a for a, v in EX.i
 LP = {V3POOL, "0xc36442b4a4522e871399cd717abdd847ab11fe88"}          # liquidity adds/removes, not trades
 FC = json.load(open(os.path.join(D, "focus_cluster.json")))
 FOC = {m["a"] for m in FC["members"]}
+REG = json.load(open(os.path.join(D, "entities.json"))) if os.path.exists(os.path.join(D, "entities.json")) else None
+REG_FOCUS = next((e for e in REG["entities"] if e["kind"] == "focus"), None) if REG else None
+if REG_FOCUS: FOC |= {x["a"] for x in REG_FOCUS["attached"]}      # wallets joined by following the coins count as the cluster's own
 WS = json.load(open(os.path.join(D, "watch_state.json")))
 # On a shared page "your wallet" reads as the viewer's; the watch files keep their original label.
 relabel = lambda g: g.replace("Your wallet's cluster", "Focus wallet's cluster")
@@ -152,6 +155,13 @@ for m in FC["members"]:
             links[tuple(sorted((a, b2))) + (kind_of.get(e["kind"], e["kind"]),)] = 1
 members = [dict(a=m["a"], bal=bal[m["a"]], tier=m["tier"], kinds=sorted(set(kind_of.get(k, k) for k in m["kinds"])),
                 first=first.get(m["a"], "")[:10], last=last.get(m["a"], "")[:10]) for m in FC["members"]]
+if REG_FOCUS:   # wallets joined by following the coins: a node linked by the GME transfer that tied it in
+    tier_of = {m["a"]: m["tier"] for m in members}
+    for x in REG_FOCUS["attached"]:
+        if x["a"] in tier_of: continue
+        tier_of[x["a"]] = tier_of.get(x["frm"], 2) + 1
+        members.append(dict(a=x["a"], bal=bal[x["a"]], tier=tier_of[x["a"]], kinds=["gme"], first=first.get(x["a"], "")[:10], last=last.get(x["a"], "")[:10], auto=x["d"]))
+        links[tuple(sorted((x["a"], x["frm"]))) + ("gme",)] = 1
 cluster = dict(nodes=members, links=[dict(s=k[0], t=k[1], kind=k[2]) for k in links],
                deposits=FC.get("deposits", {}))
 
@@ -189,11 +199,18 @@ MON = {a for a in set(bal) | peak if a not in infra and (bal[a] >= thr_mon or st
 # Owner groups, most specific first: the focus cluster, the watched groups, then the linked-wallet groups found by
 # cluster_all.py that hold a monitored wallet. Groups flagged as over-merged (>60 wallets) are never used.
 owners, owner_of = [], {}
-def add_owner(name, ws, kind):
+def add_owner(name, ws, kind, eid=None):
     ws = [a for a in sorted(ws) if a not in infra and a not in owner_of]
     if len(ws) < 1: return
-    k = len(owners); owners.append(dict(name=name, kind=kind, n=len(ws)))
+    k = len(owners); owners.append(dict(name=name, kind=kind, n=len(ws), id=eid))
     for a in ws: owner_of[a] = k
+PROV = {}
+if REG:   # owners = the entity registry (same members, ids and order as the entity cards)
+    for e in REG["entities"]: add_owner(e["name"], e["members"], e["kind"], e["id"])
+    for e in REG["entities"]:
+        k = next((i for i, o in enumerate(owners) if o["id"] == e["id"]), -1)
+        for x in e["provisional"]:
+            if x["a"] not in owner_of and x["a"] not in infra: PROV[x["a"]] = k
 add_owner("Focus wallet's cluster", FOC, "focus")
 for g, ws in sorted(MEMBERS.items(), key=lambda kv: -cur.get(kv[0], 0)):
     if g != "Focus wallet's cluster": add_owner(g, ws, "coinbase" if g.startswith("Coinbase") else "watched")
@@ -203,7 +220,7 @@ for e in ENT:
     if e.get("flagged") or not (ws & MON): continue
     lead = max(ws, key=lambda a: bal[a])
     add_owner(f"Linked group {lead[:6]}…{lead[-4:]}", ws, "linked")
-TRACK = MON | set(owner_of)
+TRACK = MON | set(owner_of) | set(PROV)
 TRACK -= infra
 def cat(a):
     if is_cex(a): return "C"
@@ -226,7 +243,7 @@ for s, r, ts, v, b in recent:
     edges[(h, src, dst)] += v
 mon = dict(
     start=t0s, hours=H90, A=A,
-    M=[[round(bal[a] / 1e9, 4), owner_of.get(a, -1), int(a in MON), first.get(a, "")[:10], last.get(a, "")[:10]] if a in TRACK else None for a in A],
+    M=[[round(bal[a] / 1e9, 4), owner_of.get(a, -1), int(a in MON), first.get(a, "")[:10], last.get(a, "")[:10], PROV.get(a, -1)] if a in TRACK else None for a in A],
     owners=owners,
     e=[[h, s_, d_, round(v / 1e9, 5)] for (h, s_, d_), v in sorted(edges.items(), key=lambda kv: (kv[0][0], str(kv[0][1]), str(kv[0][2])))],
 )

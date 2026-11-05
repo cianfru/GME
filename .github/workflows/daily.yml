@@ -1,12 +1,24 @@
 name: daily refresh + watch
 
+# Two schedules, one pipeline:
+#   full  — 06:23 UTC daily: everything, including the external lookups (focus wallet ETH history, gas funders).
+#   light — every 4 hours: new transfers, clusters, entity registry (follow the coins), watch, terminal data. Skips the
+#           external lookups and does not commit wallets.json, to keep the git history small.
 on:
   schedule:
-    - cron: "23 6 * * *"   # 06:23 UTC daily
+    - cron: "23 6 * * *"     # full
+    - cron: "47 */4 * * *"   # light
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "full or light"
+        default: full
+        type: choice
+        options: [full, light]
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: gme-daily
@@ -21,6 +33,13 @@ jobs:
       PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
+
+      - name: Mode
+        run: |
+          MODE=full
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "23 6 * * *" ]; then MODE=light; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.mode }}" = "light" ]; then MODE=light; fi
+          echo "MODE=$MODE" >> "$GITHUB_ENV"; echo "mode: $MODE"
 
       - uses: actions/setup-python@v5
         with:
@@ -60,6 +79,7 @@ jobs:
         run: python3 scripts/build_exclude.py
 
       - name: Refresh the focus wallet's ETH transfers
+        if: env.MODE == 'full'
         continue-on-error: true
         run: python3 scripts/refresh_focus.py
 
@@ -74,10 +94,12 @@ jobs:
         run: python3 scripts/stealth.py
 
       - name: Gas funders of watched wallets (Ethplorer)
+        if: env.MODE == 'full'
         continue-on-error: true
         run: python3 scripts/funders_ethplorer.py data/watch_addrs.txt
 
       - name: Quiet accumulators (with gas links)
+        if: env.MODE == 'full'
         run: python3 scripts/stealth.py
 
       - name: Float and market
@@ -104,6 +126,10 @@ jobs:
             --threshold=155 --whale_min=100000000 --whale_days=30 \
             --out=data/engine/onchain.json --urpd=data/engine/urpd.json --addrtypes=data/addr-types-engine.json
 
+      # Entities with stable ids; follows coins into fresh wallets (seed / drain rules); tripwires since the last run.
+      - name: Entity registry
+        run: python3 scripts/entities.py
+
       - name: Watch (alerts since last run)
         run: python3 scripts/watch.py
 
@@ -116,11 +142,27 @@ jobs:
         run: |
           git config user.name "gme-terminal bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$MODE" = "light" ]; then git checkout HEAD -- data/wallets.json 2>/dev/null || true; fi
           git add data
           if git diff --cached --quiet; then echo "no changes"; exit 0; fi
-          git commit -m "data: daily refresh $(date -u +%F)"
+          if [ "$MODE" = "light" ]; then git commit -m "data: refresh $(date -u +'%F %H:%M') UTC (light)"; else git commit -m "data: daily refresh $(date -u +%F)"; fi
           # main may have moved while this ran (a code push); the data commit only touches data/, so rebase onto it.
           for i in 1 2 3; do git pull --rebase origin main && git push && exit 0; sleep 5; done; exit 1
+
+      # High alerts and entity tripwires go to one open issue ("GME terminal alerts"), so GitHub notifies the owner.
+      # Set the repository variable ALERT_ISSUE=off to stop it.
+      - name: Notify
+        if: vars.ALERT_ISSUE != 'off'
+        continue-on-error: true
+        run: |
+          python3 scripts/notify.py
+          [ -f data/alerts/notify.md ] || exit 0
+          N=$(gh issue list --state open --search "GME terminal alerts in:title" --json number -q '.[0].number')
+          if [ -z "$N" ]; then
+            gh issue create -t "GME terminal alerts" -b "The scheduled job comments here when a watched group or entity trips an alert. Close the issue or set the repository variable ALERT_ISSUE=off to stop."
+            N=$(gh issue list --state open --search "GME terminal alerts in:title" --json number -q '.[0].number')
+          fi
+          gh issue comment "$N" -F data/alerts/notify.md
 
       # The archive only saves the next run from re-pulling: if the upload fails (GitHub 5xx), the old asset stays
       # and the next run pulls a slightly bigger delta. Retried, and never fails the run.

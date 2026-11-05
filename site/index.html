@@ -179,7 +179,8 @@ details.about p { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; max-w
 .empty p { margin: 0; color: var(--fg-2); font-size: 13px }
 
 /* segmented controls */
-.seg { display: inline-flex; border: 1px solid var(--line); background: var(--glass-2); flex: none }
+.seg { display: inline-flex; border: 1px solid var(--line); background: var(--glass-2); flex: none; max-width: 100%; overflow-x: auto; scrollbar-width: none }
+.seg::-webkit-scrollbar { display: none } .seg button { white-space: nowrap; flex: none }
 .seg button { background: none; border: 0; border-right: 1px solid var(--line); padding: 0 .75rem; height: 32px; font: 500 10.5px var(--mono); letter-spacing: .1em; color: var(--muted); cursor: pointer; transition: color .15s, background .15s }
 .seg button:last-child { border-right: 0 } .seg button:hover { color: var(--fg-2) }
 .seg button.on { color: var(--fg); background: var(--accent-2); box-shadow: inset 0 -1px 0 var(--accent) }
@@ -256,6 +257,27 @@ tr.r-acc td:first-child { box-shadow: inset 2px 0 var(--up) } tr.r-sell td:first
 .sumline { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; font: 400 12px var(--mono) }
 .ownlink { background: none; border: 0; padding: 0; color: var(--fg-2); cursor: pointer; font: inherit; border-bottom: 1px dotted var(--line-2) }
 .ownlink:hover { color: var(--accent) }
+
+/* entity cards */
+.ecgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px }
+@media (max-width: 760px) { .ecgrid { grid-template-columns: minmax(0, 1fr) } }
+.ec { border: 1px solid var(--line); background: var(--glass-2); padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 9px; box-shadow: inset 0 2px 0 var(--st); min-width: 0 }
+.ec header { display: flex; justify-content: space-between; align-items: flex-start; gap: .6rem }
+.ec h4 { margin: 0 0 4px; font: 600 13.5px var(--sans) }
+.ecst { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap }
+.ecv { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .7rem }
+.ecv b { font: 500 19px var(--mono); letter-spacing: -.02em } .ecv span { font: 400 11.5px var(--mono); color: var(--muted) } .ecv small { font-size: 10.5px; color: var(--muted) }
+.ecsp { width: 100%; height: 40px; display: block }
+.ecflow { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) 4.2rem; gap: 4px 8px; align-items: center; font: 400 10.5px var(--mono); color: var(--muted) }
+.ecflow b { font: 500 11.5px var(--mono); color: var(--fg-2); text-align: right }
+.ecbar { display: flex; height: 8px; background: var(--grid) } .ecbar i { display: block; height: 100% }
+.eckv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 0 }
+.eckv div { display: flex; justify-content: space-between; gap: .5rem; border-bottom: 1px solid var(--line); padding-bottom: 4px }
+.eckv dt { font: 500 9.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.eckv dd { margin: 0; font: 500 11.5px var(--mono); text-align: right }
+.ecnote { margin: 0; font-size: 11.5px; color: var(--muted); line-height: 1.45 }
+.ec footer { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start }
+.ec details { flex-basis: 100% } .ec details summary { list-style: none; cursor: pointer; width: fit-content } .ec details summary::-webkit-details-marker { display: none }
 
 /* flow map */
 .bubwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px }
@@ -380,7 +402,7 @@ const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
 const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["transfers", "Transfers"], ["entities", "Entities"], ["methodology", "Methodology"]];
-const SUBS = [["cluster", "Focus cluster"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["watchlist", "Watchlist"]];
+const SUBS = [["cards", "Entities"], ["cluster", "Focus cluster"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["watchlist", "Watchlist"]];
 const LEGACY = { wallets: "entities/monitor", bubbles: "entities/map", insiders: "entities/cluster", watchlist: "entities/watchlist", valuation: "holders", flows: "transfers" };
 let page = "overview", sub = "cluster", lastPage = null;
 const draws = [];
@@ -406,12 +428,12 @@ const rangeLabel = () => (range ? RANGES.find((r) => r[1] === range)[0] : "all")
 function init() {
   IDX = T.index || null;
   const at = new Date(IDX?.indexedAt || T.asOf);
-  AGEH = (Date.now() - at) / 3.6e6; STALE = AGEH > 36;
+  AGEH = (Date.now() - at) / 3.6e6; STALE = AGEH > 12;
   PARTIAL = !!(IDX && IDX.lastTransfer && IDX.lastTransfer.slice(0, 10) === T.daily.d[N - 1]);
   $("nav").innerHTML = PAGES.map(([id, l]) => `<a href="#${id}" data-p="${id}">${l}</a>`).join("");
   const hs = $("hstat"); hs.classList.toggle("stale", STALE);
   hs.innerHTML = `<i aria-hidden="true"></i><span><span class="hs-pre">Data </span>${STALE ? "stale" : "current"}</span><span class="hs-age">· ${agoTxt(AGEH)}</span>`;
-  hs.dataset.tip = `Last indexed ${fdt(at)} (${agoTxt(AGEH)}). The index is rebuilt once a day by a scheduled job; it is marked stale after 36 hours without a new run.`;
+  hs.dataset.tip = `Last indexed ${fdt(at)} (${agoTxt(AGEH)}). The index is rebuilt every 4 hours (fully once a day); it is marked stale after 12 hours without a new run.`;
   $("asof").textContent = "Last indexed " + fdt(at) + (STALE ? " · stale" : "");
   const themeLabel = () => { $("theme").textContent = document.documentElement.dataset.theme === "dark" ? "LIGHT" : "DARK"; };
   themeLabel();
@@ -434,7 +456,7 @@ function parseHash() {
   if (LEGACY[h]) { h = LEGACY[h]; history.replaceState(null, "", "#" + h); }
   const [p, s] = h.split("/");
   page = PAGES.some((x) => x[0] === p) ? p : "overview";
-  if (page === "entities") sub = SUBS.some((x) => x[0] === s) ? s : "cluster";
+  if (page === "entities") sub = SUBS.some((x) => x[0] === s) ? s : "cards";
 }
 function onClick(e) {
   const r = e.target.closest("[data-r]");
@@ -444,7 +466,9 @@ function onClick(e) {
   const a = e.target.closest("[data-addr]");
   if (a) { e.preventDefault(); openWallet(a.dataset.addr); return; }
   const o = e.target.closest("[data-owner]");
-  if (o) { e.preventDefault(); bubOwner = +o.dataset.owner; bubSel = null; if (location.hash === "#entities/map") render(); else location.hash = "#entities/map"; return; }
+  if (o) { e.preventDefault(); bubOwner = +o.dataset.owner; bubSel = null; bubMode = "wallets"; if (location.hash === "#entities/map") render(); else location.hash = "#entities/map"; return; }
+  const em = e.target.closest("[data-emap]");
+  if (em) { e.preventDefault(); emSel = em.dataset.emap; bubMode = "entities"; if (location.hash === "#entities/map") render(); else location.hash = "#entities/map"; return; }
   const mt = e.target.closest("[data-mtoggle]");
   if (mt) { const m = $("metrics"); m.classList.toggle("collapsed"); mt.textContent = m.classList.contains("collapsed") ? "All metrics +" : "Fewer metrics −"; }
 }
@@ -633,13 +657,13 @@ function overview() {
 function hero() {
   const at = new Date(IDX?.indexedAt || T.asOf), lt = IDX?.lastTransfer ? new Date(IDX.lastTransfer) : null;
   add(`<section class="hero">
-    <div class="sline"><span>Ethereum mainnet</span><span class="sep">·</span><span>Daily index</span><span class="sep">·</span><span>Last indexed ${fdt(at)}</span><span class="sep">·</span>
+    <div class="sline"><span>Ethereum mainnet</span><span class="sep">·</span><span>4-hour index</span><span class="sep">·</span><span>Last indexed ${fdt(at)}</span><span class="sep">·</span>
       <span class="dstat${STALE ? " stale" : ""}"><i aria-hidden="true"></i>${STALE ? "Data stale · last indexed " + agoTxt(AGEH) : "Data current · " + agoTxt(AGEH)}</span></div>
     <h1>GME <span>on Ethereum</span></h1>
     <p class="lede">An evidence-driven map of GME activity on Ethereum.</p>
     <div class="contract"><span class="eyebrow">Contract</span><span class="mono full">${TOKEN}</span><span class="mono shortc">${short(TOKEN)}</span><button class="mini" type="button" data-copy="${TOKEN}">Copy</button><a class="mini" href="${ETH(TOKEN)}" target="_blank" rel="noopener">Etherscan ↗</a></div>
     <div class="prov panel">
-      <div><span class="eyebrow">Live index · rebuilt daily</span><p class="pd">Every GME transfer on Ethereum, replayed by a scheduled job.${lt ? ` Latest transfer seen ${fdt(lt)}.` : ""}${IDX ? ` ${fN(IDX.transfers)} transfers since ${fd(new Date(IDX.firstTransfer))}.` : ""}</p></div>
+      <div><span class="eyebrow">Live index · rebuilt every 4 hours</span><p class="pd">Every GME transfer on Ethereum, replayed by a scheduled job.${lt ? ` Latest transfer seen ${fdt(lt)}.` : ""}${IDX ? ` ${fN(IDX.transfers)} transfers since ${fd(new Date(IDX.firstTransfer))}.` : ""}</p></div>
       <div><span class="eyebrow">Research · snapshot ${STUDY_DATE}</span><p><span class="pd">The written study is fixed at that date; the daily run does not update its findings. </span><a class="more" href="/study.html">Read the full study →</a></p></div>
     </div></section>`);
 }
@@ -657,7 +681,7 @@ function metrics() {
     ["Transfers", IDX ? fN(IDX.transfers) : "—", IDX ? `+${fN(IDX.tx24h)} in 24h · +${fN(IDX.tx168h)} in 7d` : NA, "Every GME Transfer event since the first one on 13 May 2024."],
     ["Held by wallets", IDX ? fB(IDX.held) : "—", IDX ? `${fPct((100 * IDX.held) / SUPPLY)} of supply · ${fPct((100 * IDX.burned) / SUPPLY)} burned` : NA, "GME in wallets, excluding pools, exchanges, contracts and the burn address."],
     ["Pool liquidity", P.weth != null ? P.weth.toFixed(1) + " ETH" : "—", P.weth != null ? `${fU(P.weth * (P.ethUsd || 0))} · ${fB(P.gme)} GME` : NA, "Reserves of the Uniswap V2 pair (the main market) at index time."],
-    ["Last indexed", d3.utcFormat("%H:%M UTC")(at), `${fd(at)} · ${agoTxt(AGEH)}`, "When the daily job last rebuilt the data. Marked stale after 36 hours."],
+    ["Last indexed", d3.utcFormat("%H:%M UTC")(at), `${fd(at)} · ${agoTxt(AGEH)}`, "When the scheduled job last rebuilt the data (every 4 hours). Marked stale after 12 hours."],
   ];
   add(`<section class="panel metrics collapsed" id="metrics"><div class="mgrid">${items.map(([k, v, d, t], i) => `<div class="m${i >= 4 ? " sec" : ""}"><span class="mk" data-tip="${esc(t)}" tabindex="0">${k}</span><span class="mv">${v}</span><span class="md">${d}</span></div>`).join("")}</div></section>
     <button class="mini mtoggle" type="button" data-mtoggle>All metrics +</button>`);
@@ -714,7 +738,7 @@ function insiderCard(wide = true) {
 }
 function alertsCard(wide) {
   const order = { high: 0, medium: 1, info: 2 }, lab = { high: "▲ High", medium: "● Medium", info: "· Info" };
-  const al = [...(S.alerts || [])].sort((a, b) => order[a.severity] - order[b.severity]);
+  const al = [...(S.alerts || []), ...((S.E && S.E.alerts) || [])].sort((a, b) => order[a.severity] - order[b.severity]);
   card({ title: "Since the last run", wide, sub: S.since ? `${fdt(new Date(S.since))} → ${fdt(new Date(S.asOf))}` : "",
     body: `<ul class="alist">${al.length ? al.map((a) => `<li><span class="sev ${esc(a.severity)}">${(lab[a.severity] || "").toUpperCase()}</span><span>${esc(a.text)}</span></li>`).join("") : `<li><span class="sev info">· ALL QUIET</span><span>No watched wallet moved.</span></li>`}</ul>` });
 }
@@ -960,10 +984,11 @@ function movesCard() {
 
 // ---------- ENTITIES ----------
 function entities() {
-  const titles = { cluster: "The focus wallet's cluster", monitor: "Wallet monitor", map: "Flow map", watchlist: "Watchlist" };
-  const desc = { cluster: "The largest group of linked wallets: what it holds, what it did, and the evidence tying each wallet to it.",
+  const titles = { cards: "Entities", cluster: "The focus wallet's cluster", monitor: "Wallet monitor", map: "Flow map", watchlist: "Watchlist" };
+  const desc = { cards: "Every group of linked wallets as one card: how big it is, whether it is growing or shrinking, and through which channel. Followed automatically as coins move into fresh wallets.",
+    cluster: "The largest group of linked wallets: what it holds, what it did, and the evidence tying each wallet to it.",
     monitor: "Every wallet holding at least 0.1% of supply, now or at any point in 90 days, and what it did over 1, 7, 30 and 90 days.",
-    map: "One owner's wallets as bubbles and the GME that moved between them, the DEX, exchanges and other wallets.",
+    map: "Entities as bubbles and the GME that moved between them, the DEX and exchanges. Open any entity to see its wallets.",
     watchlist: "Every group the daily run compares, quiet accumulators, buy-and-hide wallets and the alert log." };
   pageHead("Entities", titles[sub], desc[sub], sub === "cluster");
   add(`<nav class="subnav" aria-label="Entity views">${SUBS.map(([k, l]) => `<a href="#entities/${k}" class="${k === sub ? "on" : ""}">${l}</a>`).join("")}</nav>`);
@@ -972,7 +997,7 @@ function entities() {
     <div><svg width="38" height="10" aria-hidden="true"><line x1="0" y1="5" x2="38" y2="5" stroke="var(--fg-2)" stroke-width="2" stroke-dasharray="5 4"/></svg><b>Inferred relationship</b><p>Derived by a rule, not seen as a transfer between the two: a shared exchange deposit address, or membership of the same owner group. Dashed lines, marked “inferred”.</p></div>
     <p class="disc">Wallet links are evidence of shared control, not proof of ownership. Groups are a floor: linking errs toward not merging.</p></section>`);
   grid();
-  ({ cluster: entCluster, monitor: entMonitor, map: entMap, watchlist: entWatch })[sub]();
+  ({ cards: entCards, cluster: entCluster, monitor: entMonitor, map: entMap, watchlist: entWatch })[sub]();
 }
 function entCluster() {
   insiderCard(false); chCluster(false);
@@ -1040,9 +1065,9 @@ function entMonitor() {
   drawMon();
 }
 function entMap() {
-  card({ title: "Flow map", q: "Where did this owner's GME go?", wide: true, key: true,
+  card({ title: "Flow map", q: "Where is the GME going, between entities, the DEX and exchanges?", wide: true, key: true,
     body: `<div id="bubctl"></div><div class="sumline" id="bubsum" style="margin:2px 0"></div><div class="bubwrap"><div class="bubstage"><div class="chart" id="bub"></div><div class="bubtools"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="fit" aria-label="Reset view">⤢</button></div><span class="bubhint">drag bubbles · drag background to pan · ${mobile() ? "pinch" : "ctrl + scroll"} to zoom</span></div><aside class="bubinfo" id="bubinfo"></aside></div><div class="legend" id="bub-l"></div><div id="bubflows"></div>`,
-    note: "Bubbles are the owner's wallets, sized by what they hold now. Fill: green = holdings grew in the window, red = sold on the DEX or deposited to an exchange, amber = moved to wallets outside the group, grey = no net change or moved only between its own wallets. Arrows are direct evidence: the GME that moved in the window. Green from the DEX (bought), red to the DEX or an exchange (sold / deposited), blue from an exchange (withdrawn), dashed grey between the owner's own wallets (inferred same owner), solid grey to or from other wallets. Dragged bubbles stay where you put them; ⤢ resets." });
+    note: "Entities view: one bubble per entity (sized by holdings, coloured by its status in the window), arrows are the GME that moved between entities, the DEX, exchanges and wallets outside any entity. Buyers are pulled left toward the DEX, sellers right toward the exchanges. One owner's wallets view: bubbles are the owner's wallets, sized by what they hold now. Fill: green = holdings grew in the window, red = sold on the DEX or deposited to an exchange, amber = moved to wallets outside the group, grey = no net change or moved only between its own wallets. Arrows are direct evidence: the GME that moved in the window. Green from the DEX (bought), red to the DEX or an exchange (sold / deposited), blue from an exchange (withdrawn), dashed grey between the owner's own wallets (inferred same owner), solid grey to or from other wallets. Dragged bubbles stay where you put them; ⤢ resets." });
   draws.push(drawBub);
 }
 function entWatch() {
@@ -1182,16 +1207,199 @@ function drawMon() {
   const qi = $("monq"); qi.oninput = () => { monQ = qi.value; const pos = qi.selectionStart; drawMon(); const nq = $("monq"); nq.focus(); nq.setSelectionRange(pos, pos); };
 }
 
-// ---------- flow map ----------
+// ---------- ENTITY CARDS (entity registry, data/entities.json) ----------
+const CHI = Object.fromEntries(["dexIn", "dexOut", "cexIn", "cexOut", "wIn", "wOut", "entIn", "entOut", "othIn", "othOut", "internal", "n"].map((k, i) => [k, i]));
+const STN = { accumulating: ["▲ Accumulating", "up", "--up"], distributing: ["▼ To exchanges", "down", "--crit"], selling: ["▼ Selling", "down", "--down"], moving: ["→ Moving out", "mv-move", "--warn"], holding: ["■ Holding", "flat", "--fg-2"], dormant: ["· Dormant", "flat", "--neutral"] };
+const KINDE = { focus: "Focus cluster", coinbase: "Coinbase-funded", watched: "Watched group", linked: "Linked group" };
+let ecWin = 2, ecFilter = "all", ecSort = "bal", ecQ = "", ecAll = false;
+const ewin = (e, wi) => { const w = e.w[wi], g = (k) => w[CHI[k]];
+  const inn = g("dexIn") + g("cexIn") + g("wIn") + g("entIn") + g("othIn"), out = g("dexOut") + g("cexOut") + g("wOut") + g("entOut") + g("othOut");
+  return { g, inn, out, net: inn - out, n: g("n"), internal: g("internal") }; };
+const ownerIdx = (id) => (T.mon ? T.mon.owners.findIndex((o) => o.id === id) : -1);
+function entCards() {
+  const E = S.E;
+  if (!E || !E.entities) { card({ title: "Entities", wide: true, body: unavailable("The entity registry arrives with the next scheduled run.") }); return; }
+  card({ title: "Entity cards", q: "Which groups of linked wallets are growing, shrinking or only moving coins between their own wallets?", wide: true, key: true, body: `<div id="ecbox"></div>`,
+    note: "Each card is one entity: a group of wallets tied together by the linking rules (inferred, not proven). Change counts only GME entering or leaving the group; moves between its own wallets are shown as ↔ internal and never as selling. Red means coins left through the DEX or to an exchange; amber means they went to wallets outside the group. New wallets join automatically when a direct rule fires (a member gave them their first GME, or one sent the other ≥90% of its balance; ≥$2k). Wallets that received ≥$2k from a group without a rule firing are listed as provisional and not counted. Cost basis: first-in-first-out over the group's own inflows and outflows; coins that arrived by transfer are costed at that day's price." });
+  const ev = (E.events || []).slice(0, 40);
+  card({ title: "Entity events", wide: true, sub: `Tripwires and joins, newest first. The registry last ran ${fdt(new Date(E.asOf))}.`,
+    body: `<ul class="alist" style="max-height:360px;overflow-y:auto">${ev.length ? ev.map((a) => `<li><span class="sev ${esc(a.severity)}">${esc(a.severity.toUpperCase())} · ${d3.utcFormat("%-d %b %H:%M")(new Date(a.at))}</span><span>${esc(a.text)}</span></li>`).join("") : `<li><span class="sev info">· QUIET</span><span>No entity tripwire or join since the registry started. Events appear here from the next run on.</span></li>`}</ul>` });
+  draws.push(drawCards);
+}
+function drawCards() {
+  const box = $("ecbox"); if (!box) return;
+  const E = S.E, wl = WIN[ecWin][0];
+  const rows = E.entities.map((e) => ({ e, x: ewin(e, ecWin), st: e.status[ecWin] }));
+  const grp = (st) => (st === "distributing" ? "selling" : st);
+  const cnt = { all: rows.length, accumulating: 0, selling: 0, moving: 0, holding: 0, dormant: 0, forming: rows.filter((r) => r.e.forming).length };
+  let accB = 0, selB = 0, movB = 0;
+  rows.forEach((r) => { cnt[grp(r.st)]++; if (r.st === "accumulating") accB += r.x.net; if (grp(r.st) === "selling") selB += r.x.net; if (r.st === "moving") movB += r.x.net; });
+  const q = ecQ.trim().toLowerCase();
+  let vis = rows.filter((r) => (ecFilter === "all" || (ecFilter === "forming" ? r.e.forming : grp(r.st) === ecFilter)) && (!q || r.e.name.toLowerCase().includes(q) || r.e.id.includes(q) || r.e.members.some((a) => a.includes(q))));
+  const sorters = { bal: (a, b) => b.e.bal - a.e.bal, move: (a, b) => Math.abs(b.x.net) - Math.abs(a.x.net), growth: (a, b) => b.x.net / Math.max(1e-6, b.e.bal / 1e9) - a.x.net / Math.max(1e-6, a.e.bal / 1e9), active: (a, b) => (b.e.lastActive > a.e.lastActive ? 1 : -1) };
+  vis.sort(sorters[ecSort]);
+  const total = d3.sum(E.entities, (e) => e.bal), shown = ecAll ? vis : vis.slice(0, 24);
+  const F = [["all", "All"], ["accumulating", "▲ Accumulating"], ["selling", "▼ Selling"], ["moving", "→ Moving out"], ["holding", "■ Holding"], ["dormant", "· Dormant"], ["forming", "◆ Forming"]];
+  box.innerHTML = `<div class="ctl">${segBtns(WIN.map(([l], i) => [l, i]), ecWin, "ew")}<select class="q" id="ecsort" aria-label="Sort">${[["bal", "Largest"], ["move", "Biggest move"], ["growth", "Fastest change"], ["active", "Last active"]].map(([k, l]) => `<option value="${k}"${k === ecSort ? " selected" : ""}>Sort: ${l}</option>`).join("")}</select>
+      <input class="q" id="ecq" type="search" placeholder="Search name, id or address" value="${esc(ecQ)}" aria-label="Search entities"></div>
+    <div class="ctl" style="margin-top:.6rem">${F.map(([k, l]) => `<button type="button" class="chip${ecFilter === k ? " on" : ""}" data-ef="${k}">${l}<b>${cnt[k] ?? 0}</b></button>`).join("")}</div>
+    <div class="sumline" style="margin:.8rem 0 .9rem"><span>${E.entities.length} entities hold ${fB(total)} (${fPct((100 * total) / SUPPLY)} of supply)</span><span class="flat">Last ${wl}</span><span class="up">▲ ${cnt.accumulating} ${sgn(accB, fBb)}</span><span class="down">▼ ${cnt.selling} ${sgn(selB, fBb)}</span><span class="mv-move">→ ${cnt.moving} ${sgn(movB, fBb)}</span><span style="color:var(--accent)">◆ ${cnt.forming} forming</span></div>
+    <div class="ecgrid">${shown.map((r) => ecard(r, wl)).join("") || unavailable("No entity matches.")}</div>
+    ${!ecAll && vis.length > 24 ? `<button type="button" class="mini" data-eall style="margin-top:12px">Show all ${vis.length}</button>` : ""}`;
+  box.onclick = (ev) => { const t = ev.target.closest("[data-ew],[data-ef],[data-eall]"); if (!t) return;
+    if (t.dataset.ew != null) ecWin = +t.dataset.ew; else if (t.dataset.ef) ecFilter = t.dataset.ef; else ecAll = true; drawCards(); };
+  $("ecsort").onchange = (ev) => { ecSort = ev.target.value; drawCards(); };
+  const qi = $("ecq"); qi.oninput = () => { ecQ = qi.value; const p = qi.selectionStart; drawCards(); const n = $("ecq"); n.focus(); n.setSelectionRange(p, p); };
+}
+function ecard({ e, x, st }, wl) {
+  const [sl, sc, svar] = STN[st] || STN.dormant, g = x.g, b = e.bal / 1e9, spot = S.E.spot;
+  const ser = e.series, W2 = 260, H2 = 40, xs = d3.scaleLinear([0, ser.length - 1], [0, W2]), [lo, hi] = d3.extent(ser), ys = d3.scaleLinear([Math.min(lo, hi * 0.9), hi === lo ? hi + 1 : hi], [H2 - 2, 2]);
+  const area = d3.area().x((v, i) => xs(i)).y0(H2).y1((v) => ys(v))(ser), line = d3.line().x((v, i) => xs(i)).y((v) => ys(v))(ser);
+  const winStart = xs(Math.max(0, ser.length - 1 - Math.round(WIN[ecWin][1] / 24)));
+  const mx = Math.max(x.inn, x.out, 1e-9), seg = (v, c, t) => (v > 1e-6 ? `<i style="width:${(100 * v) / mx}%;background:var(${c})" title="${esc(t)}: ${fBb(v)}"></i>` : "");
+  const inBar = seg(g("dexIn"), "--up", "bought on the DEX") + seg(g("cexIn"), "--s1", "withdrawn from exchanges") + seg(g("wIn") + g("entIn"), "--s3", "from other wallets") + seg(g("othIn"), "--neutral", "liquidity / other");
+  const outBar = seg(g("dexOut"), "--down", "sold on the DEX") + seg(g("cexOut"), "--crit", "sent to exchanges") + seg(g("wOut") + g("entOut"), "--warn", "to wallets outside the group") + seg(g("othOut"), "--neutral", "liquidity / burn / other");
+  const ch = [];
+  if (g("dexIn") > 1e-3) ch.push(`<span class="up">+${fBb(g("dexIn"))} DEX buy</span>`);
+  if (g("cexIn") > 1e-3) ch.push(`<span class="up">+${fBb(g("cexIn"))} from exch.</span>`);
+  if (g("wIn") + g("entIn") > 1e-3) ch.push(`<span class="up">+${fBb(g("wIn") + g("entIn"))} from wallets</span>`);
+  if (g("dexOut") > 1e-3) ch.push(`<span class="down">−${fBb(g("dexOut"))} DEX sell</span>`);
+  if (g("cexOut") > 1e-3) ch.push(`<span class="down">−${fBb(g("cexOut"))} to exch.</span>`);
+  if (g("wOut") + g("entOut") > 1e-3) ch.push(`<span class="mv-move">→ ${fBb(g("wOut") + g("entOut"))} to outside wallets</span>`);
+  if (x.internal > 1e-3) ch.push(`<span class="flat">↔ ${fBb(x.internal)} internal</span>`);
+  const c = e.cost || {}, mult = c.avg ? spot / c.avg : null;
+  const srcTxt = c.src ? [["D", "DEX"], ["C", "exchanges"], ["W", "transfers"]].filter(([k]) => c.src[k]).map(([k, l]) => `${fPct(c.src[k], 0)} ${l}`).join(" · ") : "";
+  const evid = e.direct ? `Direct evidence: ${fPct(e.direct.pct, 1)} of holdings (${e.direct.wallets} wallets); the rest rests on a shared deposit address somewhere on the path.` : e.kind === "linked" ? "Linked by seed, drain or shared-deposit rules." : e.kind === "coinbase" ? "Wallets that sent to the same Coinbase collector." : "On the watchlist (accumulator, holding wallet or reshuffle wallet).";
+  const pv = e.provisional || [], pvB = d3.sum(pv, (p) => p.bal);
+  const oi = ownerIdx(e.id);
+  return `<article class="ec" style="--st:var(${svar})">
+    <header><div><h4>${esc(e.name)}</h4><span class="ev inf">${KINDE[e.kind] || e.kind}</span>${e.forming ? `<span class="ev" style="color:var(--accent);border-color:var(--accent)" data-tip="${esc(e.forming)}">◆ forming</span>` : ""}${e.flagged ? '<span class="ev" style="color:var(--crit);border-color:var(--crit)">flagged &gt;60</span>' : ""}</div><span class="ecst ${sc}">${sl}</span></header>
+    <div class="ecv"><b>${fBb(b)}</b><span>${fPct(e.pct, 2)} of supply · ${e.n} wallets${e.attached.length ? ` · <span style="color:var(--accent)">+${e.attached.length} joined</span>` : ""}</span><b class="${Math.abs(x.net) < 1e-3 ? "flat" : sc}" style="margin-left:auto">${Math.abs(x.net) < 1e-3 ? "±0" : sgn(x.net, fBb)}<small> ${wl}</small></b></div>
+    <svg viewBox="0 0 ${W2} ${H2}" preserveAspectRatio="none" class="ecsp"><rect x="${winStart}" y="0" width="${W2 - winStart}" height="${H2}" fill="var(--accent-2)"/><path d="${area}" fill="var(${svar})" fill-opacity=".14"/><path d="${line}" fill="none" stroke="var(${svar})" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg>
+    <div class="ecflow"><span>In</span><div class="ecbar">${inBar}</div><b>${x.inn > 1e-3 ? fBb(x.inn) : "—"}</b><span>Out</span><div class="ecbar">${outBar}</div><b>${x.out > 1e-3 ? fBb(x.out) : "—"}</b></div>
+    <div class="how">${ch.join("") || `<span class="flat">No GME moved in or out in the last ${wl}.</span>`}</div>
+    <dl class="eckv"><div><dt>Avg cost</dt><dd>${c.avg ? fP(c.avg) : "—"}${mult ? ` <small class="${mult >= 1 ? "up" : "down"}">${mult.toFixed(2)}× now</small>` : ""}</dd></div>
+      <div><dt>Unrealized</dt><dd class="${(c.unreal ?? 0) >= 0 ? "up" : "down"}">${c.unreal != null ? sgn(c.unreal, fU) : "—"}</dd></div>
+      <div><dt>Realized</dt><dd class="${(c.realized ?? 0) >= 0 ? "up" : "down"}">${c.realized != null ? sgn(c.realized, fU) : "—"}</dd></div>
+      <div><dt>Active</dt><dd>${esc(e.firstSeen)} → ${esc(e.lastActive)}</dd></div></dl>
+    <p class="ecnote">${esc(evid)}${srcTxt ? ` Held coins came from ${srcTxt}.` : ""}</p>
+    ${pv.length ? `<p class="ecnote" style="color:var(--warn)">${pv.length} provisional wallet(s) received coins from it and hold ${fB(pvB)}; no linking rule has fired, so they are not counted.</p>` : ""}
+    <footer>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Wallet map →</button>` : ""}<button type="button" class="mini" data-emap="${e.id}">Entity map →</button>
+      <details><summary class="mini">Wallets (${e.n})</summary><div class="chips">${e.members.slice(0, 80).map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>${e.attached.some((j) => j.a === a) ? '<span class="ev" title="joined by following the coins">joined</span>' : ""}`).join("")}${pv.map((p) => `<button class="addr" data-addr="${p.a}" style="opacity:.7">${short(p.a)}</button><span class="ev inf">provisional</span>`).join("")}</div></details></footer>
+  </article>`;
+}
+
+// ---------- entity-level flow map ----------
+let bubMode = "entities", emWin = 2, emEdge = "all", emSel = null, emQ = "";
+function drawEntMap() {
+  const ctl = $("bubctl"); if (!ctl) return;
+  const E = S.E;
+  if (bubSim) { bubSim.stop(); bubSim = null; }
+  if (!E || !E.edges) { ctl.innerHTML = modeSeg() + unavailable("The entity map arrives with the next scheduled run."); return; }
+  ctl.innerHTML = `<div class="ctl" style="margin-bottom:8px">${modeSeg()}${segBtns(WIN.map(([l], i) => [l, i]), emWin, "emw")}${segBtns([["All flows", "all"], ["DEX & exchanges", "mkt"], ["Between entities", "ent"]], emEdge, "eme")}<input class="q" id="emq" type="search" placeholder="Find an entity or address" value="${esc(emQ)}" aria-label="Find"></div>`;
+  ctl.onclick = (ev) => { const t = ev.target.closest("[data-bm],[data-emw],[data-eme]"); if (!t) return;
+    if (t.dataset.bm) bubMode = t.dataset.bm; else if (t.dataset.emw != null) emWin = +t.dataset.emw; else emEdge = t.dataset.eme; drawBub(); };
+  $("emq").onchange = (ev) => { emQ = ev.target.value; const q = emQ.trim().toLowerCase(); const f = q && E.entities.find((e) => e.name.toLowerCase().includes(q) || e.id.includes(q) || e.members.some((a) => a.includes(q))); emSel = f ? f.id : emSel; drawBub(); };
+  const byId = new Map(E.entities.map((e) => [e.id, e])), wl = WIN[emWin][0];
+  const isCat = (k) => !byId.has(k);
+  let L = (E.edges[emWin] || []).map(([s, t, v]) => ({ s, t, v })).filter((l) => !(isCat(l.s) && isCat(l.t)));
+  if (emEdge === "mkt") L = L.filter((l) => ["D", "C"].includes(l.s) || ["D", "C"].includes(l.t));
+  if (emEdge === "ent") L = L.filter((l) => !isCat(l.s) && !isCat(l.t));
+  const ids = new Set(); L.forEach((l) => { ids.add(l.s); ids.add(l.t); });
+  E.entities.slice(0, 14).forEach((e) => ids.add(e.id));
+  if (emSel) ids.add(emSel);
+  const CATN = { D: "DEX", C: "EXCHANGES", O: "OTHER WALLETS", L: "LIQUIDITY", B: "BURN", T: "TOKEN" };
+  const N2 = [...ids].map((k) => { const e = byId.get(k); return e ? { id: k, e, x0: ewin(e, emWin), st: e.status[emWin], kind: "e" } : { id: k, kind: "c", label: CATN[k] || k }; });
+  const nodes = new Map(N2.map((n) => [n.id, n]));
+  const links = L.filter((l) => nodes.has(l.s) && nodes.has(l.t)).map((l) => ({ source: l.s, target: l.t, v: l.v }));
+  const tot = N2.filter((n) => n.kind === "e").reduce((a, n) => { a.b += n.e.bal; a.in += n.x0.inn; a.out += n.x0.out; return a; }, { b: 0, in: 0, out: 0 });
+  $("bubsum").innerHTML = `<span>${N2.filter((n) => n.kind === "e").length} entities on the map · ${fB(tot.b)} GME</span><span class="flat">Last ${wl}</span><span class="up">in ${fBb(tot.in)}</span><span class="mv-move">out ${fBb(tot.out)}</span><span class="flat">left = buying side · right = selling side</span>`;
+  const el = $("bub"); el.innerHTML = "";
+  const mob = mobile(), W = el.clientWidth || 800, H = mob ? 480 : 640;
+  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H).style("touch-action", "pan-y");
+  const vp = svg.append("g");
+  const zoom = d3.zoom().scaleExtent([0.3, 6]).filter((ev) => (ev.type === "wheel" ? ev.ctrlKey || ev.metaKey : ev.type === "touchstart" ? ev.touches.length > 1 : !ev.button)).on("zoom", (ev) => vp.attr("transform", ev.transform));
+  svg.call(zoom).on("dblclick.zoom", null);
+  document.querySelectorAll("[data-z]").forEach((b) => (b.onclick = () => { const z = b.dataset.z; if (z === "fit") { emPinned.clear(); drawBub(); } else svg.transition().duration(200).call(zoom.scaleBy, z === "in" ? 1.4 : 1 / 1.4); }));
+  const maxB = d3.max(N2, (n) => (n.e ? n.e.bal : 0)) || 1, r = d3.scaleSqrt([0, maxB], [mob ? 5 : 6, mob ? 36 : 54]);
+  const R = (n) => (n.kind === "c" ? 20 : r(n.e.bal));
+  const pin = { D: [0.06, 0.45], C: [0.94, 0.45], O: [0.5, 0.95], L: [0.08, 0.92], B: [0.92, 0.92], T: [0.5, 0.05] };
+  const side = (n) => (n.kind !== "e" ? 0.5 : n.st === "accumulating" ? 0.34 : n.st === "selling" || n.st === "distributing" ? 0.66 : n.st === "moving" ? 0.6 : 0.5);
+  N2.forEach((n) => { if (n.kind === "c" && pin[n.id]) { n.fx = pin[n.id][0] * W; n.fy = pin[n.id][1] * H; } const s = emPinned.get(n.id); if (s) { n.x = n.fx = s[0]; n.y = n.fy = s[1]; } });
+  const sim = d3.forceSimulation(N2).force("link", d3.forceLink(links).id((d) => d.id).distance(150).strength(0.04))
+    .force("charge", d3.forceManyBody().strength(-90)).force("collide", d3.forceCollide((d) => R(d) + 8))
+    .force("x", d3.forceX((d) => side(d) * W).strength(0.12)).force("y", d3.forceY(H / 2).strength(0.06)).stop();
+  for (let i = 0; i < 360; i++) sim.tick();
+  N2.forEach((d) => { if (d.fx == null) { const rr = R(d) + 2; d.x = Math.max(rr, Math.min(W - rr, d.x)); d.y = Math.max(rr, Math.min(H - rr, d.y)); } });
+  const colN = (n) => (n.kind === "c" ? (n.id === "D" ? C("--s7") : n.id === "C" ? C("--s4") : C("--neutral")) : C((STN[n.st] || STN.dormant)[2]));
+  const edgeC = (l) => { const s = l.source.id, t = l.target.id;
+    if (s === "D") return [C("--up"), "bought on the DEX"]; if (t === "D") return [C("--down"), "sold on the DEX"]; if (t === "C") return [C("--crit"), "sent to an exchange"]; if (s === "C") return [C("--s1"), "withdrawn from an exchange"];
+    if (t === "O") return [C("--warn"), "to wallets outside any entity"]; if (s === "O") return [C("--s3"), "from wallets outside any entity"]; return [C("--fg-2"), "between two entities"]; };
+  const wS = d3.scaleSqrt([0, d3.max(links, (l) => l.v) || 1], [0.8, 5]);
+  const defs = svg.append("defs"), marks = new Map();
+  const marker = (c) => { if (marks.has(c)) return marks.get(c); const id = "em" + marks.size; marks.set(c, id);
+    defs.append("marker").attr("id", id).attr("viewBox", "0 -5 10 10").attr("refX", 9).attr("markerUnits", "userSpaceOnUse").attr("markerWidth", 7).attr("markerHeight", 7).attr("orient", "auto").append("path").attr("d", "M0,-4L10,0L0,4").attr("fill", c); return id; };
+  const path = (l) => { const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, d = Math.hypot(dx, dy) || 1, rs = R(l.source) + 2, rt = R(l.target) + 4;
+    const x1 = l.source.x + (dx * rs) / d, y1 = l.source.y + (dy * rs) / d, x2 = l.target.x - (dx * rt) / d, y2 = l.target.y - (dy * rt) / d;
+    return `M${x1},${y1}Q${(x1 + x2) / 2 - dy * 0.1},${(y1 + y2) / 2 + dx * 0.1} ${x2},${y2}`; };
+  const nl = (n) => (n.kind === "c" ? n.label : n.e.name);
+  const lsel = vp.append("g").selectAll("path").data(links).join("path").attr("fill", "none").attr("stroke", (l) => edgeC(l)[0]).attr("stroke-width", (l) => wS(l.v)).attr("stroke-opacity", 0.7)
+    .attr("marker-end", (l) => `url(#${marker(edgeC(l)[0])})`)
+    .on("pointermove", (ev, l) => showTip(`<div class="h">${esc(nl(l.source))} → ${esc(nl(l.target))}</div>` + trow(edgeC(l)[0], edgeC(l)[1], "") + trow("", "GME · " + wl, fBb(l.v)) + trow("", "≈ $ today", fU(l.v * 1e9 * S.E.spot)), ev)).on("pointerleave", hideTip);
+  const gsel = vp.append("g").selectAll("g").data(N2).join("g").attr("class", (d) => (d.kind === "e" ? "nd" : ""));
+  gsel.filter((d) => d.kind === "c").append("rect").attr("x", -20).attr("y", -20).attr("width", 40).attr("height", 40).attr("fill", colN).attr("fill-opacity", 0.9).attr("stroke", C("--line-2"));
+  gsel.filter((d) => d.kind === "c").append("text").attr("class", "plabel").style("fill", C("--fg-2")).attr("text-anchor", "middle").attr("y", (d) => (d.fy > H * 0.6 ? -28 : 36)).text((d) => d.label);
+  gsel.filter((d) => d.kind === "e").append("circle").attr("r", R).attr("fill", colN).attr("fill-opacity", 0.82)
+    .attr("stroke", (d) => (d.e.kind === "focus" ? C("--accent") : d.id === emSel ? C("--fg") : C("--line-2"))).attr("stroke-width", (d) => (d.e.kind === "focus" || d.id === emSel ? 2.5 : 1));
+  gsel.filter((d) => d.kind === "e" && (R(d) > 14 || d.id === emSel)).append("text").attr("class", "lbl").style("font-size", "10.5px").attr("text-anchor", "middle").attr("y", (d) => R(d) + 13)
+    .text((d) => d.e.name.replace("Accumulator ", "acc ").replace("Linked group ", "group ").replace("Holding wallet ", "hold "));
+  gsel.filter((d) => d.kind === "e" && R(d) > 24).append("text").attr("class", "lbl").style("font-family", "var(--mono)").style("fill", "#fff").attr("text-anchor", "middle").attr("y", 4).text((d) => fB(d.e.bal));
+  const pos = () => { gsel.attr("transform", (d) => `translate(${d.x},${d.y})`); lsel.attr("d", path); };
+  pos();
+  const hl = (d) => { if (!d) { lsel.attr("stroke-opacity", 0.7); gsel.attr("opacity", 1); return; }
+    const nb = new Set([d.id]); links.forEach((l) => { if (l.source.id === d.id) nb.add(l.target.id); if (l.target.id === d.id) nb.add(l.source.id); });
+    lsel.attr("stroke-opacity", (l) => (l.source.id === d.id || l.target.id === d.id ? 1 : 0.05)); gsel.attr("opacity", (n) => (nb.has(n.id) ? 1 : 0.15)); };
+  const info = (n) => {
+    const box = $("bubinfo"); if (!box) return;
+    if (!n || n.kind === "c") {
+      const fl = n ? links.filter((l) => l.source.id === n.id || l.target.id === n.id).sort((a, b) => b.v - a.v) : [];
+      box.innerHTML = n ? `<h4>${esc(n.label)}</h4><div class="kvl">${fl.slice(0, 24).map((l) => { const o = l.source.id === n.id ? l.target : l.source; return `<div><span>${l.target.id === n.id ? "from" : "to"} ${esc(nl(o))}</span><b>${fBb(l.v)}</b></div>`; }).join("") || "<div><span>No flows</span><b>—</b></div>"}</div>`
+        : `<h4>Entity map · last ${wl}</h4><p class="sub" style="font-size:12.5px">One bubble per entity, sized by what it holds, coloured by what it did: green = accumulating, red = selling or sending to exchanges, amber = moving coins to outside wallets, grey = holding or dormant. Buyers drift left toward the DEX, sellers right toward the exchanges. Click a bubble for its card; open its wallets from there.</p>`;
+      return; }
+    const e = n.e, x = n.x0, oi = ownerIdx(e.id), fl = links.filter((l) => l.source.id === n.id || l.target.id === n.id).sort((a, b) => b.v - a.v);
+    box.innerHTML = `<h4>${esc(e.name)}</h4><span class="ecst ${(STN[n.st] || STN.dormant)[1]}">${(STN[n.st] || STN.dormant)[0]}</span>
+      <div class="kvl">${[["Holds", fB(e.bal) + " · " + fPct(e.pct, 2)], ["Wallets", e.n + (e.attached.length ? ` (+${e.attached.length} joined)` : "")], [wl + " net", sgn(x.net, fBb)], ["In", fBb(x.inn)], ["Out", fBb(x.out)], ["↔ internal", fBb(x.internal)], ["Avg cost", e.cost?.avg ? fP(e.cost.avg) : "—"], ["Provisional", (e.provisional || []).length]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>
+      ${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Open its wallets →</button>` : ""}
+      <h4 style="margin-top:4px">Flows · ${wl}</h4><div class="kvl">${fl.slice(0, 20).map((l) => { const inn = l.target.id === n.id, o = inn ? l.source : l.target; return `<div><span><i style="display:inline-block;width:8px;height:8px;background:${edgeC(l)[0]};margin-right:.4rem"></i>${inn ? "from" : "to"} ${esc(nl(o))}</span><b>${fBb(l.v)}</b></div>`; }).join("") || "<div><span>No flows in this window</span><b>—</b></div>"}</div>`;
+  };
+  gsel.on("pointerenter", (ev, d) => hl(d)).on("pointerleave", () => { hl(emSel ? nodes.get(emSel) : null); hideTip(); })
+    .on("pointermove", (ev, n) => showTip(n.kind === "c" ? `<div class="h">${esc(n.label)}</div>` : `<div class="h">${esc(n.e.name)}</div>` + trow("", "holds", fB(n.e.bal)) + trow("", wl + " net", sgn(n.x0.net, fBb)) + trow("", "status", (STN[n.st] || STN.dormant)[0]) + `<p style="margin-top:.3rem">Click for detail · drag to move</p>`, ev))
+    .on("click", (ev, n) => { if (ev.defaultPrevented) return; emSel = n.id; hl(n); info(n); });
+  gsel.filter((d) => d.kind === "e").call(d3.drag().on("start", (ev, d) => { hideTip(); d.fx = d.x; d.fy = d.y; }).on("drag", (ev, d) => { d.x = d.fx = ev.x; d.y = d.fy = ev.y; pos(); }).on("end", (ev, d) => emPinned.set(d.id, [d.x, d.y])));
+  svg.on("click", (ev) => { if (ev.target === svg.node()) { emSel = null; hl(null); info(null); } });
+  const cur = emSel ? nodes.get(emSel) : null; info(cur); if (cur) hl(cur);
+  bubSim = sim;
+  $("bub-l").innerHTML = Object.values(STN).filter((v, i, a) => a.findIndex((z) => z[2] === v[2]) === i).map(([l, , c]) => `<span><i style="background:${C(c)}"></i>${l.replace(/^[^ ]+ /, "")}</span>`).join("") +
+    `<span><i style="background:${C("--s7")}"></i>DEX</span><span><i style="background:${C("--s4")}"></i>exchanges</span><span><i style="background:${C("--neutral")}"></i>other wallets</span>`;
+  const top = [...links].sort((a, b) => b.v - a.v).slice(0, 25);
+  $("bubflows").innerHTML = top.length ? `<div class="tw" style="margin-top:6px"><table><thead><tr><th>From</th><th>To</th><th class="n">GME</th><th class="n">≈ $ today</th><th>What it was</th></tr></thead><tbody>` +
+    top.map((l) => `<tr><td>${esc(nl(l.source))}</td><td>${esc(nl(l.target))}</td><td class="n">${fBb(l.v)}</td><td class="n">${fU(l.v * 1e9 * S.E.spot)}</td><td style="color:${edgeC(l)[0]}">${edgeC(l)[1]}</td></tr>`).join("") + `</tbody></table></div>`
+    : `<p class="sub">No flows between entities, the DEX and exchanges in the last ${wl}.</p>`;
+}
+const emPinned = new Map();
+const modeSeg = () => segBtns([["Entities", "entities"], ["One owner's wallets", "wallets"]], bubMode, "bm");
+function drawBub() { if (bubMode === "entities") drawEntMap(); else drawWalletMap(); }
+
+// ---------- flow map: one owner's wallets ----------
 let bubPinned = new Map();   // owner|window → node id → [x, y] the user dragged it to
-function drawBub() {
+function drawWalletMap() {
   const ctl = $("bubctl"); if (!ctl) return;
   if (!T.mon) { ctl.innerHTML = unavailable("The flow map is not in this build."); return; }
   if (bubSim) { bubSim.stop(); bubSim = null; }
   const M = T.mon, opts = M.owners.map((o, k) => [k, o]).filter(([k, o]) => o.n >= 2 || k === 0);
-  ctl.innerHTML = `<div class="ctl" style="margin-bottom:8px"><select class="q" id="bubsel" aria-label="Owner">${opts.map(([k, o]) => `<option value="${k}"${k === bubOwner ? " selected" : ""}>${esc(o.name)} · ${o.n} wallets</option>`).join("")}<option value="-1"${bubOwner === -1 ? " selected" : ""}>All monitored wallets (≥0.1%)</option></select>${segBtns(WIN, bubWin, "bw")}</div>`;
+  ctl.innerHTML = `<div class="ctl" style="margin-bottom:8px">${modeSeg()}<select class="q" id="bubsel" aria-label="Owner">${opts.map(([k, o]) => `<option value="${k}"${k === bubOwner ? " selected" : ""}>${esc(o.name)} · ${o.n} wallets</option>`).join("")}<option value="-1"${bubOwner === -1 ? " selected" : ""}>All monitored wallets (≥0.1%)</option></select>${segBtns(WIN, bubWin, "bw")}</div>`;
   $("bubsel").onchange = (e) => { bubOwner = +e.target.value; bubSel = null; drawBub(); };
-  ctl.onclick = (e) => { const b = e.target.closest("[data-bw]"); if (b) { bubWin = +b.dataset.bw; drawBub(); } };
+  ctl.onclick = (e) => { const m = e.target.closest("[data-bm]"); if (m) { bubMode = m.dataset.bm; drawBub(); return; } const b = e.target.closest("[data-bw]"); if (b) { bubWin = +b.dataset.bw; drawBub(); } };
   const S2 = monStats(bubWin), h0 = M.hours - bubWin;
   const inSet = (i) => isW(i) && (bubOwner === -1 ? M.M[i][2] === 1 : ownerOf(i) === bubOwner);
   const members = M.A.map((a, i) => i).filter((i) => inSet(i) && (M.M[i][0] > 0.001 || S2.get(i)?.n));
@@ -1341,12 +1549,17 @@ function methodology() {
       <tr><td>Gas link</td><td>One sent the other ≥0.001 ETH, and both are already on the watchlist.</td><td><span class="ev">Direct</span></td></tr>
       <tr><td>Shared deposit address</td><td>Both used the same exchange deposit address. Only when 2 to 10 wallets share it and it forwards ≥95% to an exchange.</td><td><span class="ev inf">Inferred</span></td></tr>
     </tbody></table></div>
+    <p><b>How a shared deposit address is found.</b> Exchanges give each account its own deposit address and sweep what arrives there into their hot wallets. The terminal does not get deposit addresses from the exchanges: it infers one from behaviour, an address that forwarded at least 95% of its GME to a labelled exchange wallet and received from 2 to 10 wallets. Two wallets that both paid into such an address funded the same exchange account. That points to one owner, but it is not proof: someone can deposit to a friend's account, settle an OTC trade or pay a seller that way, and an address that forwards to an exchange could also be a personal relay. Hence <i>inferred</i>. On the focus cluster, 58.2B of its 65.0B connects to the focus wallet through direct transfers only; the other 6.8B depends on a shared deposit address somewhere on the path. Each entity card shows this split.</p>
+    <p><b>Following the coins.</b> Every run (every 4 hours) checks the last 90 days of transfers. A wallet joins an entity when a direct rule fires with one of its members: seed (a member gave it its first GME) or drain (one sent the other at least 90% of its balance), worth at least $2k. There is no hop limit, but nothing links through infrastructure, contracts, exchange deposit addresses or a sender that seeded more than 40 wallets. Linked groups stop at 60 wallets, and at most 25 wallets join one entity per run. Once a wallet joins, its moves with the group are internal: neither buying nor selling. A wallet that received at least $2k from an entity in 30 days without a rule firing is shown as <i>provisional</i>: visible, not counted.</p>
     <p>Guards: an address that seeds more than 40 wallets is a hub, so nothing links through it. A group larger than 60 wallets is flagged and never trusted. A shared exchange or relayer funder never links anyone. Tiny “address poisoning” transfers never link anyone. The focus wallet's cluster stops two steps away from the focus wallet.</p>
     <p><b>Direct</b> describes the evidence, a transfer between the two wallets that anyone can check on-chain. It is not proof that one person controls both. <b>Inferred</b> means the link comes from a shared counterparty or a grouping rule, with no transfer between the two.</p>
     <div class="callout">Wallet links are evidence of shared control, not proof of ownership. Groups are a floor, not a ceiling: the rules err toward not merging.</div></div></section>
   <section><span class="dn">05 · Classifications</span><div><h2>How statuses are assigned</h2>
     <ul><li><b>Insider status</b> (focus wallet's cluster, 30 days): DISTRIBUTING if it sent ≥0.05% of supply to exchanges; SELLING if it sold more than it bought on the DEX and shrank; ACCUMULATING if it grew by more than 0.05% of supply; otherwise HOLDING. The tripwire arms on any exchange deposit in 7 days, or a DEX sale by the focus wallet in 30 days.</li>
     <li><b>Wallet monitor</b>: every wallet holding ≥0.1% of supply now or at any point in 90 days, plus its linked side wallets. A status needs a change of at least 0.5% of the wallet's balance. Selling means at least half of what left went to the DEX or an exchange. Moves between wallets of the same owner group are shown as own-wallet moves, not as buying or selling; in the owner view they cancel out.</li>
+    <li><b>Entity status</b> (per window): accumulating if the group gained more than 1% of its holdings (and at least 0.01% of supply) from outside; when it lost that much, distributing if at least half went to exchanges, selling if at least half went to the DEX or exchanges, moving out otherwise; holding if it moved less; dormant if nothing moved. Internal moves never count.</li>
+    <li><b>Entity tripwires</b> (since the last run): first exchange deposit or first DEX sale in 90 days, ≥0.05% of supply moved to wallets outside the group, a new provisional wallet holding ≥0.05% of supply, a group starting to form (first GME in the last 60 days, or +50% in 30 days, with ≥0.1% of supply), and wallets joined by following the coins. High and medium tripwires are also posted as a comment on the repository's “GME terminal alerts” issue.</li>
+    <li><b>Entity cost basis</b>: first in, first out over the group's own inflows and outflows. Coins that arrived by transfer rather than a purchase are costed at that day's price.</li>
     <li><b>Quiet accumulators</b>: owners that added ≥0.1% of supply in 90 days and sold under 15% of it.</li>
     <li><b>Buy-and-hide</b>: fresh wallets fed by wallets that bought on the DEX and forwarded ≥80% of it. One counts as “still holding” only if it kept ≥80% of what it received and sold or deposited ≤20%.</li>
     <li><b>Unusual day</b>: transfers or value moved at least 3× the median of the previous 30 days. A display rule that points at days worth inspecting.</li></ul></div></section>
@@ -1354,10 +1567,10 @@ function methodology() {
     <ul><li>Ethereum only. GME on other chains is not covered (MEXC's GME is the Solana token, not this one).</li>
     <li>What happens inside an exchange is invisible. A deposit is not proof of a sale, and only labelled exchange wallets are recognised; a deposit to an unlabelled address reads as a wallet-to-wallet transfer.</li>
     <li>Owner groups are a lower bound. A wallet funded only through an exchange or another chain cannot be linked from token transfers.</li>
-    <li>A wallet that receives coins from a group but meets no linking rule stays outside the group until it does. Until then, the group shows those coins as moved out.</li>
+    <li>A wallet that receives coins from a group but meets no linking rule stays outside the group (shown as provisional) until a rule fires. Until then, the group shows those coins as moved out, never as sold.</li>
     <li>Dollar values use daily prices. The market is thin, so small trades move the metrics. Every read describes a position, never a buy or sell signal. Nothing here is financial advice.</li></ul></div></section>
   <section><span class="dn">07 · Freshness</span><div><h2>Live index and research are separate</h2>
-    <p>The index is rebuilt once a day by a scheduled job (06:23 UTC, often started hours late by GitHub). The header shows when it last ran and turns to “Data stale” after 36 hours without a new run. The last day in every daily chart is partial: it runs up to the latest indexed transfer.</p>
+    <p>The index is rebuilt every 4 hours by a scheduled job, and fully once a day (06:23 UTC) including the external lookups of ETH funders. GitHub often starts scheduled jobs late. The header shows when it last ran and turns to “Data stale” after 12 hours without a new run. The last day in every daily chart is partial: it runs up to the latest indexed transfer.</p>
     <p>The written study is a snapshot of ${STUDY_DATE}. The daily run does not update its findings. <a class="more" href="/study.html">Read the full study →</a></p></div></section>
   </article>`);
 }

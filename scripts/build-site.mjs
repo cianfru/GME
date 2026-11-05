@@ -78,7 +78,8 @@ const site = {
     .sort((a, b) => (b.bal ?? 0) - (a.bal ?? 0) || b.tok - a.tok),
   relays: Object.keys(json("vaults90_relays.json", {}) || {}).length,   // bought-then-sold/passed-on, excluded
   float: Object.entries(float).map(([name, tok]) => ({ name: relabel(name), tok, pct: pct(tok) })),
-  T: json("terminal.json"),                       // daily series, insider watch, watched groups, cluster, top holders
+  T: json("terminal.json"),
+  E: json("entities.json"),                       // entity registry: cards, entity flow map, tripwires                       // daily series, insider watch, watched groups, cluster, top holders
   windows: (market.windows || []).map((w) => ({
     days: w.days, buyers: w.buyers, sellers: w.sellers, buyUsd: w.buyUsd, sellUsd: w.sellUsd, newBuyers: w.newBuyers, clusterNet: w.clusterNet,
   })),

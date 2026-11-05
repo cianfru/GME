@@ -21,3 +21,4 @@ data/bs/focus_internal.json
 __pycache__/
 node_modules/
 dist/
+data/alerts/notify.md
