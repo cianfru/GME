@@ -1,20 +1,34 @@
 {
  "summary": {
-  "asOf": "2026-11-05T14:21:35Z",
-  "since": "2026-11-05T10:02:11Z",
+  "asOf": "2026-11-05T19:50:23Z",
+  "since": "2026-11-05T14:21:35Z",
   "price": 8.967684554134734e-06,
   "mcap": 3772615.2150789415,
-  "pool": 44705561431.78288,
+  "pool": 43242054099.43917,
   "watchedGroups": 21,
-  "alerts": 1,
+  "alerts": 3,
   "high": 0
  },
  "alerts": [
   {
+   "kind": "flow",
+   "severity": "info",
+   "text": "Accumulator 0x28fb\u20264341: bought on DEX 0.30B GME (~$2,668, 0.07% of supply)",
+   "group": "Accumulator 0x28fb\u20264341",
+   "what": "bought on DEX",
+   "tokens": 297479268.881899
+  },
+  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME +0.32B since last run (net selling into the pool); pool now 44.71B, price $8.968e-06",
-   "delta": 320576446.1852951
+   "text": "Pool GME -1.46B since last run (net buying out of the pool); pool now 43.24B, price $8.968e-06",
+   "delta": -1463507332.3437119
+  },
+  {
+   "kind": "balance",
+   "severity": "info",
+   "text": "Accumulator 0x28fb\u20264341: holdings +0.30B since last run, now 0.77B (0.18%)",
+   "group": "Accumulator 0x28fb\u20264341"
   }
  ]
 }
