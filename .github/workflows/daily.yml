@@ -130,6 +130,11 @@ jobs:
       - name: Entity registry
         run: python3 scripts/entities.py
 
+      # Owner-level crowd behaviour: who buys (new / returning / adding), who sells or exits (profit / loss), cohorts, smart money.
+      - name: Crowd behaviour
+        continue-on-error: true
+        run: python3 scripts/crowd.py
+
       - name: Watch (alerts since last run)
         run: python3 scripts/watch.py
 
@@ -157,10 +162,11 @@ jobs:
         run: |
           python3 scripts/notify.py
           [ -f data/alerts/notify.md ] || exit 0
-          N=$(gh issue list --state open --search "GME terminal alerts in:title" --json number -q '.[0].number')
+          # list API (not search: a new issue takes minutes to reach the search index)
+          N=$(gh issue list --state open --limit 100 --json number,title -q '.[] | select(.title == "GME terminal alerts") | .number' | head -1)
           if [ -z "$N" ]; then
-            gh issue create -t "GME terminal alerts" -b "The scheduled job comments here when a watched group or entity trips an alert. Close the issue or set the repository variable ALERT_ISSUE=off to stop."
-            N=$(gh issue list --state open --search "GME terminal alerts in:title" --json number -q '.[0].number')
+            URL=$(gh issue create -t "GME terminal alerts" -b "The scheduled job comments here when a watched group or entity trips an alert. Close the issue or set the repository variable ALERT_ISSUE=off to stop.")
+            N=${URL##*/}
           fi
           gh issue comment "$N" -F data/alerts/notify.md
 

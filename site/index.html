@@ -165,6 +165,8 @@ details.about p { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; max-w
 .chart svg { display: block; width: 100%; overflow: visible }
 .legend { display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; font-size: 12px; color: var(--fg-2) }
 .legend:empty { display: none }
+.legend > .tw { min-width: 0; flex: 1 1 100% }
+@media (max-width: 760px) { .pv { white-space: normal; max-width: 100% } }
 .legend span { display: inline-flex; align-items: center; gap: .45rem }
 .legend i { width: 9px; height: 9px; flex: none }
 .legend i.ln { height: 2px; width: 14px }
@@ -257,6 +259,14 @@ tr.r-acc td:first-child { box-shadow: inset 2px 0 var(--up) } tr.r-sell td:first
 .sumline { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; font: 400 12px var(--mono) }
 .ownlink { background: none; border: 0; padding: 0; color: var(--fg-2); cursor: pointer; font: inherit; border-bottom: 1px dotted var(--line-2) }
 .ownlink:hover { color: var(--accent) }
+
+/* crowd */
+dl.rd { margin: 8px 0 0; display: grid; gap: 0 }
+dl.rd div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 1rem; padding: 9px 0; border-bottom: 1px solid var(--line) }
+dl.rd div:last-child { border-bottom: 0 }
+dl.rd dt { font: 500 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding-top: 3px }
+dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-family: var(--mono); font-weight: 500 }
+@media (max-width: 760px) { dl.rd div { grid-template-columns: minmax(0, 1fr); gap: 2px } }
 
 /* entity cards */
 .ecgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px }
@@ -401,14 +411,16 @@ let S, T, DD, N, IDX = null, AGEH = 0, STALE = false, PARTIAL = false;
 const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
-const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["transfers", "Transfers"], ["entities", "Entities"], ["methodology", "Methodology"]];
+const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["methodology", "Methodology"]];
 const SUBS = [["cards", "Entities"], ["cluster", "Focus cluster"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["watchlist", "Watchlist"]];
 const LEGACY = { wallets: "entities/monitor", bubbles: "entities/map", insiders: "entities/cluster", watchlist: "entities/watchlist", valuation: "holders", flows: "transfers" };
 let page = "overview", sub = "cluster", lastPage = null;
 const draws = [];
 
 fetch("/site.json", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("site.json " + r.status); return r.json(); }).then((d) => {
-  S = d; T = d.T; DD = T.daily.d.map(pd); N = DD.length; init();
+  S = d; T = d.T; DD = T.daily.d.map(pd); N = DD.length;
+  if (S.C && S.C.daily && S.C.d1 === T.daily.d[N - 1] && S.C.daily.buyNew.length === N) Object.assign(T.daily, S.C.daily);   // crowd series share the terminal's days
+  init();
 }).catch((e) => { $("err").style.display = "block"; $("err").textContent = "Could not load the data (" + e.message + ")."; console.error(e); });
 
 // ---------- helpers on the daily series ----------
@@ -482,7 +494,7 @@ function render() {
   document.querySelectorAll("#nav a").forEach((a) => { const on = a.dataset.p === page; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   draws.length = 0; if (bubSim) { bubSim.stop(); bubSim = null; }
   const v = $("view"); v.innerHTML = ""; v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
-  ({ overview, holders, transfers, entities, methodology })[page]();
+  ({ overview, holders, crowd, transfers, entities, methodology })[page]();
   document.title = (page === "overview" ? "GME on Ethereum" : PAGES.find((p) => p[0] === page)[1] + " · GME on Ethereum") + " · Terminal";
   markRange(); redraw();
   if (page !== lastPage) scrollTo({ top: 0 });
@@ -886,6 +898,173 @@ function cohortsCard() {
       .on("pointermove", (ev, c) => showTip(`<div class="h">${esc(c.name)}</div>` + trow("", "wallets", fN(c.wallets)) + trow(C("--s1"), "still holding", fN(c.holdNow)) + trow("", "they bought", fU(c.buyUsd)) + trow("", "they sold", fU(c.sellUsd)), ev)).on("pointerleave", hideTip);
     g.selectAll("text.v").data(Co).join("text").attr("class", "lbl").style("font-family", "var(--mono)").attr("x", w + 6).attr("y", (c) => y(c.name) + y.bandwidth() / 2 + 4).text((c) => (mob ? fPct(c.pct, 0) : `${fPct(c.pct, 0)} · ${c.holdNow} of ${fN(c.wallets)}`));
   });
+}
+
+// ---------- CROWD (data/crowd.json, owner level) ----------
+const ZONES = [[0.2, "Low vs its own history"], [0.4, "Below its middle"], [0.6, "Middle of its range"], [0.8, "Above its middle"], [1.01, "High vs its own history"]];
+const zoneOf = (v) => (v == null ? "—" : ZONES.find(([t]) => v < t)[1]);
+let COMP = null;
+function composite() {          // expanding-window percentile ranks: each day only sees its own past (no look-ahead)
+  if (COMP) return COMP;
+  const p = col("price"), mv = col("mvrv"), sp = col("sip"), b = col("buyUsd"), s = col("sellUsd"), pl = col("pool");
+  const ma = p.map((_, i) => { const w = p.slice(Math.max(0, i - 139), i + 1).filter((x) => x); return w.length >= 60 ? p[i] / d3.mean(w) : null; });
+  const flow = p.map((_, i) => { if (i < 29 || !pl[i] || !p[i]) return null; let n = 0; for (let j = i - 29; j <= i; j++) n += (b[j] || 0) - (s[j] || 0); return n / (pl[i] * 1e9 * p[i]); });
+  const rank = (a) => { const out = new Array(a.length).fill(null), seen = [];
+    a.forEach((v, i) => { if (v == null || !isFinite(v)) return; const k = d3.bisectRight(seen, v); seen.splice(k, 0, v); if (seen.length >= 60) out[i] = (k) / seen.length; }); return out; };
+  const R = { mvrv: rank(mv), sip: rank(sp), trend: rank(ma), flow: rank(flow) };
+  const W = { mvrv: 0.25, sip: 0.25, trend: 0.3, flow: 0.2 };
+  const comp = p.map((_, i) => { let s2 = 0, w2 = 0; for (const k in W) if (R[k][i] != null) { s2 += W[k] * R[k][i]; w2 += W[k]; } return w2 >= 0.7 ? s2 / w2 : null; });
+  COMP = { comp, R, W, raw: { trend: ma, flow } };
+  return COMP;
+}
+function crowd() {
+  pageHead("Crowd", "How the crowd is moving", "Who is buying, who is leaving, who has stayed, what proven winners do now, and where the price sits against its own history. Owners are the unit: moves between one entity's wallets never count.", true);
+  if (!S.C) { grid(); card({ title: "Crowd", wide: true, body: unavailable("Crowd data arrives with the next scheduled run.") }); return; }
+  grid();
+  card({ title: "Reading", q: "What does the crowd look like right now?", wide: true, key: true, body: `<div id="reading"></div>`,
+    note: "Every sentence is computed from the data on this page for the selected range. It describes positions; it is not a forecast or a signal to buy or sell." });
+  draws.push(drawReading);
+  const Cp = composite(), cv = lastVal(Cp.comp);
+  let id = card({ title: "Valuation composite", wide: true, q: "Where does GME sit against its own history?", val: `${cv == null ? "—" : cv.toFixed(2)}<small class="flat">${zoneOf(cv)}</small>`,
+    sub: "0 = the lowest reading in its own past, 1 = the highest. A weighted blend of four ranks: MVRV and supply in profit (where price sits against what holders paid), price against its 140-day average (trend) and 30-day DEX net flow against pool depth (flow).",
+    note: "Each input is ranked against its own earlier values only (an expanding window, so no day sees the future), from 60 days of data on. Weights: MVRV 25%, supply in profit 25%, trend 30%, flow 20%. GME has about 2.5 years of history, so “its own history” is short and dominated by one launch cycle. A position, not a signal." });
+  ts(id, { panes: [
+    { label: "Composite (0–1)", h: [200, 160], fmt: (v) => v.toFixed(2), yMax: 1, ref: [{ y: 0.2, label: "0.2" }, { y: 0.8, label: "0.8" }], series: [{ label: "Composite", color: "--accent", v: Cp.comp, type: "line", width: 2 }] },
+    { label: "Input ranks", h: [110, 90], fmt: (v) => v.toFixed(2), yMax: 1, series: [{ label: "MVRV", color: "--s1", v: Cp.R.mvrv, type: "line", width: 1 }, { label: "Supply in profit", color: "--s3", v: Cp.R.sip, type: "line", width: 1 },
+      { label: "Trend", color: "--s7", v: Cp.R.trend, type: "line", width: 1 }, { label: "Flow", color: "--s2", v: Cp.R.flow, type: "line", width: 1 }] },
+    { label: "Price · log", h: [90, 70], log: true, price: true, fmt: fP, series: [{ label: "Price", color: "--fg", v: col("price"), type: "line", width: 1.2 }] }] });
+  sect("Who is buying, who is leaving", "Market flows only: GME arriving from the DEX or an exchange (bought) and GME going to them (sold). Owners, not wallets.");
+  id = card({ title: "Buyers and sellers by type", wide: true, q: "Is new money arriving, or are the same owners trading?", val: `<span id="bsval"></span>`,
+    sub: "Up: GME bought by new owners (never held), returning owners (held before, had sold out) and owners adding. Down: GME sold by owners who kept a position and by owners who sold out.",
+    note: "An owner is an entity (all its wallets together) or a single wallet. New = the owner never held GME before. Returning = it held before but was empty (≤1M GME). Exit = ≤1M GME left after the sale. Exchange withdrawals count as buys and deposits as sales." });
+  ts(id, { fmt: fBb, axisFmt: (v) => v + "B", series: [
+    { label: "New owners", color: "--accent", v: col("buyNew"), type: "bar" }, { label: "Returning", color: "--s1", v: col("buyRet"), type: "bar" }, { label: "Adding", color: "--up", v: col("buyAdd"), type: "bar" },
+    { label: "Sold, kept a position", color: "--warn", v: col("sellPart"), type: "neg" }, { label: "Sold out", color: "--down", v: col("sellExit"), type: "neg" }] });
+  draws.push(() => { const el = $("bsval"); if (!el) return; const n = rangeDays(), w = S.C.win[range === 30 ? "30" : range === 90 ? "90" : range === 365 ? "365" : "all"];
+    el.innerHTML = `${fN(w.new)} new · ${fN(w.ret)} back · ${fN(w.exit)} out<small class="flat">owners · ${rangeLabel()}</small>`; });
+  id = card({ title: "Sales in profit or at a loss", wide: true, val: `<span id="plval"></span>`, sub: "Dollar value of sales above and below the seller's average cost, and the profit or loss they locked in.",
+    note: "Average cost per owner: every inflow at that day's price; transfers out to another owner lower the cost basis in proportion. A sale at or above it counts as in profit." });
+  ts(id, { panes: [
+    { label: "Sales · USD", h: [150, 120], fmt: fU, series: [{ label: "In profit", color: "--up", v: col("sellProfitUsd"), type: "bar" }, { label: "At a loss", color: "--down", v: col("sellLossUsd"), type: "bar" }] },
+    { label: "Realized profit / loss · USD", h: [110, 90], fmt: (v) => sgn(v, fU), axisFmt: fU, series: [{ label: "Realized P/L", colorBy: ["--up", "--down"], v: col("realized"), type: "bar" }] }] });
+  draws.push(() => { const el = $("plval"); if (!el) return; const n = rangeDays(); const pr = sumLast(col("sellProfitUsd"), n), lo = sumLast(col("sellLossUsd"), n), rl = sumLast(col("realized"), n);
+    el.innerHTML = `${fPct((100 * pr) / Math.max(1, pr + lo), 0)} in profit<small class="${cls(rl)}">${sgn(rl, fU)} realized</small>`; });
+  sect("Who is still here", "Owners grouped by the quarter they first received GME, and how many of them still hold more than 1M GME.");
+  cohortCards();
+  sect("Smart money", "Owners with a proven record: realized profit of at least $5k and at least 100% on the coins they sold.");
+  smartCards();
+  sect("Cost basis and the road up", "Where held supply was bought, week by week, and what the pool math says it takes to move the price.");
+  urpdHeat(); calcCard();
+}
+function drawReading() {
+  const el = $("reading"); if (!el) return;
+  const n = rangeDays(), lab = range ? "last " + rangeLabel() : "full history", W2 = S.C.win[range === 30 ? "30" : range === 90 ? "90" : range === 365 ? "365" : "all"];
+  const bn = sumLast(col("buyNew"), n), br = sumLast(col("buyRet"), n), ba = sumLast(col("buyAdd"), n), sp2 = sumLast(col("sellPart"), n), se = sumLast(col("sellExit"), n);
+  const pr = sumLast(col("sellProfitUsd"), n), lo = sumLast(col("sellLossUsd"), n), rl = sumLast(col("realized"), n);
+  const smb = sumLast(col("smBuyUsd"), Math.min(n, 90)), sms = sumLast(col("smSellUsd"), Math.min(n, 90));
+  const Cp = composite(), cv = lastVal(Cp.comp);
+  const E = S.E, ew = range === 30 ? 2 : range === 90 || !range || range === 365 ? 3 : 2;
+  const ec = E ? E.entities.reduce((a, e) => { const st = e.status[ew]; a[st] = (a[st] || 0) + 1; return a; }, {}) : {};
+  const P = T.pool || {}, dbl = P.weth ? P.weth * (Math.SQRT2 - 1) : null;
+  const items = [
+    ["Buyers", `${fN(W2.new)} new owners bought ${fBb(bn)} GME, ${fN(W2.ret)} owners came back for ${fBb(br)}, and ${fN(W2.add)} existing owners added ${fBb(ba)}.`],
+    ["Sellers", `${fN(W2.exit)} owners sold out (${fBb(se)}) and ${fN(W2.part)} trimmed while keeping a position (${fBb(sp2)}). ${fPct((100 * pr) / Math.max(1, pr + lo), 0)} of sales by value were in profit; net realized ${sgn(rl, fU)}.`],
+    ["Balance", `Bought ${fBb(bn + br + ba)} against ${fBb(sp2 + se)} sold: ${bn + br + ba >= sp2 + se ? "more GME went into owners' hands than came out" : "more GME came out of owners' hands than went in"} (${sgn(bn + br + ba - sp2 - se, fBb)}).`],
+    ["Smart money", `${fN(S.C.smart.n)} owners have a proven record; ${fN(S.C.smart.holding)} still hold. Over the ${n >= 90 ? "last 90 days" : lab} they bought ${fU(smb)} and sold ${fU(sms)}.`],
+    ["Entities", E ? `Over the last ${WIN[ew][0]}: ${ec.accumulating || 0} entities accumulating, ${(ec.selling || 0) + (ec.distributing || 0)} selling, ${ec.moving || 0} moving coins out, ${ec.dormant || 0} dormant.` : "—"],
+    ["Valuation", cv == null ? "Not enough history." : `The composite reads ${cv.toFixed(2)}: ${zoneOf(cv).toLowerCase()}.`],
+    ["Pool", P.weth ? `${P.weth.toFixed(1)} ETH sits against ${fB(P.gme)} GME. With no sellers, doubling the price takes about ${dbl.toFixed(1)} ETH (${fU(dbl * P.ethUsd)}) of net buying.` : "—"],
+  ];
+  el.innerHTML = `<span class="eyebrow">${esc(lab)}</span><dl class="rd">${items.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+}
+function cohortCards() {
+  const Co = S.C.cohorts || [];
+  const id = card({ title: "Holders by arrival quarter", wide: true, q: "Which waves of buyers make up today's holders?", sub: "Owners still holding more than 1M GME at each month end, stacked by the quarter they arrived.",
+    note: "Survival = owners still holding ÷ owners that arrived in that quarter. Arrival = the first GME any of the owner's wallets received. Right-censored: recent quarters have had less time to leave." });
+  draws.push(() => {
+    const el = $(id); if (!el) return; el.innerHTML = "";
+    const months = [...new Set(Co.flatMap((c) => c.series.map((x) => x[0])))].sort(), mi = new Map(months.map((m, i) => [m, i]));
+    const rows = months.map((m) => Object.fromEntries(Co.map((c, j) => [j, 0])));
+    Co.forEach((c, j) => c.series.forEach(([m, n]) => (rows[mi.get(m)][j] = n)));
+    const st = d3.stack().keys(Co.map((_, j) => j))(rows);
+    const mob = mobile(), H = mob ? 220 : 260, m = { t: 8, r: 10, b: 22, l: 46 }, W = el.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
+    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+    const x = d3.scaleUtc(d3.extent(months, (s) => new Date(s + "-01")), [0, w]), y = d3.scaleLinear([0, d3.max(st[st.length - 1], (p) => p[1])], [h, 0]).nice(4);
+    const col2 = d3.scaleSequential([0, Co.length - 1], d3.interpolateRgb(C("--s1"), C("--accent")));
+    g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(4).tickSize(-w).tickFormat(""));
+    g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4).tickFormat(d3.format(",")));
+    g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(mob ? 4 : 8).tickSizeOuter(0));
+    st.forEach((layer, j) => g.append("path").datum(layer).attr("fill", col2(j)).attr("fill-opacity", 0.85).attr("d", d3.area().x((p, i) => x(new Date(months[i] + "-01"))).y0((p) => y(p[0])).y1((p) => y(p[1])))
+      .on("pointermove", (ev) => { const c = Co[j], last = c.series[c.series.length - 1]; showTip(`<div class="h">arrived ${esc(c.name)}</div>` + trow(col2(j), "arrived", fN(c.arrived)) + trow("", "still holding", fN(last[1])) + trow("", "survival", fPct((100 * last[1]) / c.arrived, 1)) + trow("", "GME held", fBb(last[2])), ev); }).on("pointerleave", hideTip));
+    $(id + "-l").innerHTML = `<div class="tw" style="width:100%"><table><thead><tr><th>Arrived</th><th class="n">Owners</th><th class="n">Still holding</th><th class="n">Survival</th><th class="n">GME held now</th></tr></thead><tbody>` +
+      Co.map((c, j) => { const last = c.series[c.series.length - 1]; return `<tr><td><i style="display:inline-block;width:9px;height:9px;margin-right:.5rem;background:${col2(j)}"></i>${esc(c.name)}</td><td class="n">${fN(c.arrived)}</td><td class="n">${fN(last[1])}</td><td class="n">${fPct((100 * last[1]) / c.arrived, 1)}</td><td class="n">${fBb(last[2])}</td></tr>`; }).join("") + `</tbody></table></div>`;
+  });
+}
+function smartCards() {
+  const Sm = S.C.smart;
+  let id = card({ title: "What proven winners are doing", wide: true, val: `${fN(Sm.holding)}<small class="flat">of ${fN(Sm.n)} still hold · ${fB(Sm.heldGme)} GME</small>`,
+    sub: "Dollars these owners bought (up) and sold (down) on the DEX and exchanges, last 90 days.",
+    note: "Hindsight: owners are picked by their record today, so their past trades look better than a live pick would have. Realized profit uses the owner's average cost. Entities count as one owner." });
+  ts(id, { fmt: fU, series: [{ label: "Bought", color: "--up", v: col("smBuyUsd").map((v, i) => (i >= N - 90 ? v : null)), type: "bar" }, { label: "Sold", color: "--down", v: col("smSellUsd").map((v, i) => (i >= N - 90 ? v : null)), type: "neg" }] });
+  const rows = Sm.rows.slice(0, 40);
+  card({ title: "Smart money owners", wide: true, body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>Owner</th><th class="n">Realized</th><th class="n">On cost</th><th class="n">Bought</th><th class="n">Sold</th><th class="n">Holds</th><th class="n">Avg cost</th><th class="n">Net 7D</th><th class="n">Net 30D</th><th class="n">Net 90D</th><th>Last buy</th><th>Last sale</th></tr></thead><tbody>` +
+    rows.map((r) => { const own = r.eid ? `<button class="mini" data-emap="${esc(r.eid)}">${esc(r.name || r.eid)}</button>` : `<button class="addr" data-addr="${r.u}">${short(r.u)}</button>`;
+      const nc = (v) => `<td class="n ${v > 0 ? "up" : v < 0 ? "down" : "flat"}">${v ? sgn(v, fU) : "—"}</td>`;
+      return `<tr><td>${own}</td><td class="n up">${fU(r.realized)}</td><td class="n">+${fPct(100 * r.roi, 0)}</td><td class="n">${fU(r.boughtUsd)}</td><td class="n">${fU(r.soldUsd)}</td><td class="n">${r.bal > 1e6 ? fB(r.bal) : "—"}</td><td class="n">${r.avg ? fP(r.avg) : "—"}</td>${nc(r.net7)}${nc(r.net30)}${nc(r.net90)}<td class="num">${r.lastBuy || "—"}</td><td class="num">${r.lastSell || "—"}</td></tr>`; }).join("") + `</tbody></table></div>` });
+}
+function urpdHeat() {
+  const Uh = S.U;
+  if (!Uh || !Uh.weeks) { card({ title: "Cost basis over time", wide: true, body: unavailable("The weekly cost-basis history arrives with the next full run.") }); return; }
+  const id = card({ title: "Cost basis over time", wide: true, q: "Where was today's supply bought, and how did that change?", sub: "Each column is a week; each cell is the share of held supply bought in that price band. The line is that week's price. Cells above the line are underwater.",
+    note: "From the cost engine: every held coin at the price it was bought (first in, first out). Bands are log-spaced. Weekly." });
+  draws.push(() => {
+    const el = $(id); if (!el) return; el.innerHTML = "";
+    const Wk = Uh.weeks, E2 = Uh.edges, mob = mobile(), H = mob ? 240 : 300, m = { t: 8, r: 10, b: 22, l: 58 }, W = el.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
+    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+    const x = d3.scaleUtc([pd(Wk[0].d), +pd(Wk[Wk.length - 1].d) + 7 * 864e5], [0, w]), y = d3.scaleLog([E2[0], E2[E2.length - 1]], [h, 0]);
+    const mx = d3.max(Wk, (k) => d3.max(k.pct)) || 1, cw = w / Wk.length + 0.5, c1 = C("--accent");
+    Wk.forEach((k) => k.pct.forEach((v, j) => { if (!v) return; g.append("rect").attr("x", x(pd(k.d))).attr("width", cw).attr("y", y(E2[j + 1])).attr("height", Math.max(0.5, y(E2[j]) - y(E2[j + 1])))
+      .attr("fill", c1).attr("fill-opacity", Math.min(1, 0.08 + Math.sqrt(v / mx))).on("pointermove", (ev) => showTip(`<div class="h">week of ${fd(pd(k.d))}</div>` + trow(c1, `bought at ${fP(E2[j])}–${fP(E2[j + 1])}`, fPct(v, 2) + " of held") + trow("", "price that week", fP(k.spot)), ev)).on("pointerleave", hideTip); }));
+    g.append("path").datum(Wk.filter((k) => k.spot > 0)).attr("fill", "none").attr("stroke", C("--fg")).attr("stroke-width", 1.4).attr("d", d3.line().x((k) => x(pd(k.d)) + cw / 2).y((k) => y(Math.max(E2[0], k.spot))));
+    g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(logTicks(y, (kk) => kk !== 2)).tickFormat(tickP));
+    g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(mob ? 4 : 8).tickSizeOuter(0));
+    $(id + "-l").innerHTML = `<span><i style="background:${c1}"></i>share of held supply (darker = more)</span><span><i class="ln" style="background:${C("--fg")}"></i>price</span>`;
+  });
+}
+let calcMult = 2, calcSell = 25;
+function calcCard() {
+  const P = T.pool, Ur = T.urpd;
+  if (!P || !P.weth || !Ur) { card({ title: "Pool and overhang calculator", wide: true, body: unavailable("Pool reserves or the cost-basis distribution are missing in this build.") }); return; }
+  card({ title: "Pool and overhang calculator", wide: true, q: "What would it take to move the price, given who is waiting to break even?", body: `<div id="calc"></div><div class="chart" id="calcch"></div><div class="legend" id="calcch-l"></div>`,
+    note: "Constant-product pool (Uniswap V2): with no sellers, the price scales with the square of the ETH reserve, so multiplying the price by r takes ETH × (√r − 1) of net buying (the 0.3% fee ignored). Overhang = held supply bought between today's price and the target (from the cost engine), the holders who get back to break-even on the way up. If a share of them sells at break-even, each sale takes about its value back out of the pool, so the extra buying needed is roughly that share × their cost. Arithmetic on today's pool, not a forecast." });
+  const held = IDX?.held || null;
+  const draw = () => {
+    const el = $("calc"); if (!el) return;
+    const p0 = (P.weth * P.ethUsd) / P.gme, ethNeed = (r) => P.weth * (Math.sqrt(r) - 1);
+    const over = (r) => { let gme = 0, usd = 0; Ur.buckets.forEach((b) => { const mid = Math.sqrt(b.lo * b.hi); if (mid > p0 && mid <= p0 * r) { const q = (b.pct / 100) * (held || 0); gme += q; usd += q * mid; } }); return { gme, usd }; };
+    const r = calcMult, f = calcSell / 100, base = ethNeed(r) * P.ethUsd, o = over(r), extra = f * o.usd;
+    el.innerHTML = `<div class="ctl"><label class="eyebrow" for="cm">Target price</label>${segBtns([["2×", 2], ["3×", 3], ["5×", 5], ["10×", 10], ["25×", 25]], r, "cm")}<label class="eyebrow">Overhang that sells at break-even</label>${segBtns([["0%", 0], ["10%", 10], ["25%", 25], ["50%", 50]], calcSell, "cs")}</div>
+      <dl class="rd" style="margin-top:12px"><div><dt>Today</dt><dd>Pool price ${fP(p0)} · market cap ${fU(p0 * SUPPLY)} · ${P.weth.toFixed(1)} ETH against ${fB(P.gme)} GME.</dd></div>
+      <div><dt>Target</dt><dd>${fP(p0 * r)} · market cap ${fU(p0 * r * SUPPLY)}.</dd></div>
+      <div><dt>No sellers</dt><dd>${ethNeed(r).toFixed(1)} ETH ≈ <b>${fU(base)}</b> of net buying.</dd></div>
+      <div><dt>Overhang crossed</dt><dd>${held ? `${fB(o.gme)} GME (${fPct((100 * o.gme) / held, 1)} of held supply), bought for ${fU(o.usd)}, gets back to break-even on the way.` : "Held supply unavailable in this build."}</dd></div>
+      <div><dt>With ${calcSell}% selling</dt><dd>about <b>${fU(base + extra)}</b> of net buying (${fU(extra)} extra to absorb them).</dd></div></dl>`;
+    el.onclick = (ev) => { const t = ev.target.closest("[data-cm],[data-cs]"); if (!t) return; if (t.dataset.cm) calcMult = +t.dataset.cm; else calcSell = +t.dataset.cs; draw(); };
+    const ce = $("calcch"); if (!ce) return; ce.innerHTML = "";
+    const mob = mobile(), H = mob ? 200 : 240, m = { t: 10, r: 12, b: 26, l: 58 }, W = ce.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
+    const svg = d3.select(ce).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+    const rs = d3.range(0, 101).map((i) => 10 ** ((i / 100) * Math.log10(30)) + 0.0001).filter((v) => v > 1.01);
+    const curves = [0, 10, 25, 50].map((s) => ({ s, pts: rs.map((rr) => [rr, ethNeed(rr) * P.ethUsd + (s / 100) * over(rr).usd]) }));
+    const x = d3.scaleLog([rs[0], 30], [0, w]), y = d3.scaleLog([d3.min(curves[0].pts, (p) => p[1]), d3.max(curves[3].pts, (p) => p[1]) * 1.1], [h, 0]);
+    g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(4).tickSize(-w).tickFormat(""));
+    g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4, "~s").tickFormat((v) => fU(v)));
+    g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).tickValues([1.5, 2, 3, 5, 10, 20, 30].filter((v) => v >= rs[0])).tickFormat((v) => v + "×"));
+    const cc = [C("--s1"), C("--s3"), C("--accent"), C("--down")];
+    curves.forEach((c, k) => g.append("path").datum(c.pts).attr("fill", "none").attr("stroke", cc[k]).attr("stroke-width", c.s === calcSell ? 2.4 : 1.2).attr("d", d3.line().x((p) => x(p[0])).y((p) => y(p[1]))));
+    g.append("line").attr("x1", x(r)).attr("x2", x(r)).attr("y1", 0).attr("y2", h).attr("class", "xhair").style("opacity", 1);
+    $("calcch-l").innerHTML = curves.map((c, k) => `<span><i class="ln" style="background:${cc[k]}"></i>${c.s}% of overhang sells</span>`).join("") + `<span>x = price multiple · y = net buying needed</span>`;
+  };
+  draws.push(draw);
 }
 
 // ---------- TRANSFERS ----------
@@ -1563,13 +1742,21 @@ function methodology() {
     <li><b>Quiet accumulators</b>: owners that added ≥0.1% of supply in 90 days and sold under 15% of it.</li>
     <li><b>Buy-and-hide</b>: fresh wallets fed by wallets that bought on the DEX and forwarded ≥80% of it. One counts as “still holding” only if it kept ≥80% of what it received and sold or deposited ≤20%.</li>
     <li><b>Unusual day</b>: transfers or value moved at least 3× the median of the previous 30 days. A display rule that points at days worth inspecting.</li></ul></div></section>
-  <section><span class="dn">06 · Limits</span><div><h2>What the data cannot tell you</h2>
+  <section><span class="dn">06 · Crowd</span><div><h2>Owners, not wallets</h2>
+    <p>The Crowd page counts owners: an entity (all its wallets together) or a single wallet. Moves between one entity's wallets are never buying, selling or leaving. Only market flows count: GME arriving from the DEX or an exchange is a buy, GME going to them is a sale.</p>
+    <ul><li><b>Buyer types:</b> new (the owner never held GME), returning (held before, but had 1M GME or less), adding (already holding).</li>
+    <li><b>Seller types:</b> sold out (1M GME or less left) or kept a position; in profit or at a loss against the owner's average cost. Average cost = every inflow at that day's price; a transfer out to another owner lowers it in proportion; a sale realizes the difference.</li>
+    <li><b>Arrival quarter:</b> the quarter the owner first received GME. Survival = owners still holding more than 1M GME ÷ owners that arrived.</li>
+    <li><b>Smart money:</b> owners with at least $5k of realized profit and at least 100% on the coins they sold. Picked by today's record, so their history is a hindsight read.</li>
+    <li><b>Valuation composite:</b> MVRV (25%), supply in profit (25%), price against its 140-day average (30%) and 30-day DEX net flow against pool depth (20%), each ranked against its own earlier values only, from 60 days of data on. 0 = lowest in its own past, 1 = highest.</li>
+    <li><b>Pool and overhang calculator:</b> constant-product arithmetic on today's reserves. Multiplying the price by r takes ETH × (√r − 1) of net buying with no sellers. Overhang = held supply bought between today's price and the target, from the cost engine; if a share of it sells at break-even, the extra buying needed is roughly that share × its cost.</li></ul></div></section>
+  <section><span class="dn">07 · Limits</span><div><h2>What the data cannot tell you</h2>
     <ul><li>Ethereum only. GME on other chains is not covered (MEXC's GME is the Solana token, not this one).</li>
     <li>What happens inside an exchange is invisible. A deposit is not proof of a sale, and only labelled exchange wallets are recognised; a deposit to an unlabelled address reads as a wallet-to-wallet transfer.</li>
     <li>Owner groups are a lower bound. A wallet funded only through an exchange or another chain cannot be linked from token transfers.</li>
     <li>A wallet that receives coins from a group but meets no linking rule stays outside the group (shown as provisional) until a rule fires. Until then, the group shows those coins as moved out, never as sold.</li>
     <li>Dollar values use daily prices. The market is thin, so small trades move the metrics. Every read describes a position, never a buy or sell signal. Nothing here is financial advice.</li></ul></div></section>
-  <section><span class="dn">07 · Freshness</span><div><h2>Live index and research are separate</h2>
+  <section><span class="dn">08 · Freshness</span><div><h2>Live index and research are separate</h2>
     <p>The index is rebuilt every 4 hours by a scheduled job, and fully once a day (06:23 UTC) including the external lookups of ETH funders. GitHub often starts scheduled jobs late. The header shows when it last ran and turns to “Data stale” after 12 hours without a new run. The last day in every daily chart is partial: it runs up to the latest indexed transfer.</p>
     <p>The written study is a snapshot of ${STUDY_DATE}. The daily run does not update its findings. <a class="more" href="/study.html">Read the full study →</a></p></div></section>
   </article>`);

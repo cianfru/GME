@@ -32,7 +32,7 @@ Read this file first. It is enough to continue without the original conversation
 - **Focus wallet:** `0xE14767042159E5BD2bf16F81A0FE387ab153Fbb4`. The person behind it has a following on X and has supported the project since launch.
 - **Scale:** about 470k transfers and about 11.4k holders. The full pull takes about 15 minutes and the whole pipeline runs in a few minutes.
 
-## 3. Pipeline (`.github/workflows/daily.yml`, daily at 06:23 UTC plus manual runs)
+## 3. Pipeline (`.github/workflows/daily.yml`: full daily at 06:23 UTC, light every 4 hours, plus manual runs)
 
 1. **Archive.** The full transfer history (`sender,receiver,time,value,block`) is a release asset, tag `gme-archive`, not in git. The first run has no asset and seeds it with a full pull. `archive_tools.py merge` replaces from the first block of the new pull onward, so re-pulling the boundary block is safe.
 2. **`pull-transfers-rpc.py`** uses `eth_getLogs` on drpc and mevblocker. Both add `blockTimestamp` to each log, so no block lookups are needed. Error codes 403, 429 and 413 mean "shrink the range".
@@ -107,7 +107,7 @@ Read this file first. It is enough to continue without the original conversation
   - colours are passed as CSS variable names, so the theme toggle repaints.
 - `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Every push to `main`, including the daily data commit, redeploys. **Production URL: https://gme-terminal.vercel.app** (Vercel project `gme-terminal`, team cianfru's projects, repo `cianfru/GME`). Deployment protection is standard: the production domain is public, preview URLs require Vercel login.
 - **Password is optional (owner: "keep it simple, a side project").** `middleware.js` adds HTTP Basic auth only when the `SITE_PASSWORD` env var is set. Without it the site is open, and `noindex` keeps it out of search. Tests: `npm test`.
-- **Freshness:** age = now − `T.index.indexedAt`. After 36 hours the status turns to "Data stale" (gold) in the header and hero. The last day of every daily chart is partial (tooltips say so).
+- **Freshness:** age = now − `T.index.indexedAt`. After 12 hours (runs every 4 h) the status turns to "Data stale" (gold) in the header and hero. The last day of every daily chart is partial (tooltips say so).
 - **Header:** the token logo (`site/logo.png`, CoinGecko's "GME (Ethereum)" image, also the favicon) + "GME on Ethereum", the five-section nav (thin gold underline on the active one), the data status and a text LIGHT/DARK toggle.
 - **"Still holding"** (a buy-and-hide wallet) means it kept ≥80% of what it received AND sold or deposited ≤20% of it.
   - Since 2026-10-30, `vaults90.py` keeps ONLY those in `vaults90.json`, so they alone feed the accumulator tags and the watch groups. The relays that bought and then sold or passed the coins on go to `vaults90_relays.json` and are just counted on the page.
@@ -173,41 +173,32 @@ The full write-up is `report/gme-study.html` (also published as a private claude
 - **Gate's and MEXC's websites block scripts.** Check listings through their APIs. Bybit's API is blocked by region from here.
 - **"Buy and hide" looks like this:** a fresh wallet buys on the DEX, then forwards at least 80% to a holding wallet that never sells. At a $2.7M market cap, $10k to $20k in that pattern is someone building a position. Watch for it.
 
-## 7. Roadmap (proposed 2026-11-05 after the redesign; waiting for the owner's go and order)
+## 7. Entities, crowd and the 4-hour scan (built 2026-11-05)
 
-Owner's goals: SPX-level depth on how the crowd moves, a hands-off scan that follows coins into fresh wallets, entity cards that show who is growing or shrinking, own-wallet moves never shown as selling, and a usable bubble map.
+- **Schedule:** `daily.yml` runs **full** at 06:23 UTC and **light every 4 hours** (`47 */4 * * *`). Light skips the external lookups (`refresh_focus.py`, `funders_ethplorer.py`, the second `stealth.py`) and does not commit `wallets.json` (git size). A run takes about 1–2 minutes. Stale = 12 h.
+- **`groups.py`:** the watched groups, built once for `watch.py` and `entities.py`. `with_attached()` adds the registry's joined wallets, so a move into them is internal.
+- **`entities.py` → `data/entities.json`:** every group of linked wallets is an entity with a **stable id**, matched run to run by shared members.
+  - Sources in priority order: focus cluster → Coinbase group → watched groups → unflagged `entities_all.json` groups holding ≥0.05% of supply.
+  - **Follow the coins** (last 90 days, no hop limit): seed or drain with a member, ≥$2k. Never through infrastructure, contracts, deposit-like addresses or hubs (>40 seeds). Linked groups are capped at 60; at most 25 joins per entity per run. **Joins are sticky.** Wallets that got ≥$2k in 30 days with no rule firing are **provisional**: shown, never counted.
+  - Per entity: holdings, a 90-day series (today's members), flows by channel over 1/7/30/90 days (`channels` names the columns), status, FIFO cost basis, evidence strength for the focus cluster, forming flags, `edges` between entities and categories, `alerts` (tripwires since the last run) and the last 300 `events`.
+  - `terminal.py` builds the monitor's owners from the registry (`owners[k].id`; `M[i][5]` = provisional owner).
+- **Shared deposit evidence (owner asked how it is known):** a deposit address is inferred from behaviour: it forwarded ≥95% to a labelled exchange and received from 2–10 wallets. Two wallets paying into it funded one exchange account. That is evidence of one owner, not proof: a friend's account, an OTC settlement or a personal relay look the same. Focus cluster: **58.2B of 65.0B reaches the focus wallet through direct transfers only; 6.8B depends on a shared deposit somewhere on the path.**
+- **`crowd.py` → `data/crowd.json`:** owner-level (entity = one owner) market flows, aligned with `terminal.json` days:
+  - buyers new / returning / adding;
+  - sellers sold-out / kept-a-position and profit / loss;
+  - realized P/L;
+  - distinct owner counts per window (`win`);
+  - arrival-quarter cohorts;
+  - smart money: realized ≥$5k and ≥100% on cost, a hindsight pick.
+  Cross-checked: crowd buys = DEX buys + exchange withdrawals.
+- **`notify.py`:** high watch alerts plus high/medium entity tripwires go into a comment on issue "GME terminal alerts" (#1). Repository variable `ALERT_ISSUE=off` stops it.
+- **`data/engine/urpd-history.json`** (the engine's weekly cost-basis distribution) is now committed for the Crowd page heatmap.
+- **Site additions:**
+  - **Crowd** page (`#crowd`): reading, valuation composite (client-side, expanding-window ranks, weights 25/25/30/20), buyers/sellers by type, profit/loss sales, cohorts, smart money, cost basis over time, pool and overhang calculator.
+  - **Entities** opens on entity cards.
+  - The flow map opens at entity level and drills into one owner's wallets.
 
-**How fresh wallets are handled today (owner asked):** the clusters are rebuilt from the full transfer history on every daily run, so a fresh wallet joins on the next run if a rule fires (its first GME came from a member, ≥$2k; or a member sent it ≥90% of its balance). Gaps:
-- up to about a day of lag (cron 06:23 UTC, often hours late); until then the move shows as "→ moved out" (amber), never as selling;
-- the focus cluster stops 2 hops from the focus wallet (`cluster.py` tiers 1–2), so a wallet seeded by a tier-2 wallet is not added;
-- a partial split (<90%) into a wallet that already held GME, or anything under $2k, does not link;
-- the monitor only tracks wallets ≥0.1% of supply plus owner-group wallets.
-
-**1. Entities as first-class objects**
-- `entities.py`: a persistent registry with stable IDs, daily membership and size history, and events (wallet joined, split, consolidation, DEX buy/sell, exchange deposit). Flag >60 wallets as before.
-- Follow the coins: every run, check each entity's outflows to fresh wallets. Attach when a rule fires, with no hop limit from existing members (hub and size guards stay). Otherwise show the wallet as "provisional · received X from entity" (inferred, dashed), visible at once but not counted as owned.
-- Entity cards (Entities, default view): one card per entity with wallets, holdings and % supply, a 90-day sparkline, and 1D/7D/30D change split by channel (DEX buy, exchange in, DEX sell, exchange out, out to wallets outside the group, ↔ internal). Also status, entity cost basis and P/L (FIFO engine per entity), last activity and wallets that joined. A "forming" strip shows new or fast-growing entities.
-
-**2. Crowd behaviour (port from SPX / pepecoin)**
-- Buyer flow: daily net accumulation split into new, reactivated, adding and selling.
-- Exit flow: daily exits split into profit and loss.
-- Cohort survival as a time series.
-- Smart money: per-wallet realized P&L and ROI; are proven winners buying now?
-- URPD over time, plus a pool-and-overhang calculator: buy $X → new price, and how much underwater supply sits between today and that price.
-- Valuation composite (0–1, weights published).
-- A daily plain-language reading: positions, never signals.
-
-**3. Flow map v2:** two levels. An entity map (bubble = entity, arrows = flows between entities, DEX and exchanges, accumulators left and distributors right) opens into its wallets. Adds search/highlight, edge filters (hide internal, DEX/exchanges only), a minimum-flow slider and a day-by-day replay of the window.
-
-**4. Hands-off:**
-- A light intraday job every 3–4 h: delta pull, entity outflow check, alerts. The full rebuild stays daily.
-- The repo is private, so watch the 2,000 Actions minutes/month: measure run time first.
-- Per-entity tripwires: first exchange deposit, first DEX sale, split into fresh wallets.
-- An alert channel.
-- A freshness audit for every feed.
-
-**5. Quality:** per-chart "as of"; tests for every new builder; a Methods page entry for each new rule.
-
-Older ideas still open:
-- Track whether the accumulators' holding wallets ever send to an exchange. That is the exit tripwire.
-- Trace accumulators' ETH funding one or two hops back, to see whether one source funds several of them.
+## 8. Still open
+- Track whether the accumulators' holding wallets ever send to an exchange (exit tripwire); the entity tripwires now cover first deposits for every entity.
+- Trace accumulators' ETH funding one or two hops back.
+- Per-chart "as of" dates; tests for the Python builders.

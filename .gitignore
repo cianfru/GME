@@ -14,7 +14,7 @@ data/engine/whales.json
 data/engine/entities.json
 data/engine/cex-sankey.json
 data/engine/self-moves.json
-data/engine/urpd-history.json
+!data/engine/urpd-history.json
 data/bs/focus_txs.json
 data/bs/focus_internal.json
 
