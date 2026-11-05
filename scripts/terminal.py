@@ -47,6 +47,7 @@ z = lambda: [0.0] * N
 buy_usd, sell_usd, buy_tok, sell_tok = z(), z(), z(), z()
 buyers, sellers = [set() for _ in range(N)], [set() for _ in range(N)]
 new_w = z(); d_focus, d_cl, d_pool = z(), z(), z()
+tx_n, tx_vol, tx_usd = z(), z(), z(); active = [set() for _ in range(N)]   # every transfer, mint included
 cl_cex_tok, cl_cex_usd, cl_dexbuy, cl_dexsell, cl_cexin = z(), z(), z(), z(), z()
 focus_dexsell = z()
 gname = {}
@@ -56,6 +57,9 @@ d_grp = collections.defaultdict(z)
 seen = set()
 for s, r, ts, v, b in T:
     i = ix[ts[:10]]; px = pa(ts)
+    tx_n[i] += 1; tx_vol[i] += v; tx_usd[i] += v * px
+    if s not in infra: active[i].add(s)
+    if r not in infra: active[i].add(r)
     if r not in infra and r not in seen: seen.add(r); new_w[i] += 1
     if is_dex(s) and r not in infra: buy_usd[i] += v * px; buy_tok[i] += v; buyers[i].add(r)
     if is_dex(r) and s not in infra: sell_usd[i] += v * px; sell_tok[i] += v; sellers[i].add(s)
@@ -99,6 +103,7 @@ daily = dict(
     newWallets=[int(x) for x in new_w], pool=B(pool_bal), focus=B(focus_bal), cluster=B(cl_bal),
     clusterToCex=B(cl_cex_tok), clusterToCexUsd=r2(cl_cex_usd, 0), clusterDexBuy=B(cl_dexbuy), clusterDexSell=B(cl_dexsell),
     clusterFromCex=B(cl_cexin), focusDexSell=B(focus_dexsell),
+    tx=[int(x) for x in tx_n], txVol=B(tx_vol), txUsd=r2(tx_usd, 0), active=[len(x) for x in active],
 )
 
 # ---- insider watch: what the focus wallet's cluster did lately -------------------------------------------------
@@ -226,8 +231,30 @@ mon = dict(
     e=[[h, s_, d_, round(v / 1e9, 5)] for (h, s_, d_), v in sorted(edges.items(), key=lambda kv: (kv[0][0], str(kv[0][1]), str(kv[0][2])))],
 )
 
+# ---- index facts and the largest movements -----------------------------------------------------------------------
+def window_active(hours):
+    since = (datetime.datetime.fromisoformat(NOW[:19]) - datetime.timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    a, n = set(), 0
+    for s_, r_, ts, v, b in reversed(T):
+        if ts <= since: break
+        n += 1
+        if s_ not in infra: a.add(s_)
+        if r_ not in infra: a.add(r_)
+    return n, len(a)
+label = lambda a: ("DEX" if is_dex(a) else "Exchange" if is_cex(a) else "Liquidity" if a in LP else "Burn" if a == DEAD
+                   else "Mint" if a == NULL else "Token contract" if a == TOKEN else None)
+big = sorted((x for x in recent if x[0] != x[1] and not (x[0] in infra and x[1] in infra)), key=lambda x: -x[3])[:60]   # skip plumbing between two infra addresses
+index = dict(
+    indexedAt=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    lastTransfer=NOW, transfers=len(T), firstTransfer=T[0][2],
+    held=sum(v for a, v in bal.items() if a not in infra and v > 0), burned=bal[DEAD],
+    **{f"tx{h}h": window_active(h)[0] for h in (24, 168, 720)}, **{f"active{h}h": window_active(h)[1] for h in (24, 168, 720)},
+)
+moves = [dict(t=ts, f=s_, to=r_, fl=label(s_), tl=label(r_), fg=gname.get(s_), tg=gname.get(r_), tok=round(v / 1e9, 4),
+              usd=round(v * pa(ts))) for s_, r_, ts, v, b in big]
+
 out = dict(
-    asOf=NOW, daily=daily, insider=insider, groups=groups, top=top, cluster=cluster, mon=mon,
+    asOf=NOW, index=index, moves=moves, daily=daily, insider=insider, groups=groups, top=top, cluster=cluster, mon=mon,
     pool=dict(gme=pool_gme, weth=pool_weth, ethUsd=eth[-1][1]),
     urpd=dict(spot=urpd["spot"], buckets=[dict(lo=x["lo"], hi=x["hi"], pct=x["pct"]) for x in urpd["buckets"]]) if urpd else None,
     cohorts=[dict(name=k.split(" ", 1)[1], wallets=v["wallets"], holdNow=v["holdNow"], buyUsd=v["buyUsd"], sellUsd=v["sellUsd"]) for k, v in sorted(cohorts.items())],

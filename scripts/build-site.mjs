@@ -95,10 +95,10 @@ if (existsSync(join(D, "wallets.json")))
 
 // The study was written as a page fragment (no doctype); give it a full document shell and a way back.
 const study = readFileSync(join(ROOT, "report/gme-study.html"), "utf8")
-  .replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2[^"]*">/, '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">')
-  + `<style>:root, :root[data-theme] { --f-display: "Inter", system-ui, sans-serif; --f-body: "Inter", system-ui, sans-serif; --f-mono: "Inter", system-ui, sans-serif }
+  .replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2[^"]*">/, '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap">')
+  + `<style>:root, :root[data-theme] { --f-display: "Geist", system-ui, sans-serif; --f-body: "Geist", system-ui, sans-serif; --f-mono: "Geist Mono", ui-monospace, monospace }
 body { font-variant-numeric: tabular-nums } h1, h2, h3 { font-stretch: normal; letter-spacing: -.01em } * { border-radius: 0 !important }</style>`;
-const back = `<a href="/" style="position:fixed;top:10px;right:max(16px,env(safe-area-inset-right,0px));z-index:9;font:600 13px/1 Inter,system-ui,sans-serif;padding:9px 12px;border-radius:0;background:#15181b;color:#fff;text-decoration:none">← Terminal</a>`;
+const back = `<a href="/" style="position:fixed;top:10px;right:max(16px,env(safe-area-inset-right,0px));z-index:9;font:500 12px/1 'Geist Mono',ui-monospace,monospace;letter-spacing:.1em;padding:9px 12px;border-radius:0;background:#15181b;color:#fff;text-decoration:none">← Terminal</a>`;
 writeFileSync(
   join(OUT, "study.html"),
   `<!doctype html>\n<html lang="en">\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="robots" content="noindex">\n${study}\n${back}\n</html>\n`,

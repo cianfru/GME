@@ -57,33 +57,20 @@ Read this file first. It is enough to continue without the original conversation
 
 ### Website (Vercel): a monitoring terminal
 - **What the owner wants (2026-10-30):** a terminal to visit regularly and *see what's happening*, like the SPX/pepecoin work. Not a story: an earlier scrolling "visual journey" version was rejected. `site/index.html` is one static page, D3 v7 from cdnjs, dark by default with a light toggle.
-- **Type and shape (owner, 2026-10-31):**
-  - ONE font for everything, text, numbers, labels and chart axes: **Inter** with tabular figures (`--font`).
-  - **No JetBrains Mono, no mixing in a mono or second family.**
-  - **No pills:** every chip, tag, badge, button, input, card and bar is square (`border-radius: 0`); only status dots stay round.
-  - The study page gets the same font and square corners via an override that `build-site.mjs` injects.
-- **Layout:**
-  - **Sticky ticker:** price (24h, 7d), market cap, pool (ETH and GME), holders (30d), MVRV + supply in profit, focus-cluster share (7d), insider status.
-  - **Tabs** (hash routing), with a shared range selector (30D / 90D / 1Y / ALL, saved in localStorage):
-    - **OVERVIEW:** insider-watch card, "what changed" (1d / 7d / 30d), alerts since the last run, price vs realized price, DEX buys vs sells, cluster holdings, holders, new wallets.
-    - **VALUATION:** price vs realized, MVRV, supply in profit, SOPR (7d average), NRPL, cost basis (URPD).
-    - **HOLDERS:** holders, new wallets, holders by $ position size, HODL waves, concentration, cohort survival.
-    - **FLOWS:** DEX buys vs sells, net flow, buyers vs sellers, GME in the pool, exchange balances, liveliness.
-    - **INSIDERS:** status, cluster holdings, daily cluster flows (bought, from exchanges, to exchanges, sold), cluster → exchanges $, network graph, members table.
-    - **WALLETS** (the monitor; owner asked for "a list of all the wallets … day, weekly, monthly, accumulating or selling"):
-      - one row per wallet holding ≥0.1% of supply now or at any point in 90 days, plus their linked side wallets;
-      - columns: 1D/7D/30D/90D change, a status, "how" chips, a 90-day sparkline;
-      - status: ▲ accumulating, ▼ selling (DEX or exchange), → moved out (to other wallets), ↔ own wallets, · dormant;
-      - "how" chips break the move down: DEX buy, from exchanges, from or to other wallets, own wallets, DEX sell, to exchanges;
-      - an **Owners** view sums each owner's wallets, so moves between its own wallets cancel out;
-      - filters and search.
-    - **BUBBLE MAP:** pick an owner (default: the focus wallet's cluster, or "all monitored wallets") and a window (1D/7D/30D/90D).
-      - Bubbles = its wallets, sized by holdings. Green = grew, red = sold or deposited, amber = moved to other wallets, grey = no change.
-      - Pinned nodes for DEX, exchanges and other wallets.
-      - Arrows: green = DEX buy, red = DEX sell or exchange deposit, blue = exchange withdrawal, dashed grey = between its own wallets.
-      - A table below lists the window's largest flows.
-    - **WATCHLIST:** watched groups with 1d/7d/30d change and 180-day sparklines, quiet accumulators, buy-and-hide wallets (only those still holding), top 50 holders, alert log.
-  - **Wallet drawer:** every address opens it, with stats, a balance + price chart (buys and sells marked) and the activity list. It reads `wallets.json`, fetched lazily.
+- **Look (owner, 2026-11-05 redesign, supersedes the 2026-10-31 type rules):** a premium on-chain intelligence terminal.
+  - **Glass panels over a coloured background, sharp corners.** The background is a deep navy with gold / blue / teal glows and a faint grid (`--bg-grad`, fixed). Panels are frosted glass (`backdrop-filter`), square, with small corner brackets (`.panel::after`); the key panel of a page gets gold brackets (`.key`). Owner asked for glassmorphism + sharp angles + a background colour explicitly.
+  - **Two families from one designer:** **Geist** for text, **Geist Mono** for numbers, data, metadata labels and axes. Still **no JetBrains, no Inter**.
+  - **No pills:** every chip, tag, button, input and panel is square. One accent: muted **GME gold** (`--accent`). Green / red only for real up / down movement.
+  - **Status dot:** one static round dot in the "Data current / Data stale" status (header + hero). Nothing blinks or glows anywhere.
+- **Information architecture** (hash routing; old hashes `#wallets #bubbles #insiders #watchlist #valuation #flows` redirect):
+  - **Overview:** hero (status line `ETHEREUM MAINNET · DAILY INDEX · LAST INDEXED … · ● DATA CURRENT`, title, contract + copy, a "live index vs research snapshot" block) → 8 executive metrics (4 on phones, "All metrics +") → **primary instrument** (price + realized price / DEX net flow / cluster holdings on one time axis, plus a computed "state of play" for the chosen range) → signals (insider watch, since last run, what changed) → market structure (MVRV, supply in profit, pool).
+  - **Holders:** where the supply sits (bar + table, inferred groups hatched), largest holders, largest entities (owner groups from `T.mon`, 7D/30D net), concentration, holders, new wallets, position sizes, HODL waves, cost basis (price vs realized, MVRV, supply in profit, URPD, cohorts).
+  - **Transfers:** transfer activity (count / USD value / active addresses, ◆ unusual days = ≥3× the previous 30-day median, a display rule), unusual days, largest movements (90 days), DEX trading, liquidity and exchanges, SOPR / NRPL / liveliness.
+  - **Entities** (sub-tabs `#entities/cluster|monitor|map|watchlist`): a **direct evidence vs inferred relationship** legend on every view. Direct = a transfer between the two wallets is on-chain (solid lines); inferred = shared deposit address or same owner group (dashed, tagged "inferred").
+    - **Wallet monitor:** change cells are coloured by what the coins did in that window: green in, red only when they left through the DEX or an exchange, amber to wallets outside the group, grey "↔" for moves between wallets of the same owner group (owner asked: own-wallet moves must not read as losses).
+    - **Flow map:** draggable bubbles (positions kept per owner+window until ⤢ reset), pan, ctrl+scroll / pinch / +− zoom, hover isolates a bubble's flows, click opens a side panel with its holdings, change and every flow in and out.
+  - **Methodology:** research-style write-up (source, reconstruction, pricing, attribution with an evidence column, classifications, limits, freshness) + "Read the full study →".
+  - **Wallet drawer:** every address opens it (copy, Etherscan, Zerion, stats, balance + price chart, activity).
 - **Data:** `scripts/terminal.py` runs daily, after `watch.py`, and reads each group's members from `watch_state.json`. It writes:
   - **`data/terminal.json`:**
     - daily series since launch: price, the engine's rp/MVRV/sip/SOPR/holders/top10/top100/whale share/NRPL/liveliness/age bands/$-wealth bands/exchange balances, plus DEX buy/sell $ and counts, new wallets, pool GME, focus and cluster balances, and cluster flows by type;
@@ -91,6 +78,9 @@ Read this file first. It is enough to continue without the original conversation
     - 180-day group histories;
     - the cluster graph and members;
     - the top 50 holders and live pool reserves;
+    - daily `tx` (transfer count), `txVol` (GME, billions), `txUsd`, `active` (distinct non-infrastructure addresses);
+    - **`index`**: `indexedAt`, `lastTransfer`, `transfers`, `firstTransfer`, `held` (GME in wallets), `burned`, `tx24h/168h/720h`, `active24h/168h/720h`;
+    - **`moves`**: the 60 largest single transfers of the last 90 days (skipping plumbing between two infrastructure addresses), with labels (DEX / Exchange / Liquidity / Burn / Mint / Token contract) and group names for each end;
     - **`mon`**, the monitor and bubble map data:
       - `A` = addresses;
       - `M[i]` = [balance B, owner index, monitored flag, first seen, last active] for tracked wallets;
@@ -117,10 +107,8 @@ Read this file first. It is enough to continue without the original conversation
   - colours are passed as CSS variable names, so the theme toggle repaints.
 - `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Every push to `main`, including the daily data commit, redeploys. **Production URL: https://gme-terminal.vercel.app** (Vercel project `gme-terminal`, team cianfru's projects, repo `cianfru/GME`). Deployment protection is standard: the production domain is public, preview URLs require Vercel login.
 - **Password is optional (owner: "keep it simple, a side project").** `middleware.js` adds HTTP Basic auth only when the `SITE_PASSWORD` env var is set. Without it the site is open, and `noindex` keeps it out of search. Tests: `npm test`.
-- **Freshness:** after 36 hours without new data, a static red "STALE" label appears next to the logo and the footer says so.
-- **Header (owner, 2026-10-31):**
-  - The token logo (`site/logo.png`, CoinGecko's "GME (Ethereum)" image, also the favicon) + "GME on ETH".
-  - **No dots, no blinking or glowing indicators anywhere on the site.** The theme toggle is a text button (LIGHT/DARK).
+- **Freshness:** age = now − `T.index.indexedAt`. After 36 hours the status turns to "Data stale" (gold) in the header and hero. The last day of every daily chart is partial (tooltips say so).
+- **Header:** the token logo (`site/logo.png`, CoinGecko's "GME (Ethereum)" image, also the favicon) + "GME on Ethereum", the five-section nav (thin gold underline on the active one), the data status and a text LIGHT/DARK toggle.
 - **"Still holding"** (a buy-and-hide wallet) means it kept ≥80% of what it received AND sold or deposited ≤20% of it.
   - Since 2026-10-30, `vaults90.py` keeps ONLY those in `vaults90.json`, so they alone feed the accumulator tags and the watch groups. The relays that bought and then sold or passed the coins on go to `vaults90_relays.json` and are just counted on the page.
   - Owner: "bought and sold is not accumulation." A trader that refills, like `0x859f…d9d1` which sold 3.3B, is not a hider.
