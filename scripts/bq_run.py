@@ -14,6 +14,8 @@ bq = ["bq", f"--project_id={P}", "query", "--use_legacy_sql=false", "--location=
 total = 0
 for q in QS:
     sql = open(os.path.join(os.path.dirname(OUT), "..", "bigquery", f"{q}.sql")).read().replace("{P}", P).replace("{DS}", DS)
+    # drop the comment lines: a query string that starts with "--" is read by the bq tool as a command-line flag
+    sql = "\n".join(l for l in sql.splitlines() if not l.strip().startswith("--")).strip()
     d = subprocess.run(bq + ["--dry_run", "--format=json", sql], capture_output=True, text=True)
     if d.returncode: print(f"{q}: dry run failed\n{d.stderr or d.stdout}"); run[q] = dict(error=(d.stderr or d.stdout)[-400:]); continue
     try: nb = int(json.loads(d.stdout)["statistics"]["totalBytesProcessed"])
