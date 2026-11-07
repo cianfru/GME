@@ -412,7 +412,7 @@ const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
 const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["methodology", "Methodology"]];
-const SUBS = [["cards", "Entities"], ["cluster", "Focus cluster"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["watchlist", "Watchlist"]];
+const SUBS = [["cards", "Entities"], ["cluster", "Focus cluster"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["eth", "ETH side"], ["watchlist", "Watchlist"]];
 const LEGACY = { wallets: "entities/monitor", bubbles: "entities/map", insiders: "entities/cluster", watchlist: "entities/watchlist", valuation: "holders", flows: "transfers" };
 let page = "overview", sub = "cluster", lastPage = null;
 const draws = [];
@@ -1163,8 +1163,9 @@ function movesCard() {
 
 // ---------- ENTITIES ----------
 function entities() {
-  const titles = { cards: "Entities", cluster: "The focus wallet's cluster", monitor: "Wallet monitor", map: "Flow map", watchlist: "Watchlist" };
-  const desc = { cards: "Every group of linked wallets as one card: how big it is, whether it is growing or shrinking, and through which channel. Followed automatically as coins move into fresh wallets.",
+  const titles = { eth: "The ETH side", cards: "Entities", cluster: "The focus wallet's cluster", monitor: "Wallet monitor", map: "Flow map", watchlist: "Watchlist" };
+  const desc = { eth: "What the ETH trail adds: who funded each wallet, who paid for whose purchases, money in and out of exchanges, and the other tokens these owners trade.",
+    cards: "Every group of linked wallets as one card: how big it is, whether it is growing or shrinking, and through which channel. Followed automatically as coins move into fresh wallets.",
     cluster: "The largest group of linked wallets: what it holds, what it did, and the evidence tying each wallet to it.",
     monitor: "Every wallet holding at least 0.1% of supply, now or at any point in 90 days, and what it did over 1, 7, 30 and 90 days.",
     map: "Entities as bubbles and the GME that moved between them, the DEX and exchanges. Open any entity to see its wallets.",
@@ -1176,7 +1177,7 @@ function entities() {
     <div><svg width="38" height="10" aria-hidden="true"><line x1="0" y1="5" x2="38" y2="5" stroke="var(--fg-2)" stroke-width="2" stroke-dasharray="5 4"/></svg><b>Inferred relationship</b><p>Derived by a rule, not seen as a transfer between the two: a shared exchange deposit address, or membership of the same owner group. Dashed lines, marked “inferred”.</p></div>
     <p class="disc">Wallet links are evidence of shared control, not proof of ownership. Groups are a floor: linking errs toward not merging.</p></section>`);
   grid();
-  ({ cards: entCards, cluster: entCluster, monitor: entMonitor, map: entMap, watchlist: entWatch })[sub]();
+  ({ cards: entCards, cluster: entCluster, monitor: entMonitor, map: entMap, eth: entEth, watchlist: entWatch })[sub]();
 }
 function entCluster() {
   insiderCard(false); chCluster(false);
@@ -1272,6 +1273,53 @@ function spark(vals, c) {
   const W = 110, H = 26, x = d3.scaleLinear([0, vals.length - 1], [1, W - 1]), [a, b] = d3.extent(vals), y = d3.scaleLinear([a, b === a ? a + 1 : b], [H - 2, 2]);
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><path d="${d3.line().x((v, i) => x(i)).y((v) => y(v))(vals)}" fill="none" style="stroke:var(${c})" stroke-width="1.4"/></svg>`;
 }
+
+// ---------- ENTITIES → ETH SIDE (data/ethside.json, from BigQuery + public nodes) ----------
+const LK = { ethseed: ["ETH seed", "direct", "A sent B its first ETH"], gas: ["Gas top-up", "direct", "A sent B ≤0.05 ETH for gas"], paid: ["Paid purchase", "direct", "A swapped on the GME pool and named B as the recipient"],
+  eth: ["ETH transfer", "weak", "A sent B more than 0.05 ETH, no GME came back (could be a payment)"], funder: ["Shared funder", "inferred", "Both got their first ETH from the same private wallet"] };
+const evTag = (k) => { const [l, g, t] = LK[k] || [k, "", ""]; return `<span class="ev${g === "direct" ? "" : " inf"}" data-tip="${esc(t)}">${l} · ${g}</span>`; };
+const sideCell = (x) => (x.id ? `<button class="mini" data-emap="${esc(x.id)}">${esc(x.name)}</button>` : `<button class="addr" data-addr="${x.a}">${short(x.a)}</button>`) + ` <span class="flat">${fB(x.bal)}</span>`;
+function entEth() {
+  const H = S.H;
+  if (!H) { card({ title: "ETH side", wide: true, body: unavailable("The ETH-side study has not run yet.") }); return; }
+  const L = H.links, strong = (L.ethseed || 0) + (L.gas || 0) + (L.paid || 0), o = H.origin || {};
+  const nb = (S.bqRun || {});
+  card({ title: "ETH side", q: "Who funds these wallets, who pays for whom, and what does the ETH trail add to the groups?", wide: true, key: true,
+    body: `<dl class="rd">
+      <div><dt>Wallets studied</dt><dd>${fN(H.wallets)} wallets: every entity member, every wallet that ever held ≥0.05% of supply, every holder of ≥0.01% today and every buyer of ≥$500 in 180 days. ${fN(H.fresh)} of them were created after April 2024, so their first ETH is in the data.</dd></div>
+      <div><dt>First funding</dt><dd>${fN(o.exchange || 0)} from an exchange withdrawal, ${fN(o.private || 0)} from a private wallet, ${fN(o.study || 0)} from another studied wallet and ${fN(o.service || 0)} from a high-volume service.</dd></div>
+      <div><dt>Strong links</dt><dd>${fN(strong)}: ${fN(L.ethseed || 0)} ETH seeds, ${fN(L.gas || 0)} gas top-ups and ${fN(L.paid || 0)} purchases signed by another wallet. ${fN(L.eth || 0)} larger ETH transfers are kept as weak links, and ${fN(H.tradelike || 0)} pairs where GME went back the other way are left out as likely sales.</dd></div>
+      <div><dt>Inferred</dt><dd>${fN(L.funder || 0)} links through a shared private first funder (2–8 wallets per funder).</dd></div></dl>`,
+    note: `ETH flows come from Google's public Ethereum dataset (BigQuery, top-level transactions since April 2024); purchase signers from public nodes. Exchanges never link anyone: labelled hot wallets, any sender with a transaction count above ${fN(H.rules.nonceService)}, any wallet that sent ETH to more than ${H.rules.fanoutService} studied wallets or received from more than ${H.rules.faninService} count as services. A paid purchase counts only when the GME went straight from the pool to the recipient (${fN((H.paid || {}).poolDirect || 0)} of ${fN((H.paid || {}).signedByOther || 0)} purchases signed by another wallet): deliveries through bot, settlement, aggregator or bridge contracts are signed by their executors, not by the buyer, and a signer that bought for more than ${H.rules.maxPaid} wallets is a bot. ETH sent by contracts (some exchange withdrawals) is not in this data. Nothing here merges groups: these are candidates, each with its evidence.` });
+  const C = H.candidates || [];
+  card({ title: "What it adds to the groups", wide: true, q: "Which wallets and groups does the ETH trail tie together that the GME trail did not?", body: `<div class="ctl" style="margin-bottom:10px">${segBtns([["Strong only", "s"], ["All", "a"]], ethShow, "es")}</div><div id="ethc"></div>`,
+    note: "A row ties two sides that are in different groups (or in none). Strong links are direct transfers of the kind the linking rules already trust; weak and inferred ones are leads. Holdings are today's." });
+  const drawC = () => { const el = $("ethc"); if (!el) return;
+    const rows = C.filter((c) => ethShow === "a" || c.direct).slice(0, 60);
+    el.innerHTML = rows.length ? `<div class="tw" style="max-height:560px;overflow-y:auto"><table><thead><tr><th>Side A</th><th>Side B</th><th>Evidence</th><th class="n">Holds together</th><th>Details</th></tr></thead><tbody>` +
+      rows.map((c) => `<tr><td>${sideCell(c.sides[0])}</td><td>${c.sides[1] ? sideCell(c.sides[1]) : "—"}</td><td>${c.kinds.map(evTag).join("")}</td><td class="n">${fB(c.bal)}</td><td class="flat" style="white-space:normal;min-width:16rem">${c.ev.slice(0, 3).map((e) => `${short(e.a)} → ${short(e.b)}${e.eth != null ? ` ${e.eth} ETH` : ""}${e.n ? ` ×${e.n}` : ""}${e.first ? ` · ${e.first}` : ""}`).join("<br>")}</td></tr>`).join("") + `</tbody></table></div>` : unavailable("No candidate.");
+    el.parentElement.onclick = (ev) => { const b = ev.target.closest("[data-es]"); if (b) { ethShow = b.dataset.es; drawC(); el.parentElement.querySelectorAll("[data-es]").forEach((x) => x.classList.toggle("on", x.dataset.es === ethShow)); } }; };
+  draws.push(drawC);
+  const V = H.originVenues || {}, vtot = d3.sum(Object.values(V));
+  card({ title: "Where the first ETH came from", q: "New wallets: funded from exchanges or from private wallets?", body:
+    `<div class="tw"><table><thead><tr><th>First funder</th><th class="n">Wallets</th><th>Share</th></tr></thead><tbody>` +
+    [["Exchange withdrawal", o.exchange || 0], ["Private wallet", o.private || 0], ["Another studied wallet", o.study || 0], ["High-volume service", o.service || 0], ["Contract", o.contract || 0]].map(([k, v]) => `<tr><td>${k}</td><td class="n">${fN(v)}</td><td><div class="bar"><i style="width:${(100 * v) / Math.max(1, H.funded)}%"></i></div></td></tr>`).join("") +
+    `</tbody></table></div><p class="sub" style="margin-top:8px">Exchanges: ${Object.entries(V).map(([k, v]) => `${esc(k)} ${fN(v)}`).join(" · ") || "—"}</p>`,
+    note: "Only wallets whose first transaction falls after April 2024 (nonce 0 in the data), so their first ETH is visible. Older wallets are not counted." });
+  const F = H.flows || [];
+  card({ title: "ETH in and out, by group", q: "Is money arriving from exchanges or leaving to them?", body: `<div class="tw" style="max-height:440px;overflow-y:auto"><table><thead><tr><th>Group</th><th class="n">From exchanges</th><th class="n">To exchanges</th><th class="n">From private</th><th class="n">To private</th><th>Main exchanges</th></tr></thead><tbody>` +
+    F.slice(0, 25).map((r) => `<tr><td>${r.id && r.id !== "unlinked" ? `<button class="mini" data-emap="${esc(r.id)}">${esc(r.name)}</button>` : esc(r.name)}</td><td class="n">${(r.in_cex || 0).toFixed(2)}</td><td class="n">${(r.out_cex || 0).toFixed(2)}</td><td class="n">${(r.in_private || 0).toFixed(2)}</td><td class="n">${(r.out_private || 0).toFixed(2)}</td><td class="flat">${Object.keys({ ...(r.venuesIn || {}), ...(r.venuesOut || {}) }).slice(0, 3).join(", ")}</td></tr>`).join("") + `</tbody></table></div>`,
+    note: "ETH, top-level transactions since April 2024. Moves inside a group are left out. ETH from exchanges is usually a withdrawal to self-custody; ETH to exchanges is usually cashing out." });
+  const SV = (H.serviceWallets || []).filter((w) => w.entity || w.gme > 1e8);
+  card({ title: "Exchange-scale wallets among the studied", wide: true, q: "Which wallets on the watchlist behave like exchanges or market makers?", body: SV.length ? `<div class="tw"><table><thead><tr><th>Wallet</th><th>Group</th><th class="n">GME held</th><th class="n">ETH moved since Apr 2024</th><th>Why</th></tr></thead><tbody>` +
+    SV.map((w) => `<tr><td><button class="addr" data-addr="${w.a}">${short(w.a)}</button></td><td>${w.eid ? `<button class="mini" data-emap="${esc(w.eid)}">${esc(w.entity)}</button>` : '<span class="flat">none</span>'}</td><td class="n">${fB(w.gme)}</td><td class="n">${fN(w.eth)}</td><td class="flat" style="white-space:normal">${esc(w.why)}</td></tr>`).join("") + `</tbody></table></div>` : unavailable("None."),
+    note: "Not removed from anything: an address only goes on the exclude list once it is confirmed on Etherscan. Until then these wallets are left out of the ETH links, flows and token overlap, and their groups carry a warning." });
+  const TK = (H.tokens && H.tokens.rows) || [];
+  card({ title: "Other tokens they trade", wide: true, q: "What else do these owners trade, and is any of it shared by many of them?", body: TK.length ? `<div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>Token</th><th class="n">Owners</th><th class="n">Wallets</th><th class="n">Groups</th><th>Focus cluster</th><th>Last activity</th></tr></thead><tbody>` +
+    TK.slice(0, 40).map((t) => `<tr><td><a href="https://etherscan.io/token/${t.token}" target="_blank" rel="noopener">${esc(t.symbol || short(t.token))}</a> <span class="flat">${esc(t.name || "")}</span></td><td class="n">${t.owners}</td><td class="n">${t.wallets}</td><td class="n">${t.entities}</td><td>${t.focus ? '<span class="ev">yes</span>' : ""}</td><td class="num">${esc(t.last)}</td></tr>`).join("") + `</tbody></table></div>` : unavailable("No token data."),
+    note: `Last 12 months. A token counts only if the wallet also sent it (tokens only ever received are usually spam airdrops). Majors and stablecoins are left out, and so are ${fN((H.tokens || {}).busyExcluded || 0)} wallets that touched more than 300 tokens (bots or exchange-like). Owners = groups count once. Overlap shows shared activity, not coordination.` });
+}
+let ethShow = "s";
 
 // ---------- the monitor: wallets with ≥0.1% of supply ----------
 const WIN = [["1D", 24], ["7D", 168], ["30D", 720], ["90D", 2160]];
@@ -1430,6 +1478,7 @@ function drawCards() {
   $("ecsort").onchange = (ev) => { ecSort = ev.target.value; drawCards(); };
   const qi = $("ecq"); qi.oninput = () => { ecQ = qi.value; const p = qi.selectionStart; drawCards(); const n = $("ecq"); n.focus(); n.setSelectionRange(p, p); };
 }
+const svcEnt = (id) => { const x = S.H && (S.H.serviceEntities || []).find((y) => y.id === id); return x ? `${x.n} wallet(s) in this group moved exchange or market-maker volumes of ETH (ETH side). It may be infrastructure, not a person: to verify before reading its holdings as a holder's.` : ""; };
 function ecard({ e, x, st }, wl) {
   const [sl, sc, svar] = STN[st] || STN.dormant, g = x.g, b = e.bal / 1e9, spot = S.E.spot;
   const ser = e.series, W2 = 260, H2 = 40, xs = d3.scaleLinear([0, ser.length - 1], [0, W2]), [lo, hi] = d3.extent(ser), ys = d3.scaleLinear([Math.min(lo, hi * 0.9), hi === lo ? hi + 1 : hi], [H2 - 2, 2]);
@@ -1452,7 +1501,7 @@ function ecard({ e, x, st }, wl) {
   const pv = e.provisional || [], pvB = d3.sum(pv, (p) => p.bal);
   const oi = ownerIdx(e.id);
   return `<article class="ec" style="--st:var(${svar})">
-    <header><div><h4>${esc(e.name)}</h4><span class="ev inf">${KINDE[e.kind] || e.kind}</span>${e.forming ? `<span class="ev" style="color:var(--accent);border-color:var(--accent)" data-tip="${esc(e.forming)}">◆ forming</span>` : ""}${e.flagged ? '<span class="ev" style="color:var(--crit);border-color:var(--crit)">flagged &gt;60</span>' : ""}</div><span class="ecst ${sc}">${sl}</span></header>
+    <header><div><h4>${esc(e.name)}</h4><span class="ev inf">${KINDE[e.kind] || e.kind}</span>${e.forming ? `<span class="ev" style="color:var(--accent);border-color:var(--accent)" data-tip="${esc(e.forming)}">◆ forming</span>` : ""}${e.flagged ? '<span class="ev" style="color:var(--crit);border-color:var(--crit)">flagged &gt;60</span>' : ""}${svcEnt(e.id) ? `<span class="ev" style="color:var(--crit);border-color:var(--crit)" data-tip="${esc(svcEnt(e.id))}">exchange-scale wallets</span>` : ""}</div><span class="ecst ${sc}">${sl}</span></header>
     <div class="ecv"><b>${fBb(b)}</b><span>${fPct(e.pct, 2)} of supply · ${e.n} wallets${e.attached.length ? ` · <span style="color:var(--accent)">+${e.attached.length} joined</span>` : ""}</span><b class="${Math.abs(x.net) < 1e-3 ? "flat" : sc}" style="margin-left:auto">${Math.abs(x.net) < 1e-3 ? "±0" : sgn(x.net, fBb)}<small> ${wl}</small></b></div>
     <svg viewBox="0 0 ${W2} ${H2}" preserveAspectRatio="none" class="ecsp"><rect x="${winStart}" y="0" width="${W2 - winStart}" height="${H2}" fill="var(--accent-2)"/><path d="${area}" fill="var(${svar})" fill-opacity=".14"/><path d="${line}" fill="none" stroke="var(${svar})" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg>
     <div class="ecflow"><span>In</span><div class="ecbar">${inBar}</div><b>${x.inn > 1e-3 ? fBb(x.inn) : "—"}</b><span>Out</span><div class="ecbar">${outBar}</div><b>${x.out > 1e-3 ? fBb(x.out) : "—"}</b></div>
@@ -1731,6 +1780,7 @@ function methodology() {
     </tbody></table></div>
     <p><b>How a shared deposit address is found.</b> Exchanges give each account its own deposit address and sweep what arrives there into their hot wallets. The terminal does not get deposit addresses from the exchanges: it infers one from behaviour, an address that forwarded at least 95% of its GME to a labelled exchange wallet and received from 2 to 10 wallets. Two wallets that both paid into such an address funded the same exchange account. That points to one owner, but it is not proof: someone can deposit to a friend's account, settle an OTC trade or pay a seller that way, and an address that forwards to an exchange could also be a personal relay. Hence <i>inferred</i>. On the focus cluster, 58.2B of its 65.0B connects to the focus wallet through direct transfers only; the other 6.8B depends on a shared deposit address somewhere on the path. Each entity card shows this split.</p>
     <p><b>Following the coins.</b> Every run (every 4 hours) checks the last 90 days of transfers. A wallet joins an entity when a direct rule fires with one of its members: seed (a member gave it its first GME) or drain (one sent the other at least 90% of its balance), worth at least $2k. There is no hop limit, but nothing links through infrastructure, contracts, exchange deposit addresses or a sender that seeded more than 40 wallets. Linked groups stop at 60 wallets, and at most 25 wallets join one entity per run. Once a wallet joins, its moves with the group are internal: neither buying nor selling. A wallet that received at least $2k from an entity in 30 days without a rule firing is shown as <i>provisional</i>: visible, not counted.</p>
+    <p><b>The ETH side.</b> Google's public Ethereum dataset (BigQuery) gives every top-level ETH transfer to or from the ${S.H ? fN(S.H.wallets) : "studied"} studied wallets since April 2024, and public nodes give the signer of every GME purchase into them. That adds three direct kinds of evidence: an <i>ETH seed</i> (one wallet sent the other its first ETH), a <i>gas top-up</i> (≤0.05 ETH) and a <i>paid purchase</i> (one wallet swapped on the GME pool and named the other as recipient; deliveries through bot, settlement, aggregator or bridge contracts are signed by their executors and never count). A larger ETH transfer is weak evidence: it could be a payment. Two wallets whose first ETH came from the same private wallet (2 to 8 of them per funder) are an inferred link. ETH sent one way while GME went the other way between the same two wallets looks like a sale and is left out. Exchanges never link anyone: labelled hot wallets, any sender with more than 50,000 transactions, and any wallet that sent ETH to more than 12 studied wallets or received from more than 8. A signer that bought for more than 10 wallets is a relayer or bot. These links are shown as candidates on the ETH side page; they do not merge groups.</p>
     <p>Guards: an address that seeds more than 40 wallets is a hub, so nothing links through it. A group larger than 60 wallets is flagged and never trusted. A shared exchange or relayer funder never links anyone. Tiny “address poisoning” transfers never link anyone. The focus wallet's cluster stops two steps away from the focus wallet.</p>
     <p><b>Direct</b> describes the evidence, a transfer between the two wallets that anyone can check on-chain. It is not proof that one person controls both. <b>Inferred</b> means the link comes from a shared counterparty or a grouping rule, with no transfer between the two.</p>
     <div class="callout">Wallet links are evidence of shared control, not proof of ownership. Groups are a floor, not a ceiling: the rules err toward not merging.</div></div></section>
