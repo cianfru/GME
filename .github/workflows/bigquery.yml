@@ -1,0 +1,68 @@
+name: bigquery study (ETH side)
+
+# The ETH side of the study, from Google's public Ethereum dataset: ETH flows and first funders of the study wallets,
+# their other tokens, and who signed each GME purchase. Manual only. Needs the repository secret GCP_SA_KEY (a Google
+# service-account key with BigQuery Job User + Data Editor). Start with dry_run = true: it costs nothing and reports
+# how many GB each query would scan; then run it for real. Free tier: 1 TB scanned per month per Google project.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run: { description: "Only measure (free)", type: boolean, default: true }
+      max_gb: { description: "Cap per query, GB", default: "250" }
+      queries: { description: "Queries to run", default: "eth_flows,first_funder,token_footprint,tx_signers" }
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gme-daily
+  cancel-in-progress: false
+
+jobs:
+  bq:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BQ_DATASET: gme_study
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Key present?
+        id: gate
+        env: { KEY: "${{ secrets.GCP_SA_KEY }}" }
+        run: |
+          if [ -z "$KEY" ]; then echo "::error::Add the repository secret GCP_SA_KEY first"; exit 1; fi
+      - name: Google auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with: { credentials_json: "${{ secrets.GCP_SA_KEY }}" }
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Transfer archive
+        run: |
+          gh release download gme-archive -p transfers.csv.gz -D data --clobber && gunzip -f data/transfers.csv.gz
+      - name: Study wallets and purchase list
+        run: python3 scripts/bq_wallets.py
+      - name: Upload the lists to BigQuery (loading is free)
+        env: { GCP_PROJECT: "${{ steps.auth.outputs.project_id }}" }
+        run: |
+          bq --project_id="$GCP_PROJECT" mk -f --dataset --location=US "$GCP_PROJECT:$BQ_DATASET" || true
+          bq --project_id="$GCP_PROJECT" --location=US load --replace --source_format=CSV --skip_leading_rows=1 "$BQ_DATASET.wallets" data/bq/wallets.csv a:STRING,role:STRING
+          if [ -f data/bq/txs.csv ]; then bq --project_id="$GCP_PROJECT" --location=US load --replace --source_format=CSV --skip_leading_rows=1 "$BQ_DATASET.txs" data/bq/txs.csv tx:STRING; fi
+      - name: Queries
+        env:
+          GCP_PROJECT: "${{ steps.auth.outputs.project_id }}"
+          DRY: "${{ inputs.dry_run }}"
+          MAX_GB: "${{ inputs.max_gb }}"
+          QUERIES: "${{ inputs.queries }}"
+        run: python3 scripts/bq_run.py
+      - name: Commit results
+        run: |
+          rm -f data/bq/txs.csv
+          git config user.name "gme-terminal bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/bq
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git commit -m "data: BigQuery study ($([ "${{ inputs.dry_run }}" = "true" ] && echo dry run || echo results))"
+          for i in 1 2 3; do git pull --rebase origin main && git push && exit 0; sleep 5; done; exit 1

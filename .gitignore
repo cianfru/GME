@@ -22,3 +22,6 @@ __pycache__/
 node_modules/
 dist/
 data/alerts/notify.md
+data/swaps.csv
+data/delta_swaps.csv
+data/trade_px.csv

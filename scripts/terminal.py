@@ -11,6 +11,7 @@ spec = importlib.util.spec_from_file_location("p", os.path.join(os.path.dirname(
 p = importlib.util.module_from_spec(spec); spec.loader.exec_module(p)
 
 T = load(); pa = prices()
+PX = exact_prices(T, pa)       # exact execution price for DEX trade legs (trades.py), else the day's close
 EX = json.load(open(os.path.join(D, "exclude.json"))); CEX = {a for a, v in EX.items() if v["kind"] == "cex"}; infra = set(EX)
 LP = {V3POOL, "0xc36442b4a4522e871399cd717abdd847ab11fe88"}          # liquidity adds/removes, not trades
 FC = json.load(open(os.path.join(D, "focus_cluster.json")))
@@ -58,8 +59,8 @@ for g, ws in MEMBERS.items():
     for a in ws: gname.setdefault(a, g)
 d_grp = collections.defaultdict(z)
 seen = set()
-for s, r, ts, v, b in T:
-    i = ix[ts[:10]]; px = pa(ts)
+for k, (s, r, ts, v, b) in enumerate(T):
+    i = ix[ts[:10]]; px = PX[k]
     tx_n[i] += 1; tx_vol[i] += v; tx_usd[i] += v * px
     if s not in infra: active[i].add(s)
     if r not in infra: active[i].add(r)
@@ -284,26 +285,26 @@ watch = set().union(*MEMBERS.values()) if MEMBERS else set()
 watch |= {t["a"] for t in top} | FOC | TRACK
 watch -= infra
 ev = collections.defaultdict(list)
-for s, r, ts, v, b in T:
+for j, (s, r, ts, v, b) in enumerate(T):
     if s == r: continue
     for me in (s, r):
         if me in watch:
             k, other = kind(s, r, me)
-            ev[me].append((ts, -v if me == s else v, k, other))
+            ev[me].append((ts, -v if me == s else v, k, other, PX[j]))
 wallets = {}
 for a in watch:
     e = ev.get(a, [])
     series, run, cur_d = [], 0.0, None
-    for ts, dv, k, o in e:
+    for ts, dv, k, o, _ in e:
         run += dv
         if series and series[-1][0] == ts[:10]: series[-1][1] = round(run / 1e9, 4)
         else: series.append([ts[:10], round(run / 1e9, 4)])
     # Merge transfers of the same kind with the same counterparty on the same day (one line per action).
     agg = collections.OrderedDict()
-    for ts, dv, k, o in e:
+    for ts, dv, k, o, px in e:
         key = (ts[:10], k, o)
-        if key in agg: agg[key][1] += dv; agg[key][3] += abs(dv) * pa(ts)
-        else: agg[key] = [ts[:10], dv, k, abs(dv) * pa(ts), o]
+        if key in agg: agg[key][1] += dv; agg[key][3] += abs(dv) * px
+        else: agg[key] = [ts[:10], dv, k, abs(dv) * px, o]
     evs = [[x[0], round(x[1] / 1e9, 4), x[2], round(x[3]), x[4]] for x in agg.values()]
     wallets[a] = dict(bal=round(bal[a] / 1e9, 4), group=gname.get(a) or ("Focus wallet's cluster" if a in FOC else None),
                       first=first.get(a, "")[:10], last=last.get(a, "")[:10], n=len(evs), series=series, events=evs[-400:])

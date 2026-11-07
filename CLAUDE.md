@@ -34,9 +34,10 @@ Read this file first. It is enough to continue without the original conversation
 
 ## 3. Pipeline (`.github/workflows/daily.yml`: full daily at 06:23 UTC, light every 4 hours, plus manual runs)
 
-1. **Archive.** The full transfer history (`sender,receiver,time,value,block`) is a release asset, tag `gme-archive`, not in git. The first run has no asset and seeds it with a full pull. `archive_tools.py merge` replaces from the first block of the new pull onward, so re-pulling the boundary block is safe.
-2. **`pull-transfers-rpc.py`** uses `eth_getLogs` on drpc and mevblocker. Both add `blockTimestamp` to each log, so no block lookups are needed. Error codes 403, 429 and 413 mean "shrink the range".
+1. **Archive.** The full transfer history (`sender,receiver,time,value,block,tx,li`: tx hash + log index since 2026-11-07) and the GME pools' swap history (`swaps.csv`: `pool,time,block,li,tx,wethIn,wethOut,gmeIn,gmeOut`, raw integers, WETH = token0 in both pools) are release assets, tag `gme-archive`, not in git. An archive without the `tx` column, or a missing `swaps.csv.gz`, triggers one automatic full re-pull (~20 min). The first run has no asset and seeds it with a full pull. `archive_tools.py merge` replaces from the first block of the new pull onward, so re-pulling the boundary block is safe.
+2. **`pull-transfers-rpc.py`** uses `eth_getLogs` on drpc and mevblocker; one call per block range returns the GME Transfer logs AND the Swap logs of the V2 pair and V3 pool (`--swaps=`). Both add `blockTimestamp` to each log, so no block lookups are needed. Error codes 403, 429 and 413 mean "shrink the range".
 3. **Prices.** `pull-prices-defillama.py` fetches GME and `pull-eth-prices.py` fetches ETH. ⚠ DeFiLlama's daily stamp is the previous day's close, so analysis windows are shifted by one day.
+   - **Exact trade prices (`trades.py`, 2026-11-07):** per transaction, buy price = WETH into the pools ÷ GME out, sell price = WETH out ÷ GME in; every pool/router ↔ wallet GME transfer in that tx gets it, × the day's ETH close → `data/trade_px.csv` (rebuilt each run, not committed) + `data/trades_check.json`. First run: 217,790 of 227,461 DEX legs, **99.3% of DEX volume**; the day's GME close was off by a median **6.9%** per trade (p90 60%). `txlib.exact_prices(T, pa)` gives a per-transfer price list (exact for DEX legs, else day close); used by `entities.py` (cost basis), `crowd.py` (owner cost, P/L, smart money: 439 → 511 owners) and `terminal.py` (DEX $ flows, wallet histories). The cost engine (realized price, MVRV, URPD) still uses the day's close; linking-rule thresholds too.
 4. **`getcode.py`** sorts new addresses into contract or wallet. EIP-7702 accounts (code `0xef0100…`) count as **people**, not contracts.
 5. **`build_exclude.py`** writes `data/exclude.json`. It covers pools, routers, contracts and exchanges:
    - MEXC 2 `0x9642…`
@@ -198,7 +199,12 @@ The full write-up is `report/gme-study.html` (also published as a private claude
   - **Entities** opens on entity cards.
   - The flow map opens at entity level and drills into one owner's wallets.
 
-## 8. Still open
+## 8. BigQuery ETH side (prepared 2026-11-07; waiting for the GCP_SA_KEY repository secret)
+- `.github/workflows/bigquery.yml` (manual): auth from `GCP_SA_KEY` (project read from the key) → `bq_wallets.py` builds the study wallets (entity members, provisional, peak ≥0.05% of supply, holders ≥0.01%, buyers ≥$500 in 180 d) and the DEX purchase tx list → `bq load` (free) into dataset `gme_study` → `bq_run.py` runs `bigquery/*.sql`: **dry run first (free) reports GB per query**; with `dry_run=false` each query runs only under `max_gb` and with `maximum_bytes_billed`. Results to `data/bq/*.csv` + `run.json`.
+- Queries: `eth_flows` (native ETH between study wallets and anyone, since 2024-01-01, literal date bound), `first_funder` (full history), `token_footprint` (all other ERC-20s since 2024-05-13, with symbol/decimals), `tx_signers` (who signed each GME purchase: "paid by A, delivered to B" = direct evidence).
+- Not built yet: the local builders that turn these into funding links, money in / money out, cross-token footprint and bots vs people. Lessons to apply: exchange or relayer funders never link; remove exchange-sized wallets before any "they also hold X" read (SPX/Kraken lesson); internal ETH (from contracts) is not in `transactions`.
+
+## 9. Still open
 - Track whether the accumulators' holding wallets ever send to an exchange (exit tripwire); the entity tripwires now cover first deposits for every entity.
 - Trace accumulators' ETH funding one or two hops back.
 - Per-chart "as of" dates; tests for the Python builders.

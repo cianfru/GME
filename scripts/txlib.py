@@ -60,3 +60,30 @@ def balance_at(T, by, a, ts=None):
         if r == a: b += v
         if s == a: b -= v
     return b
+
+# ---- exact trade prices (trades.py) ------------------------------------------------------------------------------
+def load_keys():
+    """(block, logIndex) of every transfers.csv row, aligned with load(). None for an archive without the li column."""
+    p = os.path.join(D, "transfers.csv")
+    with open(p) as f:
+        h = next(f).strip().split(",")
+        if "li" not in h: return None
+        bi, li = h.index("block"), h.index("li")
+        return [(int(r[bi]), int(r[li])) for r in csv.reader(f) if r and r[0] != "sender"]
+
+def trade_px():
+    """{(block, logIndex): exact USD price per GME} for every DEX trade leg priced from the pools' Swap events."""
+    p = os.path.join(D, "trade_px.csv")
+    if not os.path.exists(p): return {}
+    out = {}
+    with open(p) as f:
+        next(f, None)
+        for r in csv.reader(f): out[(int(r[0]), int(r[1]))] = float(r[2])
+    return out
+
+def exact_prices(T, pa):
+    """USD price per GME for every transfer, aligned with T: the exact execution price of a DEX trade where trades.py
+    found its swap, otherwise that day's close (transfers between wallets, exchange moves, trades without a swap)."""
+    keys = load_keys(); P = trade_px() if keys else {}
+    if not keys or not P or len(keys) != len(T): return [pa(r[2]) for r in T]
+    return [P.get(k) or pa(T[i][2]) for i, k in enumerate(keys)]

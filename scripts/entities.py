@@ -32,6 +32,7 @@ iso = lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 parse = lambda ts: datetime.datetime.fromisoformat(ts[:19])
 
 T = load(); pa = prices()
+PX = exact_prices(T, pa)       # cost basis uses exact execution prices for DEX trades (trades.py); rules keep the day's close
 EX = json.load(open(os.path.join(D, "exclude.json"))); CEX = {a for a, v in EX.items() if v["kind"] == "cex"}; infra = set(EX)
 LP = {V3POOL, "0xc36442b4a4522e871399cd717abdd847ab11fe88"}
 AT = json.load(open(os.path.join(D, "addr-types.json"))) if os.path.exists(os.path.join(D, "addr-types.json")) else {}
@@ -173,10 +174,10 @@ for s, r, ts, v, b in T:
 # ---- cost basis: FIFO over each entity's external flows, full history ----------------------------------------------
 lots = [collections.deque() for _ in ents]
 cost = [dict(realized=0.0, invested=0.0, proceeds=0.0) for _ in ents]
-for s, r, ts, v, b in T:
+for k, (s, r, ts, v, b) in enumerate(T):
     ks, kr = own.get(s), own.get(r)
     if ks == kr: continue
-    px = pa(ts)
+    px = PX[k]
     if kr is not None:
         lots[kr].append([v, px, "D" if is_dex(s) else "C" if is_cex(s) else "W"]); cost[kr]["invested"] += v * px
     if ks is not None:

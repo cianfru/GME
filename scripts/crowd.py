@@ -18,6 +18,7 @@ from txlib import *
 DUST = 1e6
 SM_USD, SM_ROI = 5000.0, 1.0
 T = load(); pa = prices()
+PX = exact_prices(T, pa)       # exact execution price for DEX trade legs (trades.py), else the day's close
 EX = json.load(open(os.path.join(D, "exclude.json"))); CEX = {a for a, v in EX.items() if v["kind"] == "cex"}; infra = set(EX)
 LP = {V3POOL, "0xc36442b4a4522e871399cd717abdd847ab11fe88"}
 outs = collections.defaultdict(lambda: collections.defaultdict(float))
@@ -59,11 +60,11 @@ def snapshot(m):
             x = coh[q][m]; x[0] += 1; x[1] += b
 
 cur_day = None
-for s, r, ts, v, blk in T:
+for k, (s, r, ts, v, blk) in enumerate(T):
     d = ts[:10]
     if cur_day is not None and d != cur_day and cur_day in snap_days: snapshot(cur_day[:7])
     cur_day = d
-    i = ix[d]; px = pa(ts)
+    i = ix[d]; px = PX[k]
     us, ur = (U(s) if wallet(s) else None), (U(r) if wallet(r) else None)
     if us is not None and us == ur: continue                         # inside one owner: nothing happens
     if ur is not None:
@@ -106,11 +107,11 @@ spot = pa(NOW); c7 = (day1 - datetime.timedelta(days=7)).isoformat(); c30 = (day
 smart = {u for u in realized if realized[u] >= SM_USD and cost_sold[u] > 0 and realized[u] / cost_sold[u] >= SM_ROI}
 flow = {u: collections.Counter() for u in smart}
 sm_buy, sm_sell = z(), z()
-for s, r, ts, v, blk in T:
+for k, (s, r, ts, v, blk) in enumerate(T):
     if ts[:10] < c90: continue
     us, ur = (U(s) if wallet(s) else None), (U(r) if wallet(r) else None)
     if us == ur: continue
-    i = ix[ts[:10]]; usd = v * pa(ts)
+    i = ix[ts[:10]]; usd = v * PX[k]
     if ur in smart and (is_dex(s) or is_cex(s)):
         sm_buy[i] += usd
         for k, c in (("7", c7), ("30", c30), ("90", c90)):

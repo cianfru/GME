@@ -2,14 +2,18 @@
 # Pull the FULL GME (Ethereum) ERC-20 Transfer history from public Ethereum RPC via eth_getLogs.
 # Zero cost to any paid quota (no BigQuery bytes, no Dune credits). Exact canonical timestamps
 # come straight from each log's blockTimestamp (drpc enriches logs with it).
-# Output CSV columns: sender,receiver,time,value,block — engine format (it reads sender/receiver/
-# time/value by name and ignores `block`; `block` exists so the incremental refresh can merge on a
-# clean block boundary). value = raw uint256 decimal.
+# Output CSV columns: sender,receiver,time,value,block,tx,li — engine format (it reads sender/receiver/
+# time/value by name and ignores the rest; `block` lets the incremental refresh merge on a clean block
+# boundary; tx = transaction hash, li = log index, so a transfer can be tied to the swap in the same
+# transaction). value = raw uint256 decimal.
+# The same eth_getLogs call also returns the Swap events of the GME pools (Uniswap V2 pair, V3 pool), written to
+# --swaps (pool,time,block,li,tx,wethIn,wethOut,gmeIn,gmeOut; raw integers, WETH is token0 in both pools):
+# the exact ETH paid or received in every trade.
 #
 # Usage:
 #   full pull:  python scripts/pull-transfers-rpc.py                       (finds the deploy block)
 #   delta pull: python scripts/pull-transfers-rpc.py --start-block=N --out=delta.csv
-#   options:    --out=PATH  --log=PATH  --start-block=N
+#   options:    --out=PATH  --swaps=PATH  --log=PATH  --start-block=N
 import json, sys, time, os, ssl, urllib.request, urllib.error
 
 # Portable across environments: in the agent sandbox the proxy allowlists by User-Agent (curl OK,
@@ -26,8 +30,16 @@ _UA = "curl/8.5.0"
 
 CA    = "0xc56c7a0eaa804f854b536a5f3d5f49d2ec4b12b8"
 TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"  # Transfer(address,address,uint256)
+PAIR  = "0x2aeee741fa1e21120a21e57db9ee545428e683c9"   # Uniswap V2 WETH/GME
+V3P   = "0x05391bd57d8c6fb30d9c39f6618f2207893922dc"   # Uniswap V3 WETH/GME (1%)
+SWAP2 = "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822"  # Swap(address,uint,uint,uint,uint,address)
+SWAP3 = "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67"  # Swap(address,address,int,int,uint160,uint128,int24)
 RPCS  = ["https://eth.drpc.org", "https://rpc.mevblocker.io"]  # both enrich logs w/ blockTimestamp + survive bursts
 OUT   = "transfers.csv"
+SWAPS = None
+TH    = "sender,receiver,time,value,block,tx,li\n"
+SH    = "pool,time,block,li,tx,wethIn,wethOut,gmeIn,gmeOut\n"
+def s256(h): v = int(h, 16); return v - (1 << 256) if v >= 1 << 255 else v
 LOG   = "pull.log"
 
 def log(m):
@@ -87,9 +99,10 @@ def norm_addr(topic):  # 32-byte padded → 0x + last 40 hex
     return "0x" + topic[-40:]
 
 def main():
-    global OUT, LOG
+    global OUT, LOG, SWAPS
     args = dict(a[2:].split("=", 1) if "=" in a else (a[2:], True) for a in sys.argv[1:] if a.startswith("--"))
     OUT = args.get("out", OUT)
+    SWAPS = args.get("swaps", os.path.join(os.path.dirname(OUT) or ".", "swaps.csv" if os.path.basename(OUT) == "transfers.csv" else "delta_swaps.csv"))
     LOG = args.get("log", LOG)
     open(LOG, "w").close()
     latest = get_latest()
@@ -101,14 +114,14 @@ def main():
         start = find_creation(latest)
         log(f"creation/first-log block ~{start}  (span {latest-start} blocks)")
     if start > latest:
-        f = open(OUT, "w"); f.write("sender,receiver,time,value,block\n"); f.close()
+        f = open(OUT, "w"); f.write(TH); f.close(); open(SWAPS, "w").write(SH)
         log("DONE: 0 transfers (archive already at tip)"); print("DONE 0 transfers"); return
 
-    f = open(OUT, "w"); f.write("sender,receiver,time,value,block\n")
-    span = 2000; frm = start; n = 0; calls = 0
+    f = open(OUT, "w"); f.write(TH); fs = open(SWAPS, "w"); fs.write(SH)
+    span = 2000; frm = start; n = 0; ns = 0; calls = 0
     while frm <= latest:
         to = min(frm + span, latest)
-        r = rpc("eth_getLogs", [{"address":CA,"topics":[TOPIC],"fromBlock":hex(frm),"toBlock":hex(to)}])
+        r = rpc("eth_getLogs", [{"address":[CA, PAIR, V3P],"topics":[[TOPIC, SWAP2, SWAP3]],"fromBlock":hex(frm),"toBlock":hex(to)}])
         calls += 1
         if r.get("_shrink"):
             span = max(1, span//2); log(f"shrink→{span} at {frm}"); continue
@@ -124,19 +137,27 @@ def main():
                 bn = lg["blockNumber"]
                 ts = block_ts(bn)
             sec = int(ts, 16) if isinstance(ts, str) else int(ts)
-            frm_a = norm_addr(lg["topics"][1]); to_a = norm_addr(lg["topics"][2])
-            val = int(lg["data"], 16)          # exact big-int
-            bn  = int(lg["blockNumber"], 16)
+            bn  = int(lg["blockNumber"], 16); li = int(lg["logIndex"], 16); txh = lg["transactionHash"].lower()
             iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(sec))
-            f.write(f"{frm_a},{to_a},{iso},{val},{bn}\n"); n += 1
+            addr = lg["address"].lower(); t0 = lg["topics"][0].lower(); d = lg["data"][2:]
+            if addr == CA and t0 == TOPIC:
+                frm_a = norm_addr(lg["topics"][1]); to_a = norm_addr(lg["topics"][2])
+                val = int(lg["data"], 16)          # exact big-int
+                f.write(f"{frm_a},{to_a},{iso},{val},{bn},{txh},{li}\n"); n += 1
+            elif addr == PAIR and t0 == SWAP2:     # amount0In, amount1In, amount0Out, amount1Out (token0 = WETH)
+                a0i, a1i, a0o, a1o = (int(d[i:i + 64], 16) for i in range(0, 256, 64))
+                fs.write(f"v2,{iso},{bn},{li},{txh},{a0i},{a0o},{a1i},{a1o}\n"); ns += 1
+            elif addr == V3P and t0 == SWAP3:      # amount0, amount1: signed, positive = into the pool
+                a0, a1 = s256(d[0:64]), s256(d[64:128])
+                fs.write(f"v3,{iso},{bn},{li},{txh},{max(a0, 0)},{max(-a0, 0)},{max(a1, 0)},{max(-a1, 0)}\n"); ns += 1
         if len(res) < 2000: span = min(100000, max(span, 1)*2)   # grow when sparse
         frm = to + 1
         time.sleep(0.1)   # gentle pacing to avoid proxy rate-limit
         if calls % 25 == 0:
-            f.flush(); log(f"{calls} calls · block {frm}/{latest} · {n} transfers · span {span}")
-    f.close()
-    log(f"DONE: {n} transfers, {calls} calls → {OUT}")
-    print(f"DONE {n} transfers")
+            f.flush(); fs.flush(); log(f"{calls} calls · block {frm}/{latest} · {n} transfers · {ns} swaps · span {span}")
+    f.close(); fs.close()
+    log(f"DONE: {n} transfers, {ns} swaps, {calls} calls → {OUT}, {SWAPS}")
+    print(f"DONE {n} transfers, {ns} swaps")
 
 _bts = {}
 def block_ts(bn):
