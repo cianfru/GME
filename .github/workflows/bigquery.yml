@@ -9,7 +9,7 @@ on:
     inputs:
       dry_run: { description: "Only measure (free)", type: boolean, default: true }
       max_gb: { description: "Cap per query, GB", default: "250" }
-      queries: { description: "Queries to run", default: "eth_flows,first_funder,token_footprint,tx_signers" }
+      queries: { description: "Queries to run", default: "eth_flows,token_footprint" }
 
 permissions:
   contents: write

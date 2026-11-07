@@ -6,7 +6,7 @@
 import subprocess, json, os, sys, datetime
 P = os.environ["GCP_PROJECT"]; DS = os.environ.get("BQ_DATASET", "gme_study")
 DRY = os.environ.get("DRY", "true").lower() != "false"; CAP = int(float(os.environ.get("MAX_GB", "250")) * 1e9)
-QS = [q for q in os.environ.get("QUERIES", "eth_flows,first_funder,token_footprint,tx_signers").split(",") if q]
+QS = [q for q in os.environ.get("QUERIES", "eth_flows,token_footprint").split(",") if q]
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "bq"); os.makedirs(OUT, exist_ok=True)
 RJ = os.path.join(OUT, "run.json")
 run = json.load(open(RJ)) if os.path.exists(RJ) else {}

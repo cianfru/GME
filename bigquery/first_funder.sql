@@ -1,3 +1,4 @@
+-- NOT RUN BY DEFAULT: scans ~813 GB (full transactions history). eth_flows.sql gives the first funder of every wallet created since 2024-04.
 -- The first ETH each study wallet ever received (full history: a wallet's first funder can predate GME).
 WITH w AS (SELECT DISTINCT LOWER(a) AS a FROM `{P}.{DS}.wallets`)
 SELECT to_address AS a, from_address AS funder, CAST(value / 1e18 AS FLOAT64) AS eth, block_timestamp AS ts, `hash` AS tx
