@@ -2,8 +2,9 @@
  "eth_flows": {
   "bytes": 218639146820,
   "gb": 218.6,
-  "at": "2026-11-07T18:54:35Z",
-  "ran": false
+  "at": "2026-11-07T18:56:57Z",
+  "ran": true,
+  "rows": 147133
  },
  "first_funder": {
   "bytes": 812889392248,
@@ -14,8 +15,9 @@
  "token_footprint": {
   "bytes": 200046077949,
   "gb": 200.0,
-  "at": "2026-11-07T18:54:39Z",
-  "ran": false
+  "at": "2026-11-07T18:57:16Z",
+  "ran": true,
+  "rows": 117144
  },
  "tx_signers": {
   "bytes": 240800931472,
