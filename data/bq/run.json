@@ -1,0 +1,14 @@
+{
+ "eth_flows": {
+  "error": ") is not in this table; stated on the site.\nWITH w AS (SELECT DISTINCT LOWER(a) AS a FROM `goog-fltx.gme_study.wallets`)\nSELECT from_address AS f, to_address AS t, COUNT(*) AS n, CAST(SUM(value) / 1e18 AS FLOAT64) AS eth,\n       MIN(block_timestamp) AS first, MAX(block_timestamp) AS last\nFROM `bigquery-public-data.crypto_ethereum.transactions`\nWHERE block_timestamp >'\nRun 'bq.py help' to get help\n"
+ },
+ "first_funder": {
+  "error": "wallet ever received (full history: a wallet's first funder can predate GME).\nWITH w AS (SELECT DISTINCT LOWER(a) AS a FROM `goog-fltx.gme_study.wallets`)\nSELECT to_address AS a, from_address AS funder, CAST(value / 1e18 AS FLOAT64) AS eth, block_timestamp AS ts, `hash` AS tx\nFROM `bigquery-public-data.crypto_ethereum.transactions`\nWHERE value > 0 AND receipt_status '\nRun 'bq.py help' to get help\n"
+ },
+ "token_footprint": {
+  "error": "bol) AS symbol, ANY_VALUE(name) AS name, ANY_VALUE(SAFE_CAST(decimals AS INT64)) AS dec\n      FROM `bigquery-public-data.crypto_ethereum.tokens` GROUP BY address),\ntt AS (SELECT token_address, from_address, to_address, SAFE_CAST(value AS BIGNUMERIC) AS v, block_timestamp\n       FROM `bigquery-public-data.crypto_ethereum.token_transfers`\n       WHERE block_timestamp >'\nRun 'bq.py help' to get help\n"
+ },
+ "tx_signers": {
+  "error": " gas and sent the ETH), for every DEX buy in the archive.\n-- A purchase signed by one wallet but delivered to another is direct evidence the two are related.\nSELECT t.`hash` AS tx, t.from_address AS signer, t.to_address AS target\nFROM `bigquery-public-data.crypto_ethereum.transactions` t\nJOIN (SELECT DISTINCT LOWER(tx) AS tx FROM `goog-fltx.gme_study.txs`) x ON x.tx '\nRun 'bq.py help' to get help\n"
+ }
+}
