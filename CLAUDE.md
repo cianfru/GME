@@ -142,6 +142,9 @@ Guards:
   - One MEXC deposit address is shared by 6 of its wallets.
   - 38.8B was shuffled between wallets on 24–25 Sep 2025.
 - **Coinbase group:** 31 wallets holding 8.46B. They spent about $420k and are down about 89%.
+  - **Deep-dive (2026-11-08):** one operator. 30 feeder wallets bought on the DEX and held; on **2 Oct 2026** every one of them swept its GME **and its leftover ETH dust** to collector `0xe1fc…5717` (a fresh EOA that got its first ETH from that sweep and topped up one feeder with gas), plus the DCA wallet's coins on 20 Oct. The collector has never sent anything out; it is the #6 holder (8.46B, 2.0%).
+  - Buying came in waves: May 2025 (1 wallet, $8k at ~$37M MC); **Sep 2025: 21 fresh wallets each withdrew exactly 2.0 ETH from Coinbase within ~2 hours (3–4 Sep, 23:57–01:04 UTC), each made 2 buys of ~$4.4k through the Uniswap app** (UniversalRouter `0x66a9…`), plus a 15.7-ETH wallet; $323k at ~$29M MC; Dec 2025 (3 wallets, $70k at ~$19M); Mar 2026 (1 wallet, $14k at ~$8M); **May–Oct 2026 a DCA wallet `0x9d83…` bought ~$7 of GME once a day at 10–11 UTC (178 buys), funded with USDC withdrawn from Coinbase**, then $5.9k on 20 Oct. Total $422k at an average ~$21M MC, worth ~$68k at $3.4M MC (−84%); only the DCA wave is in profit (+58%).
+  - Sold: once, $3.9k in May 2025. No ETH ever went back to an exchange; the Coinbase ETH withdrawals arrive as internal transactions, so they are not in the BigQuery ETH data. No GME or strong ETH link to any other group.
 - **Pool:** 138 WETH against 49.4B GME.
   - Price moves with the square of the ETH reserve.
   - Buying **1% of supply costs about $29k and lifts price about 19%**.
