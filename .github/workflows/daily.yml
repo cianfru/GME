@@ -173,7 +173,9 @@ jobs:
         run: |
           git config user.name "gme-terminal bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ "$MODE" = "light" ]; then git checkout HEAD -- data/wallets.json data/graph.json 2>/dev/null || true; fi
+          # graph.json and graph_tx.json must move together: the ledger addresses nodes by their index in graph.json,
+          # so committing one without the other would point every ledger row at the wrong wallet.
+          if [ "$MODE" = "light" ]; then git checkout HEAD -- data/wallets.json data/graph.json data/graph_tx.json 2>/dev/null || true; fi
           git add data
           if git diff --cached --quiet; then echo "no changes"; exit 0; fi
           if [ "$MODE" = "light" ]; then git commit -m "data: refresh $(date -u +'%F %H:%M') UTC (light)"; else git commit -m "data: daily refresh $(date -u +%F)"; fi

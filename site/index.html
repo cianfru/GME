@@ -234,6 +234,15 @@ input.q { width: 15rem; max-width: 100% } select.q { max-width: 100% }
 
 /* tables */
 .tw { overflow-x: auto; -webkit-overflow-scrolling: touch }
+/* queryable tables: a sort on every header, a filter under it */
+table.q th { padding: 0 }
+.qsort { display: inline-flex; align-items: baseline; gap: 2px; width: 100%; background: none; border: 0; cursor: pointer; padding: 7px 8px; font: inherit; color: inherit; text-align: inherit; min-height: 30px }
+th.n .qsort { justify-content: flex-end } .qsort:hover { color: var(--accent) } .qsort i { font-style: normal; color: var(--accent) }
+tr.qf td { padding: 0 4px 5px }
+tr.qf input { width: 100%; min-width: 54px; height: 24px; background: var(--glass-2); border: 1px solid var(--line); color: var(--fg); padding: 0 5px; font: 400 11px var(--mono) }
+tr.qf input:focus { outline: 1px solid var(--accent); outline-offset: -1px } tr.qf input::placeholder { color: var(--placeholder, var(--muted)); opacity: .7 }
+tr.qf td.n input { text-align: right }
+.qcount { margin: 5px 0 0; color: var(--muted) }
 table { border-collapse: collapse; width: 100%; font-size: 12.5px }
 th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle }
 th { font: 500 9.5px var(--mono); letter-spacing: .13em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; z-index: 1; background: var(--th) }
@@ -349,34 +358,69 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 body.vzmode main.wrap { max-width: none; padding: 0 } body.vzmode .foot { display: none } .vz [hidden] { display: none !important }
 .vz { position: relative; height: calc(100dvh - var(--hdrh, 57px)); overflow: hidden; border-top: 1px solid var(--line) }
 .vz canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab }
-.vzbox { background: var(--glass-pop); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border: 1px solid var(--line-2); padding: 10px 12px }
-.vzbar { position: absolute; z-index: 5; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 8px; width: min(440px, calc(100% - 24px)) }
-.vzsearch .eyebrow { display: block; margin-bottom: 7px; color: var(--accent) }
-.vzq { display: flex; gap: 6px } .vzq input { flex: 1; min-width: 0; height: 36px; background: var(--glass-2); border: 1px solid var(--line); color: var(--fg); padding: 0 .7rem; font: 400 13px var(--sans) }
-.vzq input:focus { outline: 1px solid var(--accent); outline-offset: -1px } .vzq .mini { height: 36px } .vzq .mini.on { border-color: var(--accent); color: var(--accent) }
+.vzbox { background: var(--glass-pop); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border: 1px solid var(--line-2); padding: 9px 11px }
+.vzbar { position: absolute; z-index: 5; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 7px; width: min(440px, calc(100% - 24px)) }
+.vzsearch .eyebrow { display: block; margin-bottom: 6px; color: var(--accent) }
+.vzq { display: flex; gap: 6px } .vzq input { flex: 1; min-width: 0; height: 30px; background: var(--glass-2); border: 1px solid var(--line); color: var(--fg); padding: 0 .6rem; font: 400 12px var(--sans) }
+.vzq input:focus { outline: 1px solid var(--accent); outline-offset: -1px } .vzq .mini { height: 30px } .vzq .mini.on { border-color: var(--accent); color: var(--accent) }
 .vzsug { margin-top: 6px; display: flex; flex-direction: column; border: 1px solid var(--line); max-height: 330px; overflow-y: auto }
-.vzsug button { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 10px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--fg); text-align: left; cursor: pointer; font: 400 13px var(--sans) }
+.vzsug button { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 9px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--fg); text-align: left; cursor: pointer; font: 400 12px var(--sans) }
 .vzsug button:last-child { border-bottom: 0 } .vzsug button:hover, .vzsug button.on { background: var(--accent-2) } .vzsug small { color: var(--muted); font: 400 11px var(--mono); white-space: nowrap }
-.vzfil { display: flex; flex-direction: column; gap: 8px } .vzrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap } .vzrow > .eyebrow { width: 70px; flex: none } .vzrow .chips { padding: 0; gap: .35rem }
-.vztools { position: absolute; z-index: 4; right: 384px; bottom: 12px; display: flex }
-.vztools button { width: 36px; height: 36px; background: var(--glass-pop); border: 1px solid var(--line-2); margin-left: -1px; cursor: pointer; font: 500 15px var(--mono); color: var(--fg-2) } .vztools button:hover { color: var(--accent) }
-.vzlegend { position: absolute; z-index: 3; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px 14px; max-width: calc(100% - 520px); font: 400 11.5px var(--sans); color: var(--fg-2); background: var(--glass-pop); border: 1px solid var(--line); padding: 7px 10px }
+.vzfil { display: flex; flex-direction: column; gap: 7px } .vzrow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap } .vzrow > .eyebrow { width: 70px; flex: none } .vzrow .chips { padding: 0; gap: .35rem }
+/* active filters: one accent. The dimension is a gold monospace key, the value plain — no per-filter hue. */
+.vzchips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center }
+.vzchip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line-2); background: var(--glass-2); padding: 3px 4px 3px 7px; font: 400 11.5px var(--sans); color: var(--fg) }
+.vzchip i { font: 500 9.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-style: normal }
+.vzchip b { font: 500 11.5px var(--mono); font-variant-numeric: tabular-nums }
+.vzchip button { background: none; border: 0; color: var(--muted); cursor: pointer; font: 400 13px/1 var(--sans); padding: 2px 4px; min-width: 20px; min-height: 20px } .vzchip button:hover { color: var(--down) }
+.vzchips .clr { background: none; border: 0; color: var(--muted); cursor: pointer; font: 500 9.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; padding: 4px 2px } .vzchips .clr:hover { color: var(--accent) }
+/* tools: exclusive click modes, then history, then view */
+.vztools { position: absolute; z-index: 4; right: 400px; bottom: 12px; display: flex; gap: 7px; align-items: flex-end }
+.vztools .grp { display: flex } .vztools .grp + .grp { position: relative }
+.vztools button { width: 30px; height: 30px; background: var(--glass-pop); border: 1px solid var(--line-2); margin-left: -1px; cursor: pointer; font: 500 13px var(--mono); color: var(--fg-2); display: grid; place-items: center }
+.vztools button:hover:not(:disabled) { color: var(--accent) } .vztools button:disabled { opacity: .35; cursor: default }
+.vztools button.on { color: var(--accent); border-color: var(--accent); background: var(--accent-2); z-index: 1 }
+.vztools svg { display: block; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round }
+.vzmode-hint { position: absolute; z-index: 4; bottom: 50px; right: 400px; font: 500 9.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); background: var(--glass-pop); border: 1px solid var(--line); padding: 4px 7px; pointer-events: none }
+@media (pointer: coarse) { .vztools button { width: 38px; height: 38px } .vzchip button { min-width: 26px; min-height: 26px } }
+.vzlegend { position: absolute; z-index: 3; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 5px 12px; max-width: calc(100% - 640px); font: 400 11px var(--sans); color: var(--fg-2); background: var(--glass-pop); border: 1px solid var(--line); padding: 6px 9px }
 .vzlegend span { display: inline-flex; align-items: center; gap: 6px } .vzlegend .ln { width: 16px; height: 2px; display: inline-block } .vzlegend svg { display: block }
-.vzside { position: absolute; z-index: 4; top: 12px; right: 12px; bottom: 12px; width: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 14px }
-.vzph { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px } .vzph h4 { margin: 4px 0 0; font: 600 17px/1.25 var(--sans); color: var(--fg); word-break: break-word }
-.vzph .x { background: none; border: 1px solid var(--line); min-width: 36px; min-height: 36px; cursor: pointer; font-size: 18px; color: var(--fg-2) }
-.vzaddr { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; color: var(--fg-2) } .vzaddr .mono { width: 100%; word-break: break-all; font-size: 11.5px; color: var(--muted) }
-.vzkv { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); margin: 0 } .vzkv div { padding: 8px 10px; box-shadow: 1px 1px 0 var(--line); min-width: 0 }
-.vzkv dt { font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) } .vzkv dd { margin: 3px 0 0; font: 500 13px var(--mono); color: var(--fg) } .vzkv small { color: var(--muted); font-size: 11px }
-.vzact { display: flex; flex-wrap: wrap; gap: 6px }
-.vzlist { display: flex; flex-direction: column; border-top: 1px solid var(--line) }
-.vzlist button { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 2px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--fg); font: 400 12.5px var(--sans); text-align: left; cursor: pointer; min-height: 34px }
-.vzlist button:hover { background: var(--row) } .vzlist button.off { color: var(--muted) } .vzlist button > b { font: 500 12px var(--mono); white-space: nowrap }
+.vzside { position: absolute; z-index: 4; top: 12px; right: 12px; bottom: 12px; width: 376px; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; padding: 11px }
+.vzph { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px } .vzph h4 { margin: 3px 0 0; font: 500 13px/1.3 var(--sans); color: var(--fg); word-break: break-word }
+.vzph .x { background: none; border: 1px solid var(--line); min-width: 28px; min-height: 28px; cursor: pointer; font-size: 15px; color: var(--fg-2) }
+.vzaddr { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: 12px; color: var(--fg-2) } .vzaddr .mono { width: 100%; word-break: break-all; font-size: 11px; color: var(--muted) }
+.vzkv { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); margin: 0 } .vzkv div { padding: 6px 9px; box-shadow: 1px 1px 0 var(--line); min-width: 0 }
+.vzkv dt { font: 500 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) } .vzkv dd { margin: 2px 0 0; font: 500 12px var(--mono); color: var(--fg) } .vzkv small { color: var(--muted); font-size: 10.5px }
+.vzact { display: flex; flex-wrap: wrap; gap: 5px }
+.vzlist { display: flex; flex-direction: column; border-top: 1px solid var(--line); flex: none }
+.vzside > .vzkv, .vzside > .vzact, .vzside > .eyebrow { flex: none }
+.vzlist button { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 5px 2px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--fg); font: 400 12px var(--sans); text-align: left; cursor: pointer; min-height: 28px }
+.vzlist button:hover { background: var(--row) } .vzlist button.off { color: var(--muted) } .vzlist button > b { font: 500 11.5px var(--mono); white-space: nowrap }
+@media (pointer: coarse) { .vzlist button { min-height: 34px } .vzph .x { min-width: 36px; min-height: 36px } }
+/* the ledger: the individual transfers behind an edge, with a filter and a sort on every column */
+/* flex: none matters — the panel is a flex column, and `overflow` here sets min-height:0, so the table would
+   otherwise shrink to nothing instead of scrolling inside itself. */
+.vzled { border: 1px solid var(--line); overflow: auto; flex: none; max-height: 340px; overscroll-behavior: contain }
+.vzled table { border-collapse: collapse; width: 100%; font: 400 10.5px var(--mono); font-variant-numeric: tabular-nums }
+.vzled th { position: sticky; top: 0; background: var(--th); text-align: left; padding: 0; border-bottom: 1px solid var(--line-2); white-space: nowrap }
+.vzled th .hd { display: flex; align-items: center; gap: 3px; padding: 5px 6px }
+.vzled th button { background: none; border: 0; cursor: pointer; padding: 1px 2px; font: 500 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); min-height: 20px }
+.vzled th button:hover { color: var(--accent) } .vzled th button.on { color: var(--accent) }
+.vzled th .f { font-size: 10px; letter-spacing: 0; opacity: .8 } .vzled th .f.on { opacity: 1 }
+.vzled td { padding: 4px 5px; border-bottom: 1px solid var(--line); white-space: nowrap; color: var(--fg-2) }
+.vzled td:nth-child(2) { max-width: 128px; overflow: hidden; text-overflow: ellipsis }
+.vzled tr:hover td { background: var(--row) } .vzled td.v { color: var(--fg); font-weight: 500; text-align: right } .vzled td.d { text-align: right }
+.vzled a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line-2) } .vzled a:hover { color: var(--accent) }
+.vzled .no { padding: 10px 8px; color: var(--muted); font: 400 11px var(--sans) }
+.vzledf { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: -2px }
+.vzledf input { width: 74px; height: 24px; background: var(--glass-2); border: 1px solid var(--line); color: var(--fg); padding: 0 5px; font: 400 11px var(--mono) }
+.vzledf input:focus { outline: 1px solid var(--accent); outline-offset: -1px }
 .vzload { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--muted); font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; pointer-events: none }
 @media (max-width: 760px) {
   .vzbar { width: calc(100% - 24px) } .vzrow > .eyebrow { width: 100% }
   .vzside { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 55%; display: none; border-left: 0; border-right: 0; border-bottom: 0 } .vzside.open { display: flex }
-  .vztools { right: 12px; bottom: 12px } .vzside.open ~ .vztools, .vz:has(.vzside.open) .vztools { display: none } .vzlegend { display: none }
+  .vztools { right: 12px; bottom: 12px; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 24px) } .vzside.open ~ .vztools, .vz:has(.vzside.open) .vztools { display: none }
+  .vzlegend, .vzmode-hint { display: none }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { :root[data-theme="dark"] { --glass: rgb(16 24 40 / .92) } :root[data-theme="light"] { --glass: rgb(255 255 255 / .9) } }
 </style>
@@ -508,6 +552,7 @@ function init() {
   document.addEventListener("focusout", () => { if (tipEl) { tipEl = null; hideTip(); } });
   $("scrim").onclick = closeWallet; addEventListener("keydown", (e) => { if (e.key === "Escape") closeWallet(); });
   parseHash(); render();
+  qWatch.observe($("view"), { childList: true, subtree: true });
 }
 function parseHash() {
   let h = location.hash.slice(1);
@@ -545,13 +590,74 @@ function render() {
   const v = $("view"); v.innerHTML = ""; v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
   document.body.classList.toggle("vzmode", page === "visualizer");
   if (page !== "visualizer" && VZ.sim) { VZ.sim.stop(); VZ.sim = null; }
+  if (page !== "visualizer" && VZ.keys) { removeEventListener("keydown", VZ.keys); VZ.keys = null; }
   ({ overview, holders, crowd, transfers, entities, visualizer, methodology })[page]();
   document.title = (page === "overview" ? "GME on Ethereum" : PAGES.find((p) => p[0] === page)[1] + " · GME on Ethereum") + " · Terminal";
-  markRange(); redraw();
+  markRange(); redraw(); qTables();
   if (page !== lastPage) scrollTo({ top: 0 });
   lastPage = page; hideTip();
 }
 function redraw() { draws.forEach((f) => { try { f(); } catch (e) { console.error(e); } }); }
+// ---- queryable tables ------------------------------------------------------------------------------------------
+// Arkham's transfer table carries a filter AND a sort on every column, so reading it is the same gesture as querying
+// it. This gives any <table class="q"> the same: click a header to sort, type under it to narrow. It works on the
+// rows already in the DOM, so every table builder above stays exactly as it is.
+const qNum = (s) => {
+  const x = String(s).replace(/[,$\s↑↓%]/g, "");
+  const m = /^(-?\d*\.?\d+)([kKMBT])?$/.exec(x);
+  return m ? parseFloat(m[1]) * ({ k: 1e3, K: 1e3, M: 1e6, B: 1e9, T: 1e12 }[m[2]] || 1) : null;
+};
+function qTable(t) {
+  if (t.dataset.q || !t.tHead || !t.tHead.rows.length || !t.tBodies.length) return;
+  const head = t.tHead.rows[0], body = t.tBodies[0], cols = [...head.cells], rows = [...body.rows];
+  // Only flat tables: an expandable or grouped table would lose its structure when the rows are reordered.
+  if (rows.length < 5 || cols.some((c) => c.colSpan > 1) || rows.some((r) => r.cells.length !== cols.length || [...r.cells].some((c) => c.colSpan > 1))) return;
+  t.dataset.q = "1";
+  const num = cols.map((c, i) => { const v = rows.slice(0, 24).map((r) => qNum(r.cells[i].textContent)); return v.filter((x) => x != null).length > v.length * 0.6; });
+  const key = (r, i) => (num[i] ? (qNum(r.cells[i].textContent) ?? -Infinity) : r.cells[i].textContent.trim().toLowerCase());
+  let sort = -1, dir = -1;
+  const filt = cols.map(() => "");
+  const apply = () => {
+    for (const r of rows) {
+      let on = true;
+      for (let i = 0; i < cols.length && on; i++) {
+        const f = filt[i]; if (!f) continue;
+        if (num[i]) { const v = qNum(r.cells[i].textContent), lim = qNum(f); if (lim != null && (v == null || v < lim)) on = false; }
+        else if (!r.cells[i].textContent.toLowerCase().includes(f.toLowerCase())) on = false;
+      }
+      r.style.display = on ? "" : "none";
+    }
+    if (sort >= 0) {
+      const s = [...rows].sort((a, b) => { const x = key(a, sort), y = key(b, sort); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+      s.forEach((r) => body.appendChild(r));
+    }
+    const n = rows.filter((r) => r.style.display !== "none").length;
+    cnt.textContent = n === rows.length ? `${rows.length} rows` : `${n} of ${rows.length} rows`;
+    cnt.hidden = false;
+  };
+  cols.forEach((c, i) => {
+    const label = c.textContent.trim();
+    c.innerHTML = `<button type="button" class="qsort" aria-label="Sort by ${esc(label)}">${esc(label)}<i></i></button>`;
+    c.querySelector("button").onclick = () => {
+      if (sort === i) dir = -dir; else { sort = i; dir = num[i] ? -1 : 1; }
+      cols.forEach((cc, j) => { const ic = cc.querySelector("i"); if (ic) ic.textContent = j === sort ? (dir < 0 ? " ↓" : " ↑") : ""; });
+      apply();
+    };
+  });
+  const fr = t.tHead.insertRow(-1); fr.className = "qf";
+  cols.forEach((c, i) => {
+    const td = fr.insertCell(-1); if (c.classList.contains("n")) td.className = "n";
+    td.innerHTML = `<input type="${num[i] ? "text" : "search"}" inputmode="${num[i] ? "decimal" : "text"}" placeholder="${num[i] ? "≥" : "filter"}" aria-label="Filter ${esc(c.textContent.trim())}">`;
+    td.querySelector("input").oninput = (e) => { filt[i] = e.target.value.trim(); apply(); };
+  });
+  const cnt = document.createElement("p"); cnt.className = "qcount eyebrow"; cnt.hidden = true;
+  t.parentNode.insertBefore(cnt, t.nextSibling);
+}
+const qTables = () => document.querySelectorAll("table.q").forEach((t) => { try { qTable(t); } catch (e) { console.error(e); } });
+// Several cards redraw themselves when their own chips are clicked, which replaces the table and drops the sort and
+// filter row. Watching the view re-applies them; the data-q guard makes a second pass a no-op, so this settles.
+let qT = 0;
+const qWatch = new MutationObserver(() => { clearTimeout(qT); qT = setTimeout(qTables, 60); });
 
 // ---------- layout blocks ----------
 let cid = 0;
@@ -901,7 +1007,7 @@ function supplySplit() {
 function topHolders() {
   const top = T.top || [], mx = d3.max(top, (t) => t.pct) || 1;
   card({ title: "Largest holders", q: "Which single wallets hold the most?", val: fPct(d3.sum(top.slice(0, 10), (t) => t.pct)) + `<small class="flat">top 10</small>`,
-    body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>#</th><th>Wallet</th><th class="n">Holds</th><th class="n">%</th><th>Share</th><th>Group</th><th>Last active</th></tr></thead><tbody>` +
+    body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table class="q"><thead><tr><th>#</th><th>Wallet</th><th class="n">Holds</th><th class="n">%</th><th>Share</th><th>Group</th><th>Last active</th></tr></thead><tbody>` +
     top.map((t, i) => `<tr><td class="num">${i + 1}</td><td><button class="addr" data-addr="${t.a}">${short(t.a)}</button>${t.a === FOCUS ? FTAG : ""}</td><td class="n">${fB(t.bal)}</td><td class="n">${fPct(t.pct, 2)}</td><td><div class="bar"><i style="width:${(100 * t.pct) / mx}%"></i></div></td><td>${t.group ? `<span class="ev inf nm" data-tip="Group membership is inferred by the linking rules.">${esc(t.group.replace(/Accumulator /, "acc "))}</span>` : ""}</td><td class="num">${t.last}</td></tr>`).join("") + `</tbody></table></div>`,
     note: "Single addresses ranked by balance, with pools, exchanges, routers and contracts left out. Tap a wallet for its full history." });
 }
@@ -918,7 +1024,7 @@ function largestEntities() {
   if (!E.length) { card({ title: "Largest entities", body: unavailable("Owner groups are not in this build.") }); return; }
   const top = E.slice(0, 20), mx = top[0].bal, t10 = d3.sum(E.slice(0, 10), (e) => e.bal);
   card({ title: "Largest entities", q: "How much sits with groups of linked wallets?", val: fPct((100 * t10 * 1e9) / SUPPLY) + `<small class="flat">top 10 groups</small>`,
-    body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>Entity</th><th>Kind</th><th class="n">Wallets</th><th class="n">Holds</th><th class="n">%</th><th>Share</th><th class="n">7D</th><th class="n">30D</th></tr></thead><tbody>` +
+    body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table class="q"><thead><tr><th>Entity</th><th>Kind</th><th class="n">Wallets</th><th class="n">Holds</th><th class="n">%</th><th>Share</th><th class="n">7D</th><th class="n">30D</th></tr></thead><tbody>` +
     top.map((e) => `<tr><td><button class="ownlink" data-owner="${e.k}">${nm(e.name)}</button></td><td><span class="ev inf">${KINDN[e.kind] || e.kind}</span></td><td class="n">${e.w}</td><td class="n">${fBb(e.bal)}</td><td class="n">${fPct((100 * e.bal * 1e9) / SUPPLY, 2)}</td><td><div class="bar"><i style="width:${(100 * e.bal) / mx}%"></i></div></td><td class="n ${Math.abs(e.d7) < 1e-3 ? "flat" : cls(e.d7)}">${Math.abs(e.d7) < 1e-3 ? "—" : sgn(e.d7, fBb)}</td><td class="n ${Math.abs(e.d30) < 1e-3 ? "flat" : cls(e.d30)}">${Math.abs(e.d30) < 1e-3 ? "—" : sgn(e.d30, fBb)}</td></tr>`).join("") + `</tbody></table></div>`,
     note: "Each entity is a group of wallets the linking rules tie together (inferred, not proven). Changes count only GME entering or leaving the group; moves between its own wallets cancel out. Tap an entity to open it on the flow map." });
 }
@@ -1067,7 +1173,7 @@ function smartCards() {
     note: "Hindsight: owners are picked by their record today, so their past trades look better than a live pick would have. Realized profit uses the owner's average cost. Entities count as one owner." });
   ts(id, { fmt: fU, series: [{ label: "Bought", color: "--up", v: col("smBuyUsd").map((v, i) => (i >= N - 90 ? v : null)), type: "bar" }, { label: "Sold", color: "--down", v: col("smSellUsd").map((v, i) => (i >= N - 90 ? v : null)), type: "neg" }] });
   const rows = Sm.rows.slice(0, 40);
-  card({ title: "Smart money owners", wide: true, body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>Owner</th><th class="n">Realized</th><th class="n">On cost</th><th class="n">Bought</th><th class="n">Sold</th><th class="n">Holds</th><th class="n">Avg cost, MC</th><th class="n">Net 7D</th><th class="n">Net 30D</th><th class="n">Net 90D</th><th>Last buy</th><th>Last sale</th></tr></thead><tbody>` +
+  card({ title: "Smart money owners", wide: true, body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table class="q"><thead><tr><th>Owner</th><th class="n">Realized</th><th class="n">On cost</th><th class="n">Bought</th><th class="n">Sold</th><th class="n">Holds</th><th class="n">Avg cost, MC</th><th class="n">Net 7D</th><th class="n">Net 30D</th><th class="n">Net 90D</th><th>Last buy</th><th>Last sale</th></tr></thead><tbody>` +
     rows.map((r) => { const own = r.eid ? `<button class="mini" data-emap="${esc(r.eid)}">${nm(r.name || r.eid)}</button>` : `<button class="addr" data-addr="${r.u}">${short(r.u)}</button>`;
       const nc = (v) => `<td class="n ${v > 0 ? "up" : v < 0 ? "down" : "flat"}">${v ? sgn(v, fU) : "—"}</td>`;
       return `<tr><td>${own}</td><td class="n up">${fU(r.realized)}</td><td class="n">+${fPct(100 * r.roi, 0)}</td><td class="n">${fU(r.boughtUsd)}</td><td class="n">${fU(r.soldUsd)}</td><td class="n">${r.bal > 1e6 ? fB(r.bal) : "—"}</td><td class="n">${r.avg ? fP(r.avg) : "—"}</td>${nc(r.net7)}${nc(r.net30)}${nc(r.net90)}<td class="num">${r.lastBuy || "—"}</td><td class="num">${r.lastSell || "—"}</td></tr>`; }).join("") + `</tbody></table></div>` });
@@ -1239,7 +1345,7 @@ function movesCard() {
     const end = (a, l, g) => (l ? `<span class="flat">${esc(l)}</span>` : `<button class="addr" data-addr="${a}">${short(a)}</button>`) + (g ? ` <span class="ev inf nm">${esc(g.replace(/Accumulator /, "acc "))}</span>` : "");
     const rows = Mv.filter(f);
     el.innerHTML = `<div class="ctl" style="margin-bottom:10px">${[["all", "All"], ["dex", "DEX"], ["cex", "Exchanges"], ["w", "Wallet to wallet"]].map(([k, l]) => `<button type="button" class="chip${movesF === k ? " on" : ""}" data-mf2="${k}">${l}<b>${Mv.filter((m) => { const s = movesF; movesF = k; const r = f(m); movesF = s; return r; }).length}</b></button>`).join("")}</div>
-      <div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>When (UTC)</th><th>From</th><th>To</th><th class="n">GME</th><th class="n">≈ $</th><th>What it was</th></tr></thead><tbody>` +
+      <div class="tw" style="max-height:520px;overflow-y:auto"><table class="q"><thead><tr><th>When (UTC)</th><th>From</th><th>To</th><th class="n">GME</th><th class="n">≈ $</th><th>What it was</th></tr></thead><tbody>` +
       rows.map((m) => { const [k, c, ev] = moveKind(m); return `<tr><td class="num">${m.t.slice(0, 16).replace("T", " ")}</td><td>${end(m.f, m.fl, m.fg)}</td><td>${end(m.to, m.tl, m.tg)}</td><td class="n">${fBb(m.tok)}</td><td class="n">${fU(m.usd)}</td><td class="${c}">${k}${ev === "inferred" ? ' <span class="ev inf">inferred</span>' : ""}</td></tr>`; }).join("") + `</tbody></table></div>`;
     el.onclick = (e) => { const b = e.target.closest("[data-mf2]"); if (b) { movesF = b.dataset.mf2; draw(); } };
   };
@@ -1919,7 +2025,14 @@ function methodology() {
 // exchanges) are collapsed into named nodes by graph.py. With "Merge groups" on, the wallets of one group are one node.
 let VG = null;
 const VZ = { inc: new Set(), pos: new Map(), hidden: new Set(), pinned: new Set(), base: null, baseRef: null, sel: null, hov: null, hovE: null,
-  merge: true, flow: "all", minUsd: 0, preset: "all", show: { dex: true, cex: true, dep: true }, t: null, sim: null, D: null, filters: false, built: false };
+  merge: true, flow: "all", minUsd: 0, preset: "all", show: { dex: true, cex: true, dep: true }, t: null, sim: null, D: null, filters: false, built: false,
+  tool: "inspect", hist: [], hAt: -1, led: { sort: "usd", dir: -1, flow: "all", min: 0, open: true } };
+// One exclusive click mode at a time, the way a drawing tool works: with hundreds of small nodes a mode is faster for
+// repeated work than a per-node menu, and it keeps the canvas clean. "Inspect" is the resting state.
+const VZTOOLS = [["inspect", "Inspect", "click a node to open its panel", `<circle cx="6.5" cy="6.5" r="4"/><path d="M9.5 9.5 13 13"/>`],
+  ["expand", "Expand", "click a node to add its largest counterparties", `<path d="M7 2.5v9M2.5 7h9"/>`],
+  ["pin", "Pin", "click a node to pin or unpin it", `<path d="M7 9v4"/><path d="M4 5.5h6l-1 3.5H5z"/><path d="M5.5 2.5h3"/>`],
+  ["exclude", "Exclude", "click a node to take it off the graph", `<path d="M3.5 3.5 10.5 10.5M10.5 3.5 3.5 10.5"/>`]];
 const VZK = ["wallet", "contract", "deposit", "cex", "dex", "lp", "burn", "mint", "token"];
 async function loadVG() {
   if (VG) return VG;
@@ -1931,6 +2044,68 @@ async function loadVG() {
   const entById = new Map(g.entities.map((e, x) => [e[0], x]));
   VG = { ...g, adj, entMembers, entById, byKey: new Map(g.nodes.map((n, i) => [n[0], i])) };
   return VG;
+}
+// ---- graph history ------------------------------------------------------------------------------------------------
+// Every edit that changes what is on the graph is transactional: snapshot first, so it can be undone. Hover, selection
+// and the camera are deliberately NOT part of a snapshot — undoing should move the graph back, not the viewport.
+const VZSNAP = () => JSON.stringify({ inc: [...VZ.inc], hidden: [...VZ.hidden], pinned: [...VZ.pinned], base: VZ.base, baseRef: VZ.baseRef,
+  merge: VZ.merge, flow: VZ.flow, minUsd: VZ.minUsd, preset: VZ.preset, show: { ...VZ.show }, pos: [...VZ.pos].map(([k, p]) => [k, p.x, p.y]) });
+function vzMark() {                                               // call BEFORE mutating
+  const s = VZSNAP();
+  if (VZ.hist[VZ.hAt] === s) return;
+  VZ.hist.length = VZ.hAt + 1; VZ.hist.push(s);
+  if (VZ.hist.length > 50) VZ.hist.shift();
+  VZ.hAt = VZ.hist.length - 1;
+}
+function vzRestore(s) {
+  const o = JSON.parse(s);
+  VZ.inc = new Set(o.inc); VZ.hidden = new Set(o.hidden); VZ.pinned = new Set(o.pinned);
+  VZ.base = o.base; VZ.baseRef = o.baseRef; VZ.merge = o.merge; VZ.flow = o.flow; VZ.minUsd = o.minUsd; VZ.preset = o.preset; VZ.show = o.show;
+  VZ.pos = new Map(o.pos.map(([k, x, y]) => [k, { x, y }])); VZ.sel = null;
+}
+function vzStep(n) {                                              // −1 undo, +1 redo
+  if (VZ.hAt < 0) { VZ.hist = [VZSNAP()]; VZ.hAt = 0; }
+  else if (n > 0 && VZ.hAt === VZ.hist.length - 1) return;
+  if (n < 0 && VZ.hAt === VZ.hist.length - 1 && VZ.hist[VZ.hAt] !== VZSNAP()) { VZ.hist.push(VZSNAP()); VZ.hAt++; }
+  const to = VZ.hAt + n;
+  if (to < 0 || to >= VZ.hist.length) return;
+  VZ.hAt = to; vzRestore(VZ.hist[to]);
+  if (VZ.restart) VZ.restart(0.4);
+  vzTools();
+}
+// ---- the ledger ----------------------------------------------------------------------------------------------------
+let VT = null, VTby = null, VTerr = false;
+async function loadVT() {
+  if (VT) return VT;
+  const r = await fetch("/graph_tx.json", { cache: "no-store" });
+  if (!r.ok) throw new Error("graph_tx.json " + r.status);
+  const j = await r.json();
+  VTby = new Map();                                               // raw node index -> row indices touching it
+  j.rows.forEach((r, k) => { for (const n of [r[1], r[2]]) { let a = VTby.get(n); if (!a) VTby.set(n, (a = [])); a.push(k); } });
+  VT = { ...j, t0: Date.parse(j.t0) };
+  return VT;
+}
+const vtDate = (mins) => new Date(VT.t0 + mins * 60000);
+function vzLedRows(id) {                                          // the transfers of a display node, newest-value first
+  if (!VT) return null;
+  const raws = new Set(vzRaws(id)), R = vzRange(), seen = new Set(), out = [];
+  const lo = VG.months[R[0]] + "-01", hi = VG.months[R[1]] + "-32";
+  for (const i of raws) for (const k of VTby.get(i) || []) {
+    if (seen.has(k)) continue; seen.add(k);
+    const r = VT.rows[k], out_ = raws.has(r[1]), other = out_ ? r[2] : r[1];
+    if (raws.has(other)) continue;                                // internal to the group when merged
+    const iso = vtDate(r[0]).toISOString().slice(0, 10);
+    if (iso < lo || iso > hi) continue;
+    if (!vzShown(other)) continue;
+    if (VZ.led.flow === "in" && out_) continue;
+    if (VZ.led.flow === "out" && !out_) continue;
+    if (r[4] < VZ.led.min) continue;
+    out.push({ k, t: r[0], iso, out: out_, other, g: r[3], u: r[4], blk: r[5], li: r[6] });
+  }
+  const s = VZ.led.sort, d = VZ.led.dir;
+  out.sort((a, b) => d * (s === "time" ? a.t - b.t : s === "blk" ? a.blk - b.blk || a.li - b.li : s === "gme" ? a.g - b.g
+    : s === "cp" ? (vzLook(vzDid(a.other)).label > vzLook(vzDid(b.other)).label ? 1 : -1) : a.u - b.u));
+  return out;
 }
 const vzKind = (i) => VZK[VG.nodes[i][1]];
 const vzShown = (i) => { const k = vzKind(i); return !((k === "dex" || k === "lp") && !VZ.show.dex) && !(k === "cex" && !VZ.show.cex) && !(k === "deposit" && !VZ.show.dep); };
@@ -2043,10 +2218,15 @@ function visualizer() {
   document.body.classList.add("vzmode");
   add(`<section class="vz" id="vz"><canvas id="vzc" aria-label="Transfer graph"></canvas>
     <div class="vzbar">
-      <div class="vzbox vzsearch"><span class="eyebrow">Visualizer</span><div class="vzq"><input id="vzq" type="search" autocomplete="off" spellcheck="false" placeholder="Search a wallet, group or handle (fbb4, 9717, 0x…)" aria-label="Search"><button type="button" class="mini" id="vzft" aria-expanded="false">Filters</button></div><div class="vzsug" id="vzsug" hidden></div></div>
+      <div class="vzbox vzsearch"><span class="eyebrow">Visualizer</span><div class="vzq"><input id="vzq" type="search" autocomplete="off" spellcheck="false" placeholder="Search a wallet, group or handle (fbb4, 9717, 0x…)" aria-label="Search"><button type="button" class="mini" id="vzft" aria-expanded="false">Filters</button></div><div class="vzsug" id="vzsug" hidden></div><div class="vzchips" id="vzchips" hidden></div></div>
       <div class="vzbox vzfil" id="vzfil" hidden></div>
     </div>
-    <div class="vztools"><button type="button" data-vz="in" aria-label="Zoom in">+</button><button type="button" data-vz="out" aria-label="Zoom out">−</button><button type="button" data-vz="fit" aria-label="Fit to screen">⤢</button><button type="button" data-vz="reset" aria-label="Back to the starting graph">↺</button></div>
+    <div class="vztools">
+      <div class="grp" id="vztool">${VZTOOLS.map(([k, n, h, svg]) => `<button type="button" data-vzt="${k}" aria-pressed="${k === "inspect"}" class="${k === "inspect" ? "on" : ""}" title="${n} — ${h}" aria-label="${n}: ${h}"><svg viewBox="0 0 14 14" aria-hidden="true">${svg}</svg></button>`).join("")}</div>
+      <div class="grp"><button type="button" data-vz="undo" aria-label="Undo" title="Undo (⌘Z)" disabled>↶</button><button type="button" data-vz="redo" aria-label="Redo" title="Redo (⇧⌘Z)" disabled>↷</button></div>
+      <div class="grp"><button type="button" data-vz="in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-vz="out" aria-label="Zoom out" title="Zoom out">−</button><button type="button" data-vz="fit" aria-label="Fit to screen" title="Fit to screen">⤢</button><button type="button" data-vz="reset" aria-label="Back to the starting graph" title="Back to the starting graph">↺</button></div>
+    </div>
+    <p class="vzmode-hint" id="vzhint" hidden></p>
     <div class="vzlegend" id="vzleg"></div>
     <aside class="vzside vzbox" id="vzside"></aside>
     <p class="vzload" id="vzload">Loading every transfer since launch…</p></section>`);
@@ -2147,7 +2327,7 @@ function vzStart() {
       .force("x", d3.forceX(0).strength(0.015)).force("y", d3.forceY(0).strength(0.015))
       .alpha(alpha).alphaDecay(0.035)
       .on("tick", () => { for (const d of D.nodes) VZ.pos.set(d.id, { x: d.x, y: d.y }); draw(); });
-    vzPanel(); vzLegend(); vzFilters();
+    vzPanel(); vzLegend(); vzFilters(); vzTools();
   }
   VZ.restart = restart;
   // pan / zoom (not when the press starts on a node: that drags the node)
@@ -2160,55 +2340,98 @@ function vzStart() {
   cv.addEventListener("pointerdown", (ev) => { const [px, py] = ptOf(ev), d = nodeAt(px, py); if (!d) return; drag = { d, x0: px, y0: py, moved: false }; cv.setPointerCapture(ev.pointerId); });
   cv.addEventListener("pointermove", (ev) => {
     const [px, py] = ptOf(ev);
-    if (drag) { if (Math.hypot(px - drag.x0, py - drag.y0) > 3) drag.moved = true;
+    if (drag) { if (Math.hypot(px - drag.x0, py - drag.y0) > 3) { if (!drag.moved) vzMark(); drag.moved = true; }
       if (drag.moved && drag.d.id !== VZ.base) { const [x, y] = toW(px, py); drag.d.fx = x; drag.d.fy = y; VZ.pinned.add(drag.d.id); VZ.sim.alphaTarget(0.25).restart(); }
       hideTip(); return; }
     const d = nodeAt(px, py), e = d ? null : edgeAt(px, py);
     if (d !== VZ.hov || e !== VZ.hovE) { VZ.hov = d; VZ.hovE = e; cv.style.cursor = d ? "pointer" : e ? "help" : "grab"; draw(); }
     if (d) showTip(`<div class="h">${esc(d.label)}</div>` + trow(vzColor(d), VZKL[d.kind] || d.kind, d.kind === "wallet" || d.kind === "entity" || d.kind === "contract" ? fBb(d.bal) + " GME" : "")
-      + trow(C("--up"), "in, on screen", fU(d.in)) + trow(C("--down"), "out, on screen", fU(d.out)) + `<p style="margin-top:.3rem">Click to inspect · double-click to expand · drag to move</p>`, ev);
+      + trow(C("--up"), "in, on screen", fU(d.in)) + trow(C("--down"), "out, on screen", fU(d.out))
+      + `<p style="margin-top:.3rem">${VZ.tool === "inspect" ? "Click to inspect · double-click to expand · drag to move"
+        : "Click to " + (VZ.tool === "pin" ? (VZ.pinned.has(d.id) ? "unpin" : "pin") : VZ.tool) + " · Esc for Inspect"}</p>`, ev);
     else if (e) showTip(`<div class="h">${esc(e.source.label)} → ${esc(e.target.label)}</div>` + trow(ecol(e), "GME", fBb(e.g)) + trow("", "≈ $", fU(e.u)) + trow("", "transfers", fN(e.n))
       + trow("", "months", VG.months[e.a] === VG.months[e.b] ? VG.months[e.a] : `${VG.months[e.a]} → ${VG.months[e.b]}`), ev);
     else hideTip();
   });
   let lastTap = { id: null, t: 0 };
   const up = (ev) => { if (!drag) return; const d = drag.d, moved = drag.moved; drag = null; VZ.sim.alphaTarget(0);
-    if (moved) return;
-    const pick = () => { VZ.sel = d.id; if (mobile() && VZ.filters) { VZ.filters = false; vzFilters(); } vzPanel(); draw(); };
+    if (moved) { vzTools(); return; }
+    const pick = () => {
+      if (VZ.tool === "expand") { vzMark(); vzExpand(d.id, 12); VZ.sel = d.id; restart(0.5); vzTools(); return; }
+      if (VZ.tool === "pin") { vzMark(); if (VZ.pinned.has(d.id)) { VZ.pinned.delete(d.id); d.fx = null; d.fy = null; VZ.sim.alpha(0.3).restart(); } else { VZ.pinned.add(d.id); d.fx = d.x; d.fy = d.y; } vzPanel(); draw(); vzTools(); return; }
+      if (VZ.tool === "exclude") { if (d.id === VZ.base) return; vzMark(); VZ.hidden.add(d.id); if (VZ.sel === d.id) VZ.sel = null; restart(0.3); vzTools(); return; }
+      VZ.sel = d.id; if (mobile() && VZ.filters) { VZ.filters = false; vzFilters(); } vzPanel(); draw();
+    };
     if (ev.pointerType === "mouse") { pick(); return; }
     // touch: a second tap within 380 ms expands; the panel opens only once that window has passed, so it can't cover the node
     const now = performance.now();
-    if (lastTap.id === d.id && now - lastTap.t < 380) { lastTap = { id: null, t: 0 }; VZ.tapX = now; vzExpand(d.id, 12); VZ.sel = d.id; restart(0.5); return; }
+    if (lastTap.id === d.id && now - lastTap.t < 380) { lastTap = { id: null, t: 0 }; VZ.tapX = now; vzMark(); vzExpand(d.id, 12); VZ.sel = d.id; restart(0.5); vzTools(); return; }
     lastTap = { id: d.id, t: now }; setTimeout(() => { if (lastTap.id === d.id && lastTap.t === now) pick(); }, 390); };
   cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
   cv.addEventListener("pointerleave", () => { if (!drag) { VZ.hov = null; VZ.hovE = null; hideTip(); draw(); } });
   cv.addEventListener("click", (ev) => { const [px, py] = ptOf(ev); if (!nodeAt(px, py) && !edgeAt(px, py) && VZ.sel) { VZ.sel = null; vzPanel(); draw(); } });
-  cv.addEventListener("dblclick", (ev) => { if (performance.now() - (VZ.tapX || 0) < 700) return; const d = nodeAt(...ptOf(ev)); if (!d) return; ev.preventDefault(); vzExpand(d.id, 12); VZ.sel = d.id; restart(0.5); });
+  cv.addEventListener("dblclick", (ev) => { if (performance.now() - (VZ.tapX || 0) < 700) return; const d = nodeAt(...ptOf(ev)); if (!d) return; ev.preventDefault(); vzMark(); vzExpand(d.id, 12); VZ.sel = d.id; restart(0.5); vzTools(); });
   const ro = new ResizeObserver(() => { if (!$("vz")) { ro.disconnect(); return; } size(); draw(); }); ro.observe(el);
   // toolbar, search, panel actions
-  el.querySelector(".vztools").onclick = (ev) => { const b = ev.target.closest("[data-vz]"); if (!b) return; const a = b.dataset.vz;
+  el.querySelector(".vztools").onclick = (ev) => {
+    const t = ev.target.closest("[data-vzt]");
+    if (t) { VZ.tool = t.dataset.vzt; vzTools(); return; }
+    const b = ev.target.closest("[data-vz]"); if (!b) return; const a = b.dataset.vz;
     if (a === "in" || a === "out") sel.transition().duration(200).call(zoom.scaleBy, a === "in" ? 1.35 : 1 / 1.35);
-    if (a === "fit") vzFit(); if (a === "reset") { vzSetBase(VZ.baseRef, false); restart(0.8); setTimeout(vzFit, 650); } };
+    if (a === "fit") vzFit();
+    if (a === "undo") vzStep(-1);
+    if (a === "redo") vzStep(1);
+    if (a === "reset") { vzMark(); vzSetBase(VZ.baseRef, false); restart(0.8); setTimeout(vzFit, 650); } };
+  VZ.keys = (ev) => {
+    if (!$("vz")) return;
+    const typing = /^(INPUT|TEXTAREA)$/.test(ev.target.tagName);
+    if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); vzStep(ev.shiftKey ? 1 : -1); return; }
+    if (typing || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    const n = { v: "inspect", e: "expand", p: "pin", x: "exclude" }[ev.key.toLowerCase()];
+    if (n) { VZ.tool = n; vzTools(); }
+    if (ev.key === "Escape" && VZ.tool !== "inspect") { VZ.tool = "inspect"; vzTools(); }
+  };
+  addEventListener("keydown", VZ.keys);
+  vzTools();
   const q = $("vzq"), sug = $("vzsug");
   q.oninput = () => { const r = vzSearch(q.value); sug.hidden = !r.length; sug.innerHTML = r.map((x, i) => `<button type="button" data-vzs="${esc(x.ref)}" class="${i ? "" : "on"}"><span>${x.html}</span><small>${esc(x.sub)}</small></button>`).join(""); };
   q.onkeydown = (ev) => { if (ev.key === "Enter") { const b = sug.querySelector("[data-vzs]"); if (b) b.click(); } if (ev.key === "Escape") { sug.hidden = true; q.blur(); } };
   sug.onclick = (ev) => { const b = ev.target.closest("[data-vzs]"); if (!b) return; sug.hidden = true; q.value = "";
-    if (vzSetBase(b.dataset.vzs)) { restart(0.9); setTimeout(vzFit, 650); } };
+    vzMark(); if (vzSetBase(b.dataset.vzs)) { restart(0.9); setTimeout(vzFit, 650); } vzTools(); };
   $("vzft").onclick = () => { VZ.filters = !VZ.filters; if (VZ.filters && mobile() && VZ.sel) { VZ.sel = null; vzPanel(); draw(); } vzFilters(); };
-  $("vzfil").onclick = (ev) => { const b = ev.target.closest("[data-vzf]"); if (!b) return; const [f, v] = b.dataset.vzf.split(":");
+  $("vzchips").onclick = (ev) => { const b = ev.target.closest("[data-vzc]"); if (!b) return; vzMark();
+    const was = VZ.merge;
+    if (b.dataset.vzc === "all") VZCHIP.forEach(([, , clr]) => clr()); else VZCHIP[+b.dataset.vzc][2]();
+    if (!was && VZ.merge) {                                       // back to merged: pull each group's other wallets in
+      [...VZ.inc].forEach((i) => { if (VG.nodes[i][3] >= 0) VG.entMembers[VG.nodes[i][3]].forEach((j) => VZ.inc.add(j)); });
+      const b0 = vzRefFor(VZ.baseRef); VZ.base = b0 ? vzDid(b0.ent != null ? VG.entMembers[b0.ent][0] : b0.raw) : VZ.base;
+      VZ.pos.set(VZ.base, { x: 0, y: 0 }); VZ.sel = null;
+    }
+    restart(0.5); vzTools(); };
+  $("vzfil").onclick = (ev) => { const b = ev.target.closest("[data-vzf]"); if (!b) return; const [f, v] = b.dataset.vzf.split(":"); vzMark();
     if (f === "range") VZ.preset = v; if (f === "min") VZ.minUsd = +v; if (f === "flow") VZ.flow = v;
     if (f === "show") VZ.show[v] = !VZ.show[v];
     if (f === "merge") { VZ.merge = !VZ.merge; const raws = [...VZ.inc]; if (VZ.merge) raws.forEach((i) => { if (VG.nodes[i][3] >= 0) VG.entMembers[VG.nodes[i][3]].forEach((j) => VZ.inc.add(j)); });
       const b0 = vzRefFor(VZ.baseRef); VZ.base = b0 ? vzDid(b0.ent != null ? VG.entMembers[b0.ent][0] : b0.raw) : VZ.base; VZ.pos.set(VZ.base, { x: 0, y: 0 }); VZ.sel = null; }
-    restart(0.5); };
-  $("vzside").onclick = (ev) => { const b = ev.target.closest("[data-vza]"); if (!b) return; const [a, id] = [b.dataset.vza, b.dataset.id];
-    if (a === "expand") { vzExpand(id, 12); restart(0.5); }
-    if (a === "center") { const r = id[0] === "E" ? VG.entities[+id.slice(1)][0] : VG.nodes[+id.slice(1)][0]; if (vzSetBase(r)) { restart(0.9); setTimeout(vzFit, 650); } }
-    if (a === "pin") { if (VZ.pinned.has(id)) { VZ.pinned.delete(id); const d = VZ.D.byId.get(id); if (d) { d.fx = null; d.fy = null; } VZ.sim.alpha(0.3).restart(); } else { const d = VZ.D.byId.get(id); VZ.pinned.add(id); if (d) { d.fx = d.x; d.fy = d.y; } } vzPanel(); draw(); }
-    if (a === "hide") { VZ.hidden.add(id); VZ.sel = null; restart(0.3); }
-    if (a === "add") { const raws = vzRaws(id); vzAdd(raws, VZ.sel); VZ.sel = id; restart(0.5); }
+    restart(0.5); vzTools(); };
+  $("vzside").onclick = (ev) => {
+    const L = ev.target.closest("[data-vzl]");                    // ledger: sort a column, flip it, or toggle the section
+    if (L) { const [f, v] = L.dataset.vzl.split(":");
+      if (f === "sort") { if (VZ.led.sort === v) VZ.led.dir = -VZ.led.dir; else { VZ.led.sort = v; VZ.led.dir = v === "cp" ? 1 : -1; } }
+      if (f === "flow") VZ.led.flow = VZ.led.flow === v ? "all" : v;
+      if (f === "open") { VZ.led.open = !VZ.led.open; if (VZ.led.open && !VT) { loadVT().then(vzPanel); return; } }
+      vzPanel(); return; }
+    const b = ev.target.closest("[data-vza]"); if (!b) return; const [a, id] = [b.dataset.vza, b.dataset.id];
+    if (a === "expand") { vzMark(); vzExpand(id, 12); restart(0.5); }
+    if (a === "center") { vzMark(); const r = id[0] === "E" ? VG.entities[+id.slice(1)][0] : VG.nodes[+id.slice(1)][0]; if (vzSetBase(r)) { restart(0.9); setTimeout(vzFit, 650); } }
+    if (a === "pin") { vzMark(); if (VZ.pinned.has(id)) { VZ.pinned.delete(id); const d = VZ.D.byId.get(id); if (d) { d.fx = null; d.fy = null; } VZ.sim.alpha(0.3).restart(); } else { const d = VZ.D.byId.get(id); VZ.pinned.add(id); if (d) { d.fx = d.x; d.fy = d.y; } } vzPanel(); draw(); }
+    if (a === "hide") { vzMark(); VZ.hidden.add(id); VZ.sel = null; restart(0.3); }
+    if (a === "add") { vzMark(); const raws = vzRaws(id); vzAdd(raws, VZ.sel); VZ.sel = id; restart(0.5); }
     if (a === "sel") { VZ.sel = id; vzPanel(); draw(); }
-    if (a === "close") { VZ.sel = null; vzPanel(); draw(); } };
+    if (a === "close") { VZ.sel = null; vzPanel(); draw(); }
+    vzTools(); };
+  $("vzside").addEventListener("change", (ev) => { const i = ev.target.closest("[data-vzlm]"); if (!i) return;
+    VZ.led.min = Math.max(0, +i.value || 0); vzPanel(); });
   restart(0.9);
   setTimeout(vzFit, 700);
 }
@@ -2216,7 +2439,7 @@ const VZKL = { wallet: "Wallet", contract: "Contract", deposit: "Exchange deposi
 function vzFit() {
   if (!VZ.D || !VZ.zsel) return; const el = $("vz"); if (!el) return;
   const ns = VZ.D.nodes.filter((d) => d.x != null); if (!ns.length) return;
-  const W = el.clientWidth, H = el.clientHeight, side = mobile() ? 0 : 360, top = mobile() ? 120 : 0, bot = mobile() ? H * 0.12 : 0;
+  const W = el.clientWidth, H = el.clientHeight, side = mobile() ? 0 : 376, top = mobile() ? 120 : 0, bot = mobile() ? H * 0.12 : 0;
   const x0 = d3.min(ns, (d) => d.x - d.r), x1 = d3.max(ns, (d) => d.x + d.r), y0 = d3.min(ns, (d) => d.y - d.r), y1 = d3.max(ns, (d) => d.y + d.r + 30);
   const k = Math.max(0.15, Math.min(1.6, Math.min((W - side - 60) / (x1 - x0 || 1), (H - top - bot - 60) / (y1 - y0 || 1))));
   const t = d3.zoomIdentity.translate((W - side) / 2 - k * (x0 + x1) / 2, top + (H - top - bot) / 2 - k * (y0 + y1) / 2).scale(k);
@@ -2232,6 +2455,35 @@ function vzSearch(q) {
   VG.nodes.forEach(([a, k, label, ent, bal]) => { if (label && !a.startsWith("0x") && label.toLowerCase().includes(q)) out.push({ ref: a, html: esc(label), sub: VZKL[VZK[k]], s: 1e9 }); });
   return out.sort((a, b) => b.s - a.s).slice(0, 9);
 }
+// Active filters, one chip each: the dimension is a gold monospace KEY, the value is plain. Same job Arkham does with a
+// colour per filter type, but it keeps the site's one-accent rule — the key carries the meaning, not a hue.
+const VZCHIP = [
+  ["time", () => (VZ.preset === "all" ? null : VZ.preset === "3m" ? "Last 3M" : VZ.preset), () => (VZ.preset = "all")],
+  ["min", () => (VZ.minUsd ? "≥ " + fU(VZ.minUsd) : null), () => (VZ.minUsd = 0)],
+  ["expand", () => (VZ.flow === "all" ? null : VZ.flow === "in" ? "Received" : "Sent"), () => (VZ.flow = "all")],
+  ["dex", () => (VZ.show.dex ? null : "Hidden"), () => (VZ.show.dex = true)],
+  ["cex", () => (VZ.show.cex ? null : "Hidden"), () => (VZ.show.cex = true)],
+  ["deposits", () => (VZ.show.dep ? null : "Hidden"), () => (VZ.show.dep = true)],
+  ["groups", () => (VZ.merge ? null : "Split"), () => (VZ.merge = true)],
+];
+function vzChips() {
+  const c = $("vzchips"); if (!c) return;
+  const on = VZCHIP.map(([k, get], i) => [k, get(), i]).filter((x) => x[1] != null);
+  c.hidden = !on.length;
+  if (!on.length) { c.innerHTML = ""; return; }
+  c.innerHTML = on.map(([k, v, i]) => `<span class="vzchip"><i>${esc(k)}</i><b>${esc(v)}</b><button type="button" data-vzc="${i}" aria-label="Remove the ${esc(k)} filter">×</button></span>`).join("")
+    + `<button type="button" class="clr" data-vzc="all">Clear all</button>`;
+}
+function vzTools() {
+  const g = $("vztool"); if (!g) return;
+  for (const b of g.querySelectorAll("[data-vzt]")) { const on = b.dataset.vzt === VZ.tool; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); }
+  const u = document.querySelector('[data-vz="undo"]'), r = document.querySelector('[data-vz="redo"]');
+  if (u) u.disabled = VZ.hAt < 0 || (VZ.hAt === 0 && VZ.hist[0] === VZSNAP());
+  if (r) r.disabled = VZ.hAt < 0 || VZ.hAt >= VZ.hist.length - 1;
+  const h = $("vzhint"), t = VZTOOLS.find((x) => x[0] === VZ.tool);
+  if (h) { h.hidden = VZ.tool === "inspect"; h.textContent = t ? t[1] + " · " + t[2] : ""; }
+  const cv = $("vzc"); if (cv) cv.dataset.tool = VZ.tool;
+}
 function vzFilters() {
   const f = $("vzfil"), b = $("vzft"); if (!f || !VG) return;
   f.hidden = !VZ.filters;
@@ -2240,6 +2492,7 @@ function vzFilters() {
   const years = [...new Set(VG.months.map((m) => m.slice(0, 4)))];
   const seg = (name, list, cur) => `<div class="seg">${list.map(([l, v]) => `<button type="button" data-vzf="${name}:${v}" class="${String(v) === String(cur) ? "on" : ""}">${l}</button>`).join("")}</div>`;
   const tog = (v, l) => `<button type="button" class="chip${VZ.show[v] ? " on" : ""}" data-vzf="show:${v}" aria-pressed="${VZ.show[v]}">${l}</button>`;
+  vzChips();
   f.innerHTML = `<div class="vzrow"><span class="eyebrow">Time</span>${seg("range", [["All", "all"], ...years.map((y) => [y, y]), ["3M", "3m"]], VZ.preset)}</div>
     <div class="vzrow"><span class="eyebrow">Min value</span>${seg("min", [["Any", 0], ["$1k", 1000], ["$10k", 10000], ["$100k", 100000]], VZ.minUsd)}</div>
     <div class="vzrow"><span class="eyebrow">Expand</span>${seg("flow", [["In + out", "all"], ["Received", "in"], ["Sent", "out"]], VZ.flow)}</div>
@@ -2281,7 +2534,34 @@ function vzPanel() {
     <span class="eyebrow">Counterparties · ${esc(rng)}${VZ.minUsd ? " · ≥ " + fU(VZ.minUsd) : ""}</span>
     <div class="vzlist">${cps.slice(0, 40).map((c) => { const L = vzLook(c.id), dir = c.inU && c.outU ? "⇄" : c.inU ? "←" : "→";
       return `<button type="button" data-vza="${shown.has(c.id) ? "sel" : "add"}" data-id="${esc(c.id)}" class="${shown.has(c.id) ? "" : "off"}"><span><b class="${c.inU && !c.outU ? "up" : c.outU && !c.inU ? "down" : "flat"}">${dir}</b> ${nm(L.label)}</span><b>${fU(c.u)}</b></button>`; }).join("") || '<p class="sub">None in this range.</p>'}</div>
-    <p class="sub">← received from · → sent to · ⇄ both. Grey rows are not on screen yet: click to add them.</p>`;
+    <p class="sub">← received from · → sent to · ⇄ both. Grey rows are not on screen yet: click to add them.</p>
+    ${vzLedger(d)}`;
+}
+// The ledger: the transfers the aggregate is made of. graph.json says 4.2B moved to an exchange in a month; this says
+// which transfers those were, so the number can be checked against the chain.
+function vzLedger(d) {
+  const L = VZ.led, head = (k, label, cls = "") =>
+    `<th class="${cls}"><span class="hd"><button type="button" data-vzl="sort:${k}" class="${L.sort === k ? "on" : ""}" aria-label="Sort by ${label}">${label}${L.sort === k ? (L.dir < 0 ? " ↓" : " ↑") : ""}</button></span></th>`;
+  if (!L.open) return `<span class="eyebrow"><button type="button" class="mini" data-vzl="open:1">Ledger — show the transfers →</button></span>`;
+  if (VTerr) return `<span class="eyebrow">Ledger</span><p class="sub">The ledger is added by the next full daily run.</p>`;
+  if (!VT) { loadVT().then(() => { if ($("vzside")) vzPanel(); }).catch(() => { VTerr = true; if ($("vzside")) vzPanel(); });
+    return `<span class="eyebrow">Ledger</span><p class="sub">Loading the transfers…</p>`; }
+  const rows = vzLedRows(d.id);
+  if (!rows) return "";
+  const fl = (v, l) => `<button type="button" class="mini${L.flow === v ? " on" : ""}" data-vzl="flow:${v}" aria-pressed="${L.flow === v}">${l}</button>`;
+  const body = rows.slice(0, 150).map((r) => {
+    const o = vzLook(vzDid(r.other));
+    return `<tr><td>${r.iso}</td><td><b class="${r.out ? "down" : "up"}">${r.out ? "→" : "←"}</b> ${esc(o.label.length > 18 ? o.label.slice(0, 17) + "…" : o.label)}</td>`
+      + `<td class="d">${fBb(r.g)}</td><td class="v">${fU(r.u)}</td>`
+      + `<td class="d"><a href="https://etherscan.io/block/${r.blk}" target="_blank" rel="noopener" title="Block ${r.blk}, log ${r.li}">${r.blk}</a></td></tr>`;
+  }).join("");
+  return `<span class="eyebrow">Ledger · ${fN(rows.length)} transfer${rows.length === 1 ? "" : "s"}<button type="button" class="mini" data-vzl="open:1" style="margin-left:6px">Hide</button></span>
+    <div class="vzledf">${fl("in", "Received")}${fl("out", "Sent")}<label class="eyebrow" for="vzlm">Min $</label><input id="vzlm" data-vzlm type="number" min="0" step="100" value="${L.min || ""}" placeholder="0" aria-label="Minimum dollars"></div>
+    <div class="vzled"><table><thead><tr>${head("time", "Time")}${head("cp", "Counterparty")}${head("gme", "GME", "d")}${head("usd", "$", "d")}${head("blk", "Block", "d")}</tr></thead>
+      <tbody>${body || `<tr><td colspan="5" class="no">No transfer matches these filters.</td></tr>`}</tbody></table></div>
+    <p class="sub">The ${VT.perNode} largest transfers of every node, by value — enough to explain each link, not the full history.
+      Each row is identified by its block and log index, so it can be checked on Etherscan or against the public archive.
+      ${rows.length > 150 ? `Showing the first 150 of ${fN(rows.length)}.` : ""}</p>`;
 }
 
 // ---------- wallet drawer ----------
