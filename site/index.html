@@ -603,7 +603,7 @@ function redraw() { draws.forEach((f) => { try { f(); } catch (e) { console.erro
 // it. This gives any <table class="q"> the same: click a header to sort, type under it to narrow. It works on the
 // rows already in the DOM, so every table builder above stays exactly as it is.
 const qNum = (s) => {
-  const x = String(s).replace(/[,$\s↑↓%]/g, "");
+  const x = String(s).replace(/[−–]/g, "-").replace(/[,$\s↑↓%+]/g, "");   // "+145%", "−$666" are numbers too
   const m = /^(-?\d*\.?\d+)([kKMBT])?$/.exec(x);
   return m ? parseFloat(m[1]) * ({ k: 1e3, K: 1e3, M: 1e6, B: 1e9, T: 1e12 }[m[2]] || 1) : null;
 };
@@ -613,7 +613,9 @@ function qTable(t) {
   // Only flat tables: an expandable or grouped table would lose its structure when the rows are reordered.
   if (rows.length < 5 || cols.some((c) => c.colSpan > 1) || rows.some((r) => r.cells.length !== cols.length || [...r.cells].some((c) => c.colSpan > 1))) return;
   t.dataset.q = "1";
-  const num = cols.map((c, i) => { const v = rows.slice(0, 24).map((r) => qNum(r.cells[i].textContent)); return v.filter((x) => x != null).length > v.length * 0.6; });
+  // a column is numeric when most of its non-empty cells parse as numbers ("—" means no value, not text)
+  const num = cols.map((c, i) => { const v = rows.slice(0, 24).map((r) => r.cells[i].textContent.trim()).filter((x) => x && x !== "—").map(qNum);
+    return v.length > 0 && v.filter((x) => x != null).length > v.length * 0.6; });
   const key = (r, i) => (num[i] ? (qNum(r.cells[i].textContent) ?? -Infinity) : r.cells[i].textContent.trim().toLowerCase());
   let sort = -1, dir = -1;
   const filt = cols.map(() => "");
@@ -2357,7 +2359,9 @@ function vzStart() {
   const up = (ev) => { if (!drag) return; const d = drag.d, moved = drag.moved; drag = null; VZ.sim.alphaTarget(0);
     if (moved) { vzTools(); return; }
     const pick = () => {
-      if (VZ.tool === "expand") { vzMark(); vzExpand(d.id, 12); VZ.sel = d.id; restart(0.5); vzTools(); return; }
+      // on a phone the panel is a bottom sheet that hides the toolbar, so the Expand tool leaves it closed: the next tap
+      // can expand again, and Undo stays in reach
+      if (VZ.tool === "expand") { vzMark(); vzExpand(d.id, 12); if (!mobile()) VZ.sel = d.id; restart(0.5); vzTools(); return; }
       if (VZ.tool === "pin") { vzMark(); if (VZ.pinned.has(d.id)) { VZ.pinned.delete(d.id); d.fx = null; d.fy = null; VZ.sim.alpha(0.3).restart(); } else { VZ.pinned.add(d.id); d.fx = d.x; d.fy = d.y; } vzPanel(); draw(); vzTools(); return; }
       if (VZ.tool === "exclude") { if (d.id === VZ.base) return; vzMark(); VZ.hidden.add(d.id); if (VZ.sel === d.id) VZ.sel = null; restart(0.3); vzTools(); return; }
       VZ.sel = d.id; if (mobile() && VZ.filters) { VZ.filters = false; vzFilters(); } vzPanel(); draw();
