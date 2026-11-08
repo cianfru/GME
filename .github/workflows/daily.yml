@@ -5,12 +5,13 @@ name: daily refresh + watch
 #           funders) and the files only the full run commits (wallets.json, the Visualizer's graph).
 #   light — about every 4 hours: new transfers, clusters, entity registry (follow the coins), watch, terminal data.
 # GitHub starts scheduled runs late or not at all under load (the old fixed 06:23 full run started at 12:46–14:43 UTC
-# for a week, and up to half the light runs were dropped). So the schedule is an hourly tick, and the plan job decides
+# for a week, up to half the light runs were dropped, and a new hourly "41 * * * *" did not fire once in 5.5 hours on
+# 8 Nov). So the schedule is a tick twice an hour, and the plan job decides
 # from the data commits whether this tick does a full run, a light run or nothing (scripts/plan-run.mjs). Ticks that
 # do nothing finish in seconds; a dropped tick is covered by the next one.
 on:
   schedule:
-    - cron: "41 * * * *"     # hourly tick: the plan job decides full / light / skip
+    - cron: "7,37 * * * *"   # tick twice an hour: the plan job decides full / light / skip
   workflow_dispatch:
     inputs:
       mode:

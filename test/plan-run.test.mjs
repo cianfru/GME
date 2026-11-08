@@ -44,5 +44,12 @@ test("reads the GitHub API shapes", () => {
   const c = [{ commit: { message: "data: daily refresh 2026-11-08\n\nbody", committer: { date: "2026-11-08T07:00:00Z" } } }];
   const r = { workflow_runs: [{ id: 5, status: "in_progress" }, { id: 4, status: "completed" }] };
   assert.deepEqual(fromApi(c, r, 5), { commits: [{ message: "data: daily refresh 2026-11-08", date: "2026-11-08T07:00:00Z" }], busy: false });
-  assert.equal(fromApi(c, { workflow_runs: [{ id: 6, status: "queued" }] }, 5).busy, true);
+  assert.equal(fromApi(c, { workflow_runs: [{ id: 4, status: "queued" }] }, 5).busy, true);
+});
+
+test("only an older run (or a manual one) counts as busy, so ticks released together do not all skip", () => {
+  const c = [];
+  assert.equal(fromApi(c, { workflow_runs: [{ id: 6, status: "in_progress", event: "schedule" }] }, 5).busy, false);
+  assert.equal(fromApi(c, { workflow_runs: [{ id: 4, status: "in_progress", event: "schedule" }] }, 5).busy, true);
+  assert.equal(fromApi(c, { workflow_runs: [{ id: 6, status: "in_progress", event: "workflow_dispatch" }] }, 5).busy, true);
 });
