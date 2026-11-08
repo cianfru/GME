@@ -5,13 +5,13 @@
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from txlib import D
+from groups import display
 out = os.path.join(D, "alerts", "notify.md")
 if os.path.exists(out): os.remove(out)
 W = json.load(open(os.path.join(D, "alerts", "latest.json"))) if os.path.exists(os.path.join(D, "alerts", "latest.json")) else {"alerts": [], "summary": {}}
 E = json.load(open(os.path.join(D, "entities.json"))) if os.path.exists(os.path.join(D, "entities.json")) else {"alerts": []}
-relabel = lambda t: t.replace("Your wallet's cluster", "Focus wallet's cluster")
-rows = [("HIGH", relabel(a["text"])) for a in W.get("alerts", []) if a["severity"] == "high"]
-rows += [(a["severity"].upper(), a["text"]) for a in E.get("alerts", []) if a["severity"] in ("high", "medium")]
+rows = [("HIGH", display(a["text"])) for a in W.get("alerts", []) if a["severity"] == "high"]
+rows += [(a["severity"].upper(), display(a["text"])) for a in E.get("alerts", []) if a["severity"] in ("high", "medium")]
 if not rows: print("nothing to notify"); sys.exit(0)
 s = W.get("summary", {})
 lines = [f"**GME terminal · {s.get('asOf', E.get('asOf', ''))[:16].replace('T', ' ')} UTC** · since {s.get('since', E.get('since', ''))[:16].replace('T', ' ')} UTC", ""]

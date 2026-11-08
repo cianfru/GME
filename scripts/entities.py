@@ -9,10 +9,15 @@
 #
 # Follow the coins (last 90 days, no hop limit): a wallet joins an entity when a DIRECT linking rule fires with one of
 # its members — seed (the wallet's first GME came from a member, ≥$2k) or drain (one sent the other ≥90% of its
-# balance in one transfer, ≥$2k). Never through infrastructure, contracts, exchange deposit addresses or a sender that
-# seeded >40 wallets (a distributor). Linked groups stop growing at 60 wallets (flagged); at most 25 joins per entity
-# per run. Joins are kept on later runs. A wallet that received ≥$2k from an entity in 30 days without a rule firing is
-# listed as PROVISIONAL: shown, never counted.
+# balance in one transfer, ≥$2k). Strong ETH links from the last ethside.py run (data/eth_links.json) count too, at any
+# date: "ethseed" (one sent the other its first ETH) and "gas" (a ≤0.05 ETH top-up). Never through infrastructure,
+# contracts, exchange deposit addresses or a sender that seeded >40 wallets (a distributor). Linked groups stop
+# growing at 60 wallets (flagged); at most 25 joins per entity per run. Joins are kept on later runs. A wallet that
+# received ≥$2k from an entity in 30 days without a rule firing is listed as PROVISIONAL: shown, never counted.
+#
+# Names: every entity carries a short handle, the last four characters of the wallet it is named after (one more
+# character when two would clash), kept from run to run. The focus wallet's group is "fbb4" (its owner's X name and
+# the end of 0xe147…fbb4); the others read "Accumulator efdb", "Holding wallet b749", "Linked group 847d", …
 #
 # Per entity: holdings and 90-day series (today's members, so moves between its own wallets cancel), flows by channel
 # over 1/7/30/90 days, a status per window, a cost basis (FIFO over the entity's external flows; coins that arrived by
@@ -21,13 +26,12 @@
 import sys, json, os, collections, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from txlib import *
-from groups import base_groups, short
+from groups import base_groups, short, display, FOCUS_NAME, COLLECTOR
 
 MIN_USD, HUB, CAP, PER_RUN = 2000.0, 40, 60, 25
 WIN = (24, 168, 720, 2160)
 LINKED_MIN = 0.0005 * SUPPLY
 CH = ["dexIn", "dexOut", "cexIn", "cexOut", "wIn", "wOut", "entIn", "entOut", "othIn", "othOut", "internal", "n"]
-relabel = lambda g: g.replace("Your wallet's cluster", "Focus wallet's cluster")
 iso = lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 parse = lambda ts: datetime.datetime.fromisoformat(ts[:19])
 
@@ -65,19 +69,19 @@ ok = lambda a: a not in infra and a not in deplike and AT.get(a) != "contract"
 groups, FOC, CBG, ST, V = base_groups()
 src = []
 for g, ws in groups.items():
-    src.append(dict(name=relabel(g), wname=g, kind="focus" if g.startswith("Your wallet") else "coinbase" if g.startswith("Coinbase") else "watched", ws=ws))
+    src.append(dict(name=display(g), wname=g, kind="focus" if g.startswith("Your wallet") else "coinbase" if g.startswith("Coinbase") else "watched", ws=ws))
 ENT = json.load(open(os.path.join(D, "entities_all.json")))["entities"] if os.path.exists(os.path.join(D, "entities_all.json")) else []
 for e in ENT:
     ws = {a for a in e["wallets"] if a not in infra}
     if e.get("flagged") or len(ws) < 2 or sum(max(bal[a], 0) for a in ws) < LINKED_MIN: continue
     lead = max(ws, key=lambda a: bal[a])
-    src.append(dict(name=f"Linked group {short(lead)}", wname=None, kind="linked", ws=ws))
+    src.append(dict(name=f"Linked group {short(lead)}", wname=None, kind="linked", ws=ws, via=e.get("via", {})))
 own, ents = {}, []
 for x in src:
     ms = [a for a in x["ws"] if a not in infra and a not in own]
     if not ms: continue
     k = len(ents)
-    ents.append(dict(name=x["name"], wname=x["wname"], kind=x["kind"], members=set(ms), attached=[], joined_now=[], capped=False))
+    ents.append(dict(name=x["name"], wname=x["wname"], kind=x["kind"], members=set(ms), attached=[], joined_now=[], capped=False, via=x.get("via")))
     for a in ms: own[a] = k
 
 # ---- stable ids: match each entity to last run's by shared members -----------------------------------------------
@@ -103,10 +107,37 @@ for k, e in enumerate(ents):
     while e["id"] in ids: e["id"] += "x"
     ids.add(e["id"])
 
+# ---- names: a short handle from the wallet each group is named after, kept run to run ----------------------------
+def anchor_of(e, p):
+    if e["kind"] == "focus": return FOCUS
+    if e["kind"] == "coinbase": return COLLECTOR
+    if e["kind"] == "watched":                                  # "Accumulator 0x53ee…efdb" → the member it names
+        pre, suf = e["wname"].rsplit(" ", 1)[1].split("…")
+        return next((a for a in sorted(e["members"]) if a.startswith(pre.lower()) and a.endswith(suf.lower())), min(e["members"]))
+    if p and p.get("anchor") in e["members"]: return p["anchor"]
+    if p and "…" in p.get("name", ""):                          # before handles were stored: "Linked group 0x4098…847d"
+        pre, suf = p["name"].rsplit(" ", 1)[1].split("…")
+        x = next((a for a in sorted(e["members"]) if a.startswith(pre.lower()) and a.endswith(suf.lower())), None)
+        if x: return x
+    return max(e["members"], key=lambda a: bal[a])
+used = set()
+for k, e in enumerate(ents):
+    p = prev_ents[match[k]] if k in match else None
+    e["anchor"] = anchor_of(e, p)
+    n = 4
+    while e["anchor"][-n:] in used and n < 40: n += 1
+    e["tag"] = FOCUS_NAME if e["kind"] == "focus" else e["anchor"][-n:]
+    used.add(e["tag"])
+    if e["kind"] == "watched": e["name"] = e["wname"].rsplit(" ", 1)[0] + " " + e["tag"]
+    elif e["kind"] == "linked": e["name"] = "Linked group " + e["tag"]
+    elif e["kind"] == "focus": e["name"] = FOCUS_NAME
+
 # ---- follow the coins: attach by seed / drain over the last 90 days ------------------------------------------------
 c90, c30 = cut(2160), cut(720)
 cand_seed = [(r, s, ts, v, usd) for r, (s, ts, v, usd) in first_in.items() if ts > c90 and usd >= MIN_USD]
 cand_drain = [d for d in drains if d[2] > c90]
+EL = os.path.join(D, "eth_links.json")                          # strong ETH links (ethside.py, previous run): any date
+eth_links = [x for x in json.load(open(EL))["links"] if x[2] in ("ethseed", "gas")] if os.path.exists(EL) else []
 def attach(k, a, ts, how, frm, v):
     e = ents[k]
     if e["kind"] == "linked" and len(e["members"]) >= CAP: e["capped"] = True; return False
@@ -122,6 +153,9 @@ while changed:
     for s, r, ts, v, usd in cand_drain:
         for a, b in ((s, r), (r, s)):
             if a in own and b not in own and ok(b) and seeds[a] <= HUB: changed |= attach(own[a], b, ts, "drain", a, v)
+    for s, r, how, d in eth_links:
+        for a, b in ((s, r), (r, s)):
+            if a in own and b not in own and ok(b) and seeds[a] <= HUB: changed |= attach(own[a], b, d or TODAY, how, a, max(bal[b], 0))
 
 # ---- flows by channel, daily net, entity-to-entity edges, provisional receivers ------------------------------------
 NW = len(WIN)
@@ -209,6 +243,7 @@ out, alerts = [], []
 prev_by = {p["id"]: p for p in prev_ents}
 first_run = prev is None
 def alert(sev, kind, text, **kw): alerts.append(dict(severity=sev, kind=kind, text=text, at=NOW, **kw))
+RULEW = {"seed": "seed rule", "drain": "drain rule", "ethseed": "first ETH from a member", "gas": "gas top-up"}
 for k, e in enumerate(ents):
     ms = sorted(e["members"]); b = sum(max(bal[a], 0) for a in ms)
     ser = [0.0] * 91; ser[90] = b
@@ -237,13 +272,15 @@ for k, e in enumerate(ents):
     if b >= 0.001 * SUPPLY:
         if fs >= cut(1440)[:10]: forming = "first GME in the last 60 days"
         elif ser[60] > 0 and net30 >= 0.5 * ser[60]: forming = f"grew {100 * net30 / ser[60]:.0f}% in 30 days"
-        elif prev and e["id"] not in prev_by: forming = "new group this run"
+        elif prev and e["id"] not in prev_by:
+            ev = [RULEW[k] for k in ("ethseed", "gas") if (e["via"] or {}).get(k)]
+            forming = "new group this run" + (f", linked through the ETH side ({' and '.join(ev)})" if ev else "")
     prov = []
     for a, (tok, usd, f, l) in recv[k].items():
         if usd >= MIN_USD and a not in own and bal[a] >= 0.5 * tok:
             prov.append(dict(a=a, recv=round(tok), usd=round(usd), bal=round(max(bal[a], 0)), first=f[:10], last=l[:10]))
     prov.sort(key=lambda x: -x["recv"]); prov = prov[:12]
-    rec = dict(id=e["id"], name=e["name"], wname=e["wname"], kind=e["kind"], created=e["created"], n=len(ms), bal=round(b), pct=round(100 * b / SUPPLY, 4),
+    rec = dict(id=e["id"], name=e["name"], tag=e["tag"], anchor=e["anchor"], wname=e["wname"], kind=e["kind"], via=e["via"], created=e["created"], n=len(ms), bal=round(b), pct=round(100 * b / SUPPLY, 4),
                series=[round(x / 1e9, 4) for x in ser], w=wins, status=sts, cost=cb, firstSeen=fs, lastActive=la, direct=direct, forming=forming,
                capped=e["capped"], flagged=e["kind"] == "linked" and len(ms) > CAP,
                members=ms, attached=e["attached"], provisional=prov)
@@ -252,9 +289,9 @@ for k, e in enumerate(ents):
     if not prev: continue
     p = prev_by.get(e["id"]); t = tw[k]; nm = e["name"]
     if e["joined_now"]:
-        tot = sum(x["tok"] for x in e["joined_now"])
-        alert("medium" if tot >= 0.0005 * SUPPLY else "info", "joined",
-              f"{nm}: {len(e['joined_now'])} wallet(s) joined by following the coins ({', '.join(sorted({x['how'] for x in e['joined_now']}))} rule): {tot/1e9:.2f}B moved into them. Counted as the group's own, not as selling.", entity=e["id"])
+        held = sum(max(bal[x["a"]], 0) for x in e["joined_now"])
+        alert("medium" if held >= 0.0005 * SUPPLY else "info", "joined",
+              f"{nm}: {len(e['joined_now'])} wallet(s) joined ({', '.join(sorted({RULEW.get(x['how'], x['how']) for x in e['joined_now']}))}), holding {held/1e9:.2f}B now. Counted as the group's own, not as selling.", entity=e["id"])
     if t["cex"] >= 5e7 and t["cexPrior"] == 0:
         alert("high", "first_cex", f"{nm}: first exchange deposit in 90 days, {t['cex']/1e9:.2f}B (~${t['cex']*spot:,.0f}, {100*t['cex']/SUPPLY:.2f}% of supply).", entity=e["id"])
     if t["dex"] >= 5e7 and t["dexPrior"] == 0:
@@ -270,7 +307,7 @@ for k, e in enumerate(ents):
 
 order = {"high": 0, "medium": 1, "info": 2}
 alerts.sort(key=lambda a: order[a["severity"]])
-events = (alerts + (prev or {}).get("events", []))[:300]
+events = (alerts + [dict(x, text=display(x["text"])) for x in (prev or {}).get("events", [])])[:300]
 E = [[[s_, t_, round(v / 1e9, 4)] for (s_, t_), v in sorted(edges[wi].items(), key=lambda kv: -kv[1])[:400] if v >= 1e6] for wi in range(NW)]
 out.sort(key=lambda x: -x["bal"])
 json.dump(dict(asOf=NOW, since=since, spot=spot, windows=list(WIN), channels=CH, entities=out, edges=E, alerts=alerts, events=events), open(RP, "w"))

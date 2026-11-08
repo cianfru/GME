@@ -12,10 +12,15 @@
 #     recipient in that transaction (a swap with another wallet named as the recipient) and that signer bought for at
 #     most 10 different wallets. Deliveries through settlement, bot, aggregator or bridge contracts are signed by
 #     their solvers, relayers or executors, not by the buyer: never a link.
-# Evidence grades, strongest first: "ethseed" (A sent B its first ETH), "gas" (A topped B up with ≤0.05 ETH) and
-# "paid" (A signed B's GME purchase) are DIRECT and STRONG; "eth" (a larger ETH transfer, no GME back) is DIRECT but
-# WEAK (could be a payment); "funder" (same private first funder) is INFERRED. Nothing here merges entities: links are
-# reported as candidates, and only strong direct links group wallets.
+# Evidence grades, strongest first: "ethseed" (A sent B its first ETH) and "gas" (A topped B up with ≤0.05 ETH) are
+# DIRECT and STRONG; "eth" (a larger ETH transfer, no GME back) is DIRECT but WEAK (could be a payment); "paid" (A
+# signed a swap that delivered GME from a pool straight to B) is WEAK too: most of these signers are trading-bot
+# executors that sign for many unrelated buyers (one buyer's purchases signed by up to 17 different executors, one
+# executor signing for up to 15 buyers), so a signature alone does not show one owner; "funder" (same private first
+# funder) is INFERRED.
+# The strong links go to data/eth_links.json. The NEXT run's cluster_all.py and entities.py read it: cluster_all.py
+# links wallets through them like a GME seed or drain, and entities.py attaches an unowned wallet to the group of a
+# member it is strongly linked to. Weak and inferred links never group wallets; they are only shown as candidates.
 import sys, os, csv, json, collections, unicodedata
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from txlib import *
@@ -99,19 +104,22 @@ if os.path.exists(SG):
     with open(os.path.join(D, "transfers.csv")) as f:
         h = next(f).strip().split(","); ti = h.index("tx")
         for x in csv.reader(f):
-            if x[ti] in want: src[(x[ti], x[1])] = x[0]
+            if x[ti] in want: src[(x[ti], x[1])] = (x[0], x[2][:10])
     POOLS = {PAIR, V3POOL}
-    allrows = len(rows); rows = [r for r in rows if src.get((r["tx"], r["recipient"])) in POOLS]
+    allrows = len(rows); rows = [r for r in rows if src.get((r["tx"], r["recipient"]), ("",))[0] in POOLS]
     per_signer = collections.defaultdict(set)
     for r in rows: per_signer[r["signer"]].add(r["recipient"])
     relayers = {s for s, rs in per_signer.items() if len(rs) > MAX_PAID}
     agg = collections.Counter(); firstd = {}
     for r in rows:
         s, rc = r["signer"], r["recipient"]
-        if s in relayers or svc(s): continue
-        agg[(s, rc)] += 1
-    for (s, rc), n in agg.items(): links.append((s, rc, "paid", dict(n=n)))
-    paid = dict(signedByOther=allrows, poolDirect=len(rows), relayers=len(relayers), pairs=len(agg))
+        if s in relayers or svc(s) or svc(rc): continue
+        agg[(s, rc)] += 1; d = src[(r["tx"], rc)][1]; firstd[(s, rc)] = min(firstd.get((s, rc), d), d)
+    for (s, rc), n in agg.items(): links.append((s, rc, "paid", dict(n=n, first=firstd[(s, rc)])))
+    rc_sig = collections.defaultdict(set)                       # every other wallet that ever signed for this recipient
+    for r in csv.DictReader(open(SG)): rc_sig[r["recipient"]].add(r["signer"])
+    shared = sum(1 for (s, rc) in agg if len(rc_sig[rc]) > 1)
+    paid = dict(signedByOther=allrows, poolDirect=len(rows), relayers=len(relayers), pairs=len(agg), sharedRecipient=shared)
 
 # ---- what the links say about entities ------------------------------------------------------------------------------
 unit = lambda a: own.get(a)
@@ -120,7 +128,7 @@ def find(x):
     while uf.get(x, x) != x: uf[x] = uf.get(uf[x], uf[x]); x = uf[x]
     return x
 def union(a, b): ra, rb = find(a), find(b); uf[ra] = rb if ra != rb else rb
-STRONG = ("ethseed", "gas", "paid")
+STRONG = ("ethseed", "gas")                                     # the only kinds that group wallets
 for a, b, k, d in links:
     if k in STRONG: union(a, b)
 cands = collections.defaultdict(lambda: dict(ents=set(), wallets=set(), ev=[]))
@@ -202,6 +210,9 @@ out = dict(window="2024-04-01", serviceWallets=service_wallets, serviceEntities=
            candidates=cand[:80], flows=ents_flow[:40], tokens=tokens if isinstance(tokens, dict) else dict(rows=[]),
            rules=dict(volService=VOL_SVC, nonceService=NONCE_SVC, fanoutService=FANOUT_SVC, faninService=FANIN_SVC, maxFund=MAX_FUND, maxPaid=MAX_PAID, minEth=MIN_ETH, gasMax=GAS_MAX))
 json.dump(out, open(os.path.join(D, "ethside.json"), "w"))
+strong = sorted({(a, b, k, d.get("first", "")) for a, b, k, d in links if k in STRONG and a != b})
+json.dump(dict(asOf=max((p_[5] for p_ in pairs), default="")[:10], kinds=list(STRONG), links=[list(x) for x in strong]),
+          open(os.path.join(D, "eth_links.json"), "w"), separators=(",", ":"))
 print(f"ethside.json: {len(W)} study wallets · {len(fresh)} created since 2024-04, {len(funder)} with a first funder · origin {dict(orig)} · "
       f"links {out['links']} · {tradelike} OTC-like skipped · {len(svcw)} service-scale studied wallets in {len(svc_ents)} groups · {len(cand)} candidates "
       f"({sum(1 for c in cand if c['direct'])} direct) · {len(out['tokens'].get('rows', []))} shared tokens")

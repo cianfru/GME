@@ -20,8 +20,9 @@ REG = json.load(open(os.path.join(D, "entities.json"))) if os.path.exists(os.pat
 REG_FOCUS = next((e for e in REG["entities"] if e["kind"] == "focus"), None) if REG else None
 if REG_FOCUS: FOC |= {x["a"] for x in REG_FOCUS["attached"]}      # wallets joined by following the coins count as the cluster's own
 WS = json.load(open(os.path.join(D, "watch_state.json")))
-# On a shared page "your wallet" reads as the viewer's; the watch files keep their original label.
-relabel = lambda g: g.replace("Your wallet's cluster", "Focus wallet's cluster")
+# Display names ("fbb4", "Accumulator efdb", …); the watch files keep their original keys.
+from groups import namer, FOCUS_NAME
+relabel = namer()
 MEMBERS = {relabel(g): set(ws) for g, ws in WS.get("members", {}).items()}
 NOW = T[-1][2]; TODAY = NOW[:10]
 
@@ -121,7 +122,7 @@ elif w[30]["net"] > thr: status, why = "ACCUMULATING", "holdings grew in the las
 else: status, why = "HOLDING", "no meaningful change in 30 days"
 tripwire = []
 if w[7]["toCex"] > 0: tripwire.append(f"{w[7]['toCex']/1e9:.2f}B GME sent to exchanges in the last 7 days")
-if w[30]["focusDexSell"] > 0: tripwire.append(f"the focus wallet sold {w[30]['focusDexSell']/1e9:.2f}B on the DEX in the last 30 days")
+if w[30]["focusDexSell"] > 0: tripwire.append(f"{FOCUS_NAME}'s main wallet sold {w[30]['focusDexSell']/1e9:.2f}B on the DEX in the last 30 days")
 insider = dict(status=status, why=why, armed=bool(tripwire), tripwire=tripwire,
                focusDexSellEver=sum(focus_dexsell), windows={str(k): v for k, v in w.items()})
 
@@ -212,15 +213,15 @@ if REG:   # owners = the entity registry (same members, ids and order as the ent
         k = next((i for i, o in enumerate(owners) if o["id"] == e["id"]), -1)
         for x in e["provisional"]:
             if x["a"] not in owner_of and x["a"] not in infra: PROV[x["a"]] = k
-add_owner("Focus wallet's cluster", FOC, "focus")
+add_owner(FOCUS_NAME, FOC, "focus")
 for g, ws in sorted(MEMBERS.items(), key=lambda kv: -cur.get(kv[0], 0)):
-    if g != "Focus wallet's cluster": add_owner(g, ws, "coinbase" if g.startswith("Coinbase") else "watched")
+    if g != FOCUS_NAME: add_owner(g, ws, "coinbase" if g.startswith("Coinbase") else "watched")
 ENT = json.load(open(os.path.join(D, "entities_all.json")))["entities"] if os.path.exists(os.path.join(D, "entities_all.json")) else []
 for e in ENT:
     ws = set(e["wallets"])
     if e.get("flagged") or not (ws & MON): continue
     lead = max(ws, key=lambda a: bal[a])
-    add_owner(f"Linked group {lead[:6]}…{lead[-4:]}", ws, "linked")
+    add_owner(f"Linked group {lead[-4:]}", ws, "linked")
 TRACK = MON | set(owner_of) | set(PROV)
 TRACK -= infra
 def cat(a):
@@ -306,7 +307,7 @@ for a in watch:
         if key in agg: agg[key][1] += dv; agg[key][3] += abs(dv) * px
         else: agg[key] = [ts[:10], dv, k, abs(dv) * px, o]
     evs = [[x[0], round(x[1] / 1e9, 4), x[2], round(x[3]), x[4]] for x in agg.values()]
-    wallets[a] = dict(bal=round(bal[a] / 1e9, 4), group=gname.get(a) or ("Focus wallet's cluster" if a in FOC else None),
+    wallets[a] = dict(bal=round(bal[a] / 1e9, 4), group=gname.get(a) or (FOCUS_NAME if a in FOC else None),
                       first=first.get(a, "")[:10], last=last.get(a, "")[:10], n=len(evs), series=series, events=evs[-400:])
 json.dump(wallets, open(os.path.join(D, "wallets.json"), "w"), separators=(",", ":"))
 

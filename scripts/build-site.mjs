@@ -11,8 +11,14 @@ const SUPPLY = 420.69e9;
 const FOCUS = "0xe14767042159e5bd2bf16f81a0fe387ab153fbb4";
 
 const json = (p, fallback = null) => (existsSync(join(D, p)) ? JSON.parse(readFileSync(join(D, p), "utf8")) : fallback);
-// The data files call the focus wallet's group "your wallet's cluster"; on a shared page that reads as the viewer's wallet.
-const relabel = (s) => s.replace(/your wallet's cluster/gi, "Focus wallet's cluster");
+// Display names (same rule as scripts/groups.py): the focus wallet's group is "fbb4" (its owner's X name and the end of
+// 0xe147…fbb4); every other group goes by the last four characters of the wallet it is named after ("Accumulator efdb",
+// "Linked group 847d"). The watch files keep their original keys ("Your wallet's cluster", "Accumulator 0x53ee…efdb"),
+// and older alerts say "Focus wallet's cluster"; the entity registry's own names win where it has the group.
+const REG = Object.fromEntries(((json("entities.json", { entities: [] }) || {}).entities || []).filter((e) => e.wname).map((e) => [e.wname, e.name]));
+const relabel = (s) =>
+  typeof s !== "string" ? s : REG[s] ? REG[s]
+    : s.replace(/\b(?:your|focus) wallet's cluster/gi, "fbb4").replace(/\b(Accumulator|Holding wallet|Sep-2025 wallet|Linked group) 0x[0-9a-fA-F]{4}…([0-9a-fA-F]{4,})/g, "$1 $2");
 const pct = (t) => (100 * t) / SUPPLY;
 
 const latest = json("alerts/latest.json", { summary: {}, alerts: [] });
@@ -78,12 +84,12 @@ const site = {
     .sort((a, b) => (b.bal ?? 0) - (a.bal ?? 0) || b.tok - a.tok),
   relays: Object.keys(json("vaults90_relays.json", {}) || {}).length,   // bought-then-sold/passed-on, excluded
   float: Object.entries(float).map(([name, tok]) => ({ name: relabel(name), tok, pct: pct(tok) })),
-  T: json("terminal.json"),
-  E: json("entities.json"),
-  C: json("crowd.json"),
-  X: json("trades_check.json"),
-  H: json("ethside.json"),                        // ETH side: funding, ETH links, paid purchases, flows, other tokens                   // exact trade pricing: coverage and the day-close error it removes                          // crowd behaviour (owner level)
-  U: json("engine/urpd-history.json"),            // weekly cost-basis distribution of held supply (engine)                       // entity registry: cards, entity flow map, tripwires                       // daily series, insider watch, watched groups, cluster, top holders
+  T: json("terminal.json"),                       // daily series, insider watch, watched groups, cluster, top holders
+  E: json("entities.json"),                       // entity registry: cards, entity flow map, tripwires
+  C: json("crowd.json"),                          // crowd behaviour (owner level)
+  X: json("trades_check.json"),                   // exact trade pricing: coverage and the day-close error it removes
+  H: json("ethside.json"),                        // ETH side: funding, ETH links, paid purchases, flows, other tokens
+  U: json("engine/urpd-history.json"),            // weekly cost-basis distribution of held supply (engine)
   windows: (market.windows || []).map((w) => ({
     days: w.days, buyers: w.buyers, sellers: w.sellers, buyUsd: w.buyUsd, sellUsd: w.sellUsd, newBuyers: w.newBuyers, clusterNet: w.clusterNet,
   })),

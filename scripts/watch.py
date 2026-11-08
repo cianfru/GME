@@ -12,7 +12,8 @@ LP = {"0x05391bd57d8c6fb30d9c39f6618f2207893922dc", "0xc36442b4a4522e871399cd717
 outs = collections.defaultdict(lambda: collections.defaultdict(float))
 for s, r, ts, v, b in T: outs[s][r] += v
 deplike = {a for a, o in outs.items() if a not in infra and sum(o.values()) > 0 and sum(x for k, x in o.items() if k in CEX) / sum(o.values()) >= 0.95}
-from groups import base_groups, with_attached, short
+from groups import base_groups, with_attached, short, namer
+name = namer()                     # display names ("fbb4", "Accumulator efdb", …); watch_state.json keeps the raw keys
 groups, FOC, CBG, ST, V = base_groups()
 groups = with_attached(groups)     # + wallets the entity registry attached by following the coins (moves into them are internal)
 NOW = T[-1][2]
@@ -49,7 +50,7 @@ for g, c in flow.items():
         if v < 5e7: continue                                   # ignore < 50M GME (~$300)
         pct = 100 * v / SUPPLY
         sev = "high" if k in ("to exchange", "sold on DEX") and pct >= 0.05 else ("medium" if k in ("to exchange", "sold on DEX", "to other wallets") else "info")
-        add("flow", sev, f"{g}: {k} {v/1e9:.2f}B GME (~${v*price:,.0f}, {pct:.2f}% of supply)", group=g, what=k, tokens=v)
+        add("flow", sev, f"{name(g)}: {k} {v/1e9:.2f}B GME (~${v*price:,.0f}, {pct:.2f}% of supply)", group=name(g), what=k, tokens=v)
 # 2) new holding wallets and new accumulators
 if prev:
     for v, x in V.items():
@@ -69,7 +70,7 @@ if prev:
     for g, b in gbal.items():
         pb = prev["groups"].get(g)
         if pb is not None and abs(b - pb) >= 0.0005 * SUPPLY:
-            add("balance", "medium" if b < pb else "info", f"{g}: holdings {'+' if b >= pb else ''}{(b-pb)/1e9:.2f}B since last run, now {b/1e9:.2f}B ({100*b/SUPPLY:.2f}%)", group=g)
+            add("balance", "medium" if b < pb else "info", f"{name(g)}: holdings {'+' if b >= pb else ''}{(b-pb)/1e9:.2f}B since last run, now {b/1e9:.2f}B ({100*b/SUPPLY:.2f}%)", group=name(g))
 order = {"high": 0, "medium": 1, "info": 2}
 alerts.sort(key=lambda x: order[x["severity"]])
 summary = dict(asOf=NOW, since=since, price=price, mcap=price * SUPPLY, pool=pool, watchedGroups=len(groups), alerts=len(alerts),
