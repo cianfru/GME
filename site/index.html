@@ -194,6 +194,13 @@ details.about p { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; max-w
 @media (max-width: 760px) { .chip { height: 40px } }
 input.q, select.q { background: var(--glass-2); border: 1px solid var(--line); color: var(--fg); padding: 0 .65rem; height: 32px; font: 400 12.5px var(--sans); min-width: 0 }
 input.q { width: 15rem; max-width: 100% } select.q { max-width: 100% }
+/* pool and overhang calculator */
+.calcctl { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px 28px; align-items: start }
+.calcctl .cg { display: flex; flex-direction: column; gap: 7px; min-width: 0 } .calcctl .cgr { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.calcctl #cmi { width: 8.5rem; font: 500 13px var(--mono) } .calcctl .sub { margin: 0 }
+.calcctl input[type="range"] { width: 100%; margin: 2px 0; accent-color: var(--accent); height: 22px; cursor: pointer }
+.calcch svg { user-select: none; -webkit-user-select: none } .calcch .calc-lab { font: 500 11px var(--mono) }
+@media (max-width: 760px) { .calcctl { grid-template-columns: minmax(0, 1fr) } .calcctl input[type="range"] { height: 30px } }
 @media (max-width: 760px) { input.q, select.q { height: 40px; width: 100% } }
 .subnav { display: flex; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; scrollbar-width: none }
 .subnav::-webkit-scrollbar { display: none }
@@ -1226,37 +1233,152 @@ function urpdHeat() {
   });
 }
 let calcMult = 2, calcSell = 25;
+// Pool and overhang calculator. Everything is arithmetic on today's pool and the cost engine's distribution of held
+// supply (T.urpd): pick a target market cap (type it, slide, press a preset, or click / drag on the chart) and a share
+// of the overhang that sells at break-even (slider); the curve, the walls crossed and the numbers follow.
 function calcCard() {
   const P = T.pool, Ur = T.urpd;
   if (!P || !P.weth || !Ur) { card({ title: "Pool and overhang calculator", wide: true, body: unavailable("Pool reserves or the cost-basis distribution are missing in this build.") }); return; }
-  card({ title: "Pool and overhang calculator", wide: true, q: "What would it take to move the price, given who is waiting to break even?", body: `<div id="calc"></div><div class="chart" id="calcch"></div><div class="legend" id="calcch-l"></div>`,
-    note: "Constant-product pool (Uniswap V2): with no sellers, the price scales with the square of the ETH reserve, so multiplying the price by r takes ETH × (√r − 1) of net buying (the 0.3% fee ignored). Overhang = held supply bought between today's price and the target (from the cost engine), the holders who get back to break-even on the way up. If a share of them sells at break-even, each sale takes about its value back out of the pool, so the extra buying needed is roughly that share × their cost. Arithmetic on today's pool, not a forecast." });
+  card({ title: "Pool and overhang calculator", wide: true, q: "What would it take to move the price, given who is waiting to break even?",
+    body: `<div id="calc"></div><div class="chart calcch" id="calcch"></div><div class="legend" id="calcch-l"></div>`,
+    note: "Constant-product pool (Uniswap V2): with no sellers, the price scales with the square of the ETH reserve, so multiplying the price by r takes ETH × (√r − 1) of net buying (the 0.3% fee ignored). Overhang = held supply bought between today's market cap and the target (from the cost engine), the holders who get back to break-even on the way up; a band only partly crossed counts in proportion. If a share of them sells at break-even, each sale takes about its value back out of the pool, so the extra buying needed is roughly that share × their cost. The lower panel shows where that supply was bought. Arithmetic on today's pool, not a forecast." });
   const held = IDX?.held || null;
-  const draw = () => {
-    const el = $("calc"); if (!el) return;
-    const p0 = (P.weth * P.ethUsd) / P.gme, ethNeed = (r) => P.weth * (Math.sqrt(r) - 1);
-    const over = (r) => { let gme = 0, usd = 0; Ur.buckets.forEach((b) => { const mid = Math.sqrt(b.lo * b.hi); if (mid > p0 && mid <= p0 * r) { const q = (b.pct / 100) * (held || 0); gme += q; usd += q * mid; } }); return { gme, usd }; };
-    const r = calcMult, f = calcSell / 100, base = ethNeed(r) * P.ethUsd, o = over(r), extra = f * o.usd;
-    el.innerHTML = `<div class="ctl"><label class="eyebrow" for="cm">Target market cap</label>${segBtns([["2×", 2], ["3×", 3], ["5×", 5], ["10×", 10], ["25×", 25]], r, "cm")}<label class="eyebrow">Overhang that sells at break-even</label>${segBtns([["0%", 0], ["10%", 10], ["25%", 25], ["50%", 50]], calcSell, "cs")}</div>
-      <dl class="rd" style="margin-top:12px"><div><dt>Today</dt><dd>Market cap ${fP(p0)} · ${P.weth.toFixed(1)} ETH against ${fB(P.gme)} GME.</dd></div>
-      <div><dt>Target</dt><dd>Market cap ${fP(p0 * r)}.</dd></div>
+  const p0 = (P.weth * P.ethUsd) / P.gme, mc0 = p0 * SUPPLY, ethNeed = (r) => P.weth * (Math.sqrt(r) - 1);
+  const bands = Ur.buckets.filter((b) => b.pct > 0 && b.hi > p0).map((b) => ({ lo: Math.max(b.lo, p0), hi: b.hi, pct: b.pct, gme: (b.pct / 100) * (held || 0) }));
+  const R0 = 1.02, RMAX = Math.min(100, Math.max(10, Math.ceil(d3.max(bands, (b) => b.hi / p0) || 30)));
+  const over = (r) => {                                            // overhang crossed up to r × today's price
+    let gme = 0, usd = 0; const top = p0 * r;
+    for (const b of bands) {
+      if (b.lo >= top) continue;
+      const hi = Math.min(b.hi, top), f = Math.log(hi / b.lo) / Math.log(b.hi / b.lo);
+      if (f > 0) { gme += f * b.gme; usd += f * b.gme * Math.sqrt(b.lo * hi); }
+    }
+    return { gme, usd };
+  };
+  const need = (r, s) => ethNeed(r) * P.ethUsd + (s / 100) * over(r).usd;
+  const clampR = (r) => Math.min(RMAX, Math.max(R0, r));
+  const toSlider = (r) => Math.round((1000 * Math.log(r / R0)) / Math.log(RMAX / R0)), fromSlider = (v) => R0 * (RMAX / R0) ** (v / 1000);
+  const parseTarget = (s) => {                                     // "$10M", "10m", "10,000,000", "4x"
+    s = String(s).trim().toLowerCase().replace(/[$,\s]/g, "");
+    let m = /^(\d*\.?\d+)(x|×)$/.exec(s); if (m) return +m[1];
+    m = /^(\d*\.?\d+)([kmb])?$/.exec(s); if (!m) return null;
+    return (+m[1] * ({ k: 1e3, m: 1e6, b: 1e9 }[m[2]] || 1)) / mc0;
+  };
+  const xTxt = (r) => (r < 10 ? +r.toFixed(r < 2 ? 2 : 1) : Math.round(r)) + "×";
+  const bandTxt = (b) => `${fP(b.lo)}–${fP(b.hi)}: ${fPct(b.pct, 1)} of held supply (${fB(b.gme)} GME)`;
+  const PRE = [2, 3, 5, 10, 25].filter((v) => v <= RMAX), SPRE = [0, 10, 25, 50, 100];
+  let ui = null;                                                   // handles into the drawn chart, for live updates
+
+  const summary = (r, s) => {
+    const base = ethNeed(r) * P.ethUsd, o = over(r), extra = (s / 100) * o.usd;
+    const crossed = bands.filter((b) => b.lo < p0 * r), wall = crossed.length ? crossed.reduce((a, b) => (b.pct > a.pct ? b : a)) : null;
+    const next = bands.find((b) => b.lo >= p0 * r * 0.999 && b.pct >= 2);
+    return `<div><dt>Today</dt><dd>Market cap ${fP(p0)} · ${P.weth.toFixed(1)} ETH against ${fB(P.gme)} GME.</dd></div>
+      <div><dt>Target</dt><dd>Market cap <b>${fP(p0 * r)}</b> (${xTxt(r)}).</dd></div>
       <div><dt>No sellers</dt><dd>${ethNeed(r).toFixed(1)} ETH ≈ <b>${fU(base)}</b> of net buying.</dd></div>
       <div><dt>Overhang crossed</dt><dd>${held ? `${fB(o.gme)} GME (${fPct((100 * o.gme) / held, 1)} of held supply), bought for ${fU(o.usd)}, gets back to break-even on the way.` : "Held supply unavailable in this build."}</dd></div>
-      <div><dt>With ${calcSell}% selling</dt><dd>about <b>${fU(base + extra)}</b> of net buying (${fU(extra)} extra to absorb them).</dd></div></dl>`;
-    el.onclick = (ev) => { const t = ev.target.closest("[data-cm],[data-cs]"); if (!t) return; if (t.dataset.cm) calcMult = +t.dataset.cm; else calcSell = +t.dataset.cs; draw(); };
-    const ce = $("calcch"); if (!ce) return; ce.innerHTML = "";
-    const mob = mobile(), H = mob ? 200 : 240, m = { t: 10, r: 12, b: 26, l: 58 }, W = ce.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
-    const svg = d3.select(ce).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
-    const rs = d3.range(0, 101).map((i) => 10 ** ((i / 100) * Math.log10(30)) + 0.0001).filter((v) => v > 1.01);
-    const curves = [0, 10, 25, 50].map((s) => ({ s, pts: rs.map((rr) => [rr, ethNeed(rr) * P.ethUsd + (s / 100) * over(rr).usd]) }));
-    const x = d3.scaleLog([rs[0], 30], [0, w]), y = d3.scaleLog([d3.min(curves[0].pts, (p) => p[1]), d3.max(curves[3].pts, (p) => p[1]) * 1.1], [h, 0]);
-    g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(4).tickSize(-w).tickFormat(""));
-    g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4, "~s").tickFormat((v) => fU(v)));
-    g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).tickValues([1.5, 2, 3, 5, 10, 20, 30].filter((v) => v >= rs[0])).tickFormat((v) => v + "×"));
-    const cc = [C("--s1"), C("--s3"), C("--accent"), C("--down")];
-    curves.forEach((c, k) => g.append("path").datum(c.pts).attr("fill", "none").attr("stroke", cc[k]).attr("stroke-width", c.s === calcSell ? 2.4 : 1.2).attr("d", d3.line().x((p) => x(p[0])).y((p) => y(p[1]))));
-    g.append("line").attr("x1", x(r)).attr("x2", x(r)).attr("y1", 0).attr("y2", h).attr("class", "xhair").style("opacity", 1);
-    $("calcch-l").innerHTML = curves.map((c, k) => `<span><i class="ln" style="background:${cc[k]}"></i>${c.s}% of overhang sells</span>`).join("") + `<span>x = market cap multiple · y = net buying needed</span>`;
+      <div><dt>With ${s}% selling</dt><dd>about <b>${fU(base + extra)}</b> of net buying (${fU(extra)} extra to absorb them).</dd></div>
+      ${held && wall ? `<div><dt>Largest wall crossed</dt><dd>${bandTxt(wall)}.</dd></div>` : ""}
+      ${held ? `<div><dt>Next wall above</dt><dd>${next ? `${bandTxt(next)}, ${xTxt(next.lo / p0)} today's market cap.` : "No band of 2% or more above the target in the data."}</dd></div>` : ""}`;
+  };
+
+  const update = (r, s, from) => {
+    calcMult = clampR(r); calcSell = Math.max(0, Math.min(100, Math.round(s)));
+    const el = $("calc"); if (!el) return;
+    const inp = $("cmi"); if (inp && from !== "input") inp.value = fP(p0 * calcMult);
+    if (from !== "slider") { const sl = $("cmr"); if (sl) sl.value = toSlider(calcMult); }
+    const ss = $("csr"); if (ss && from !== "sell") ss.value = calcSell;
+    $("csv").textContent = calcSell + "%";
+    el.querySelectorAll("[data-cm]").forEach((b) => b.classList.toggle("on", Math.abs(+b.dataset.cm - calcMult) < 1e-6));
+    el.querySelectorAll("[data-cs]").forEach((b) => b.classList.toggle("on", +b.dataset.cs === calcSell));
+    $("calcsum").innerHTML = summary(calcMult, calcSell);
+    if (ui) ui.place(calcMult, calcSell);
+  };
+
+  const draw = () => {
+    const el = $("calc"); if (!el) return;
+    el.innerHTML = `<div class="calcctl">
+        <div class="cg"><label class="eyebrow" for="cmi">Target market cap</label>
+          <div class="cgr"><input id="cmi" class="q" type="text" inputmode="decimal" spellcheck="false" autocomplete="off" aria-describedby="cmi-h">${segBtns(PRE.map((v) => [v + "×", v]), calcMult, "cm")}</div>
+          <input id="cmr" type="range" min="0" max="1000" step="1" aria-label="Target market cap">
+          <p class="sub" id="cmi-h">Type a market cap ($10M) or a multiple (4×), slide, or click and drag on the chart.</p></div>
+        <div class="cg"><label class="eyebrow" for="csr">Overhang that sells at break-even · <b id="csv"></b></label>
+          <div class="cgr">${segBtns(SPRE.map((v) => [v + "%", v]), calcSell, "cs")}</div>
+          <input id="csr" type="range" min="0" max="100" step="1" aria-label="Share of the overhang that sells at break-even"></div>
+      </div>
+      <dl class="rd" id="calcsum" style="margin-top:12px"></dl>`;
+    const inp = $("cmi"), commit = () => { const v = parseTarget(inp.value); if (v && isFinite(v)) update(v, calcSell, "input"); inp.value = fP(p0 * calcMult); };
+    inp.onchange = commit; inp.onkeydown = (ev) => { if (ev.key === "Enter") { commit(); inp.blur(); } };
+    $("cmr").oninput = (ev) => update(fromSlider(+ev.target.value), calcSell, "slider");
+    $("csr").oninput = (ev) => update(calcMult, +ev.target.value, "sell");
+    el.onclick = (ev) => { const t = ev.target.closest("[data-cm],[data-cs]"); if (!t) return; if (t.dataset.cm) update(+t.dataset.cm, calcSell); else update(calcMult, +t.dataset.cs); };
+
+    // ---- chart: net buying needed (top) and where the overhang was bought (bottom), one market-cap axis ----
+    const ce = $("calcch"); ce.innerHTML = ""; ui = null;
+    const mob = mobile(), H1 = mob ? 170 : 220, H2 = mob ? 84 : 104, gap = 26, m = { t: 22, r: 14, b: 26, l: 58 }, W = ce.clientWidth;
+    const w = W - m.l - m.r, H = m.t + H1 + gap + H2 + m.b;
+    const svg = d3.select(ce).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H).style("touch-action", "pan-y").style("cursor", "crosshair");
+    const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`), g2 = svg.append("g").attr("transform", `translate(${m.l},${m.t + H1 + gap})`);
+    const x = d3.scaleLog([p0 * R0, p0 * RMAX], [0, w]);
+    const rs = d3.range(0, 161).map((i) => R0 * (RMAX / R0) ** (i / 160));
+    const REF = [0, 25, 50, 100], top = need(RMAX, 100) * 1.15, bot = need(R0, 0) * 0.85;
+    const y = d3.scaleLog([bot, top], [H1, 0]).clamp(true);
+    const xt = mcTicks(x, (k) => k === 1 || k === 2 || k === 5);
+    // round-number ticks only: powers of ten, with 3× steps added when the range is short
+    const e0 = Math.ceil(Math.log10(bot)), e1 = Math.floor(Math.log10(top));
+    let yt = d3.range(e0, e1 + 1).map((e) => 10 ** e);
+    if (yt.length < 4) yt = d3.range(e0 - 1, e1 + 1).flatMap((e) => [10 ** e, 3 * 10 ** e]).filter((v) => v >= bot && v <= top);
+    g.append("g").attr("class", "gridl").call(d3.axisLeft(y).tickValues(yt).tickSize(-w).tickFormat(""));
+    g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(yt).tickFormat((v) => fU(v)));
+    g2.append("g").attr("class", "axis").attr("transform", `translate(0,${H2})`).call(d3.axisBottom(x).tickValues(xt).tickFormat(tickP));
+    g.append("text").attr("class", "plabel").attr("x", -m.l + 2).attr("y", -9).text("Net buying needed to reach that market cap");
+    g2.append("text").attr("class", "plabel").attr("x", -m.l + 2).attr("y", -8).text("Held supply bought at each market cap (break-even walls)");
+    const line = (s) => d3.line().x((r) => x(p0 * r)).y((r) => y(need(r, s)))(rs);
+    const cRef = C("--fg-2"), cMain = C("--accent"), cBar = C("--line-2"), cOn = C("--accent");
+    REF.forEach((s) => g.append("path").attr("fill", "none").attr("stroke", cRef).attr("stroke-opacity", 0.35).attr("stroke-width", 1).attr("stroke-dasharray", s ? "3 3" : null).attr("d", line(s)));
+    const main = g.append("path").attr("fill", "none").attr("stroke", cMain).attr("stroke-width", 2.4);
+    // bars: one per band, share of held supply
+    const by = d3.scaleLinear([0, d3.max(bands, (b) => b.pct) || 1], [H2, 0]);
+    g2.append("g").attr("class", "axis").call(d3.axisLeft(by).ticks(3).tickFormat((v) => v + "%"));
+    const bars = g2.selectAll("rect").data(bands.filter((b) => b.lo < p0 * RMAX)).join("rect")
+      .attr("x", (b) => x(b.lo) + 0.5).attr("width", (b) => Math.max(1, x(Math.min(b.hi, p0 * RMAX)) - x(b.lo) - 1))
+      .attr("y", (b) => by(b.pct)).attr("height", (b) => H2 - by(b.pct));
+    // target: line across both panels, a dot on the chosen curve, a label
+    const tl = svg.append("line").attr("stroke", cMain).attr("stroke-width", 1.5).attr("y1", m.t - 4).attr("y2", m.t + H1 + gap + H2);
+    const dot = g.append("circle").attr("r", 4.5).attr("fill", cMain).attr("stroke", C("--bg")).attr("stroke-width", 1.5);
+    const hl = g.append("line").attr("stroke", cMain).attr("stroke-opacity", 0.5).attr("stroke-dasharray", "2 3").attr("x1", 0);
+    const lab = g.append("text").attr("class", "calc-lab").attr("fill", cMain).attr("paint-order", "stroke").attr("stroke", C("--bg")).attr("stroke-width", 4).attr("stroke-linejoin", "round");
+    const xh = svg.append("line").attr("class", "xhair").attr("y1", m.t).attr("y2", m.t + H1 + gap + H2).style("opacity", 0);
+    let sNow = null;
+    const place = (r, s) => {
+      if (s !== sNow) { main.attr("d", line(s)); sNow = s; }
+      const X = x(p0 * r), Y = y(need(r, s));
+      tl.attr("x1", m.l + X).attr("x2", m.l + X); dot.attr("cx", X).attr("cy", Y); hl.attr("x2", X).attr("y1", Y).attr("y2", Y);
+      const t = `${fP(p0 * r)} · ${fU(need(r, s))}`; lab.text(t).attr("y", Math.max(11, Y - 11));
+      const tw = lab.node().getComputedTextLength(), right = X + 8 + tw <= w;      // right of the line when it fits, else left
+      lab.attr("x", right ? X + 8 : Math.max(tw, X - 8)).attr("text-anchor", right ? "start" : "end");
+      bars.attr("fill", (b) => (b.lo < p0 * r ? cOn : cBar)).attr("fill-opacity", (b) => (b.lo < p0 * r ? 0.85 : 1));
+    };
+    ui = { place };
+    place(calcMult, calcSell);
+    // pointer: hover reads any market cap; press or drag sets the target
+    const rAt = (ev) => { const [px] = d3.pointer(ev, g.node()); return clampR(x.invert(Math.max(0, Math.min(w, px))) / p0); };
+    const tip = (ev, r) => {
+      const o = over(r), b = bands.find((q) => q.lo <= p0 * r && p0 * r < q.hi);
+      showTip(`<div class="h">Market cap ${fP(p0 * r)} · ${xTxt(r)}</div>` + trow(C("--fg-2"), "net buying, no sellers", fU(need(r, 0)))
+        + trow(cMain, `with ${calcSell}% selling`, fU(need(r, calcSell)))
+        + (held ? trow("", "overhang crossed", `${fB(o.gme)} (${fPct((100 * o.gme) / held, 1)})`) + trow("", "bought for", fU(o.usd)) : "")
+        + (b && held ? `<p style="margin-top:.3rem">Band here: ${esc(bandTxt(b))}</p>` : "") + `<p style="margin-top:.3rem">${mob ? "Tap or drag to set the target" : "Click or drag to set the target"}</p>`, ev);
+    };
+    let dragging = false;
+    svg.on("pointermove", (ev) => { const r = rAt(ev); xh.attr("x1", m.l + x(p0 * r)).attr("x2", m.l + x(p0 * r)).style("opacity", 1); if (dragging) update(r, calcSell, "drag"); tip(ev, r); })
+      .on("pointerdown", (ev) => { dragging = true; svg.node().setPointerCapture?.(ev.pointerId); update(rAt(ev), calcSell, "drag"); tip(ev, rAt(ev)); })
+      .on("pointerup pointercancel", () => { dragging = false; })
+      .on("pointerleave", () => { if (!dragging) { xh.style("opacity", 0); hideTip(); } });
+    $("calcch-l").innerHTML = `<span><i class="ln" style="background:${cMain}"></i>net buying needed, ${calcSell === 0 ? "no sellers" : "with your share selling"}</span>`
+      + `<span><i class="ln" style="background:${cRef};opacity:.6"></i>0 / 25 / 50 / 100% of the overhang selling</span>`
+      + `<span><i style="background:${cOn}"></i>bands crossed on the way</span><span><i style="background:${cBar}"></i>bands above the target</span>`;
+    update(calcMult, calcSell);
   };
   draws.push(draw);
 }
@@ -2014,7 +2136,7 @@ function methodology() {
     <li><b>Arrival quarter:</b> the quarter the owner first received GME. Survival = owners still holding more than 1M GME ÷ owners that arrived.</li>
     <li><b>Smart money:</b> owners with at least $5k of realized profit and at least 100% on the coins they sold. Picked by today's record, so their history is a hindsight read.</li>
     <li><b>Valuation composite:</b> MVRV (25%), supply in profit (25%), price against its 140-day average (30%) and 30-day DEX net flow against pool depth (20%), each ranked against its own earlier values only, from 60 days of data on. 0 = lowest in its own past, 1 = highest.</li>
-    <li><b>Pool and overhang calculator:</b> constant-product arithmetic on today's reserves. Multiplying the price by r takes ETH × (√r − 1) of net buying with no sellers. Overhang = held supply bought between today's price and the target, from the cost engine; if a share of it sells at break-even, the extra buying needed is roughly that share × its cost.</li></ul></div></section>
+    <li><b>Pool and overhang calculator:</b> constant-product arithmetic on today's reserves. Multiplying the price by r takes ETH × (√r − 1) of net buying with no sellers. Overhang = held supply bought between today's price and the target, from the cost engine (a price band only partly crossed counts in proportion); if a share of it sells at break-even, the extra buying needed is roughly that share × its cost. The lower panel draws that supply band by band, so the walls a move would have to absorb are visible.</li></ul></div></section>
   <section><span class="dn">07 · Limits</span><div><h2>What the data cannot tell you</h2>
     <ul><li>Ethereum only. GME on other chains is not covered (MEXC's GME is the Solana token, not this one).</li>
     <li>What happens inside an exchange is invisible. A deposit is not proof of a sale, and only labelled exchange wallets are recognised; a deposit to an unlabelled address reads as a wallet-to-wallet transfer.</li>
