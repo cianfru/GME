@@ -1994,6 +1994,27 @@ function wirePl(root, P) {
 }
 const PLNOTE = "Oldest coins sold first (FIFO). A DEX buy costs what was actually paid; anything else that arrives (exchange withdrawal, transfer, liquidity removed) is costed at that day's close. Sales are DEX sales and exchange deposits (treated as sales); they realize profit or loss. Coins sent to other wallets, added to liquidity or burned leave at cost, with no profit or loss. Unrealized = holdings × the day's close − cost of the coins still held. Prices are shown as market cap (price × 420.69B supply). Markers: filled = DEX trade at its average execution price for the day; ring = exchange deposit or withdrawal at the day's close.";
 const plKv = (now) => now ? [["Bought (DEX + exch.)", fU(now.bu)], ["Sold (DEX + exch.)", fU(now.so)], ["Realized P/L", sgn(now.rz, fU)], ["Unrealized P/L", sgn(now.un, fU)], ["Total P/L", sgn(now.tot, fU)], ["Avg cost of held, as MC", now.h > 1e-6 ? fP(now.c / (now.h * 1e9)) : "—"]] : [];
+// Group profile (entities.py → pnl.json ents[id].profile): buying waves, sweeps between its own wallets, where the
+// buys were executed, and the hour of day (UTC) they happened.
+function profileHtml(pr) {
+  if (!pr || !pr.buys) return "";
+  const tot = d3.sum(pr.venues, (v) => v[1]) || 1, mxh = d3.max(pr.hours) || 1, W = 24 * 14;
+  const hours = `<svg viewBox="0 0 ${W} 74" width="100%" height="74" preserveAspectRatio="none" style="display:block;max-width:520px">` +
+    pr.hours.map((n, h) => `<rect x="${h * 14 + 1}" y="${60 - (52 * n) / mxh}" width="12" height="${Math.max(n ? 1.5 : 0, (52 * n) / mxh)}" fill="var(--accent)" fill-opacity="${n ? 0.85 : 0}" data-tip="${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59 UTC · ${n} buy${n === 1 ? "" : "s"} · ${fU(pr.hoursUsd[h])}"></rect>`).join("") +
+    [0, 6, 12, 18].map((h) => `<text x="${h * 14 + 1}" y="72" font-size="9" fill="var(--muted)" font-family="var(--mono)">${String(h).padStart(2, "0")}h</text>`).join("") + `</svg>`;
+  return `<div><span class="eyebrow">Buying waves · ${pr.nWaves} wave${pr.nWaves === 1 ? "" : "s"}, ${fN(pr.buys)} buys${pr.nWaves > pr.waves.length ? ` · the ${pr.waves.length} largest shown` : ""}</span>
+    <div class="tw" style="margin-top:6px"><table><thead><tr><th>Dates</th><th class="n">Wallets</th><th class="n">Buys</th><th class="n">Spent</th><th class="n">Avg MC</th><th class="n">Worth today</th><th>Mostly via</th></tr></thead><tbody>` +
+    pr.waves.map((w) => { const ch = w.usd ? (100 * (w.now - w.usd)) / w.usd : null;
+      return `<tr><td class="num">${w.a === w.b ? w.a : w.a + " → " + w.b}</td><td class="n">${w.wallets}</td><td class="n">${fN(w.n)}</td><td class="n">${fU(w.usd)}</td><td class="n">${w.mc ? fMcap(w.mc) : "—"}</td><td class="n">${fU(w.now)} <small class="${ch >= 0 ? "up" : "down"}">${ch == null ? "" : sgn(ch, fPct)}</small></td><td class="flat" style="white-space:normal">${esc(w.via || "—")}</td></tr>`; }).join("") +
+    `</tbody></table></div><p class="sub" style="margin-top:6px">A wave is a run of market buys (DEX or exchange withdrawal) with no gap longer than ${pr.gap} days. “Worth today” values the GME bought in that wave at today's market cap, whether or not those exact coins are still held.</p></div>
+    <div><span class="eyebrow">Where the buys were executed</span><div class="tw" style="margin-top:6px"><table><tbody>` +
+    pr.venues.map(([n, u]) => `<tr><td style="white-space:normal">${esc(n)}</td><td class="n">${fU(u)}</td><td class="n">${fPct((100 * u) / tot, 0)}</td><td><div class="bar"><i style="width:${(100 * u) / tot}%"></i></div></td></tr>`).join("") +
+    `</tbody></table></div><p class="sub" style="margin-top:6px">The address the bought GME came from. “Straight from the pool” means an app or bot told the pool to pay the wallet directly, so the app itself is not visible.</p></div>
+    <div><span class="eyebrow">Hour of day the buys happened (UTC)</span><div style="margin-top:8px">${hours}</div></div>` +
+    (pr.sweeps.length ? `<div><span class="eyebrow">Sweeps between its own wallets</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Into</th><th class="n">From</th><th class="n">GME</th></tr></thead><tbody>` +
+      pr.sweeps.map((x) => `<tr><td class="num">${x.d}</td><td><button class="addr" data-addr="${x.into}">${short(x.into)}</button></td><td class="n">${x.n} wallet${x.n === 1 ? "" : "s"}</td><td class="n">${fBb(x.tok / 1e9)}</td></tr>`).join("") +
+      `</tbody></table></div><p class="sub" style="margin-top:6px">Days when one of the group's wallets received GME from 3 or more of its other wallets, or at least 0.1% of supply in total. Internal: not buying or selling.</p></div>` : "");
+}
 async function openEntity(id) {
   const e = S.E && S.E.entities.find((x) => x.id === id); if (!e) return;
   $("scrim").classList.add("on"); $("drawer").classList.add("open");
@@ -2006,6 +2027,7 @@ async function openEntity(id) {
   const big = ((P && P.marks) || []).slice().sort((a, b) => b[3] - a[3]).slice(0, 12), off = d0off();
   $("db").innerHTML = `<div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
     <div><span class="eyebrow">How it traded · the whole group as one owner</span><div style="margin-top:6px">${plBox("e:" + id)}</div><p class="sub" style="margin-top:6px">${PLNOTE} Moves between the group's own wallets are internal: neither buys nor sales.</p></div>
+    ${profileHtml(P && P.profile)}
     ${big.length ? `<div><span class="eyebrow">Largest trades</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">At MC</th></tr></thead><tbody>` +
       big.map(([d, k, b, u]) => `<tr><td class="num">${fday(DD[d + off] || DD[N - 1])}</td><td class="${PLK[k][1] === "--up" ? "up" : "down"}">${PLK[k][0]}</td><td class="n">${fBb(b)}</td><td class="n">${fU(u)}</td><td class="n">${PLK[k][2] ? fP(u / (b * 1e9)) : "—"}</td></tr>`).join("") + `</tbody></table></div></div>` : ""}
     <div><span class="eyebrow">Wallets (${e.n})</span><div class="chips" style="margin-top:6px">${e.members.slice(0, 120).map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>`).join("")}</div></div>`;

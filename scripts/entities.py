@@ -23,7 +23,8 @@
 # over 1/7/30/90 days, a status per window, a cost basis and profit and loss (pnl.py: FIFO over the entity's external
 # flows; DEX sales and exchange deposits realize, other outflows leave at cost; coins that arrived by transfer are
 # costed at that day's price), evidence strength (focus cluster), "forming" flags and tripwires since the last run.
-# data/pnl.json carries each entity's day-by-day P/L track and its trades for the page's P/L chart.
+# data/pnl.json carries each entity's day-by-day P/L track, its trades and a profile (buying waves, sweeps between its
+# own wallets, where the buys were executed, hour of day) for the page's group drawer.
 import sys, json, os, collections, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from txlib import *
@@ -209,11 +210,54 @@ for s, r, ts, v, b in T:
 
 # ---- cost basis and P/L over time: FIFO over each entity's external flows, full history (pnl.py) -------------------
 books = [Book(T[0][2][:10]) for _ in ents]
+buys = [[] for _ in ents]                                       # profile: every market buy (DEX or exchange withdrawal)
+inside = [collections.defaultdict(lambda: [set(), 0.0]) for _ in ents]   # profile: moves between an entity's own wallets
 for j, (s, r, ts, v, b) in enumerate(T):
     ks, kr = own.get(s), own.get(r)
-    if ks == kr: continue
-    if kr is not None: books[kr].inflow(ts, v, PX[j], "D" if is_dex(s) else "C" if is_cex(s) else "W")
+    if ks is not None and ks == kr:
+        if s != r: x = inside[ks][(ts[:10], r)]; x[0].add(s); x[1] += v
+        continue
+    if kr is not None:
+        books[kr].inflow(ts, v, PX[j], "D" if is_dex(s) else "C" if is_cex(s) else "W")
+        if is_dex(s) or is_cex(s): buys[kr].append((ts, r, v, v * PX[j], s))
     if ks is not None: books[ks].outflow(ts, v, PX[j], "D" if is_dex(r) else "C" if is_cex(r) else None)
+
+# ---- profile per entity (shown in its P&L drawer): buying waves, sweeps, where the buys were executed, hour of day ----
+# A wave = buys with no gap longer than WAVE_GAP days. A sweep = a day when one member received GME from 3+ other
+# members (or ≥0.1% of supply in total). Venue = the address the bought GME came from: a known router or app, the pool
+# itself (an app or bot that tells the pool to pay the wallet directly), or an exchange withdrawal. Hours are UTC.
+ROUTERS = {"0x66a9893cc07d91d95644aedd05d03f95e1dba8af": "Uniswap app (Universal Router)", "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad": "Uniswap app (Universal Router)",
+           "0xef1c6e67703c7bd7107eed8303fbe6ec2554bf6b": "Uniswap app (older Universal Router)", "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": "Uniswap V2 router",
+           "0xe592427a0aece92de3edee1f18e0157c05861564": "Uniswap V3 router", "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45": "Uniswap V3 router",
+           "0x1111111254eeb25477b68fb85ed929f73a960582": "1inch", "0x111111125421ca6dc452d289314280a0f8842a65": "1inch",
+           "0x9008d19f58aabd9ed0d60971565aa8510560ab41": "CoW Protocol", "0x000000000004444c5dc75cb358380d2e3de08a90": "Uniswap v4 (PoolManager)"}
+NAMES = {"MainnetSettler": "0x Settler (Matcha, wallet swaps)", "ZeroExProxy": "0x", "TransitSwapRouterV5": "TransitSwap", "DexRouter": "OKX DEX router", "RainbowRouter": "Rainbow wallet"}
+def venue(a):
+    if a in ROUTERS: return ROUTERS[a]
+    if a == PAIR: return "Straight from the Uniswap V2 pool"
+    if a == V3POOL: return "Straight from the Uniswap V3 pool"
+    n = EX.get(a, {}).get("name", "")
+    if is_cex(a): return "Exchange withdrawal" + (f" ({n})" if n and n != "contract" else "")
+    return NAMES.get(n, f"Other router or bot {short(a)}")
+WAVE_GAP = 14
+def profile(k):
+    B = sorted(buys[k])
+    waves, cur = [], None
+    for ts, r, v, usd, s in B:
+        d = datetime.date.fromisoformat(ts[:10])
+        if cur and (d - cur["_last"]).days <= WAVE_GAP: cur["_last"] = d
+        else: cur = dict(_first=d, _last=d, w=set(), n=0, v=0.0, usd=0.0, ven=collections.Counter()); waves.append(cur)
+        cur["w"].add(r); cur["n"] += 1; cur["v"] += v; cur["usd"] += usd; cur["ven"][venue(s)] += usd
+    wv = [dict(a=x["_first"].isoformat(), b=x["_last"].isoformat(), wallets=len(x["w"]), n=x["n"], tok=round(x["v"]), usd=round(x["usd"]),
+               mc=round(x["usd"] / x["v"] * SUPPLY) if x["v"] else None, now=round(x["v"] * spot), via=x["ven"].most_common(1)[0][0] if x["ven"] else None) for x in waves]
+    big = sorted(range(len(wv)), key=lambda i: -wv[i]["usd"])[:12]
+    ven = collections.Counter(); hr = [0] * 24; hru = [0.0] * 24
+    for ts, r, v, usd, s in B:
+        ven[venue(s)] += usd; h = int(ts[11:13]); hr[h] += 1; hru[h] += usd
+    sw = [dict(d=d, into=r, n=len(ss), tok=round(v)) for (d, r), (ss, v) in inside[k].items() if len(ss) >= 3 or v >= 0.001 * SUPPLY]
+    sw.sort(key=lambda x: -x["tok"])
+    return dict(waves=[wv[i] for i in sorted(big)], nWaves=len(wv), gap=WAVE_GAP, buys=len(B), venues=[[n, round(u)] for n, u in ven.most_common(6)],
+                hours=hr, hoursUsd=[round(x) for x in hru], sweeps=sorted(sw[:10], key=lambda x: x["d"]))
 
 # ---- evidence strength (focus cluster): holdings reachable from the focus wallet through direct evidence only ------
 FC = json.load(open(os.path.join(D, "focus_cluster.json")))
@@ -305,7 +349,7 @@ out.sort(key=lambda x: -x["bal"])
 json.dump(dict(asOf=NOW, since=since, spot=spot, windows=list(WIN), channels=CH, entities=out, edges=E, alerts=alerts, events=events), open(RP, "w"))
 json.dump(dict(asOf=NOW, d0=T[0][2][:10], kinds=dict(b="DEX buy", s="DEX sale", ci="from an exchange", co="to an exchange"),
                track=["day", "holdB", "costUsd", "realizedUsd", "boughtUsd", "soldUsd"],
-               ents={e["id"]: books[k].finish() for k, e in enumerate(ents)}), open(os.path.join(D, "pnl.json"), "w"), separators=(",", ":"))
+               ents={e["id"]: dict(books[k].finish(), profile=profile(k)) for k, e in enumerate(ents)}), open(os.path.join(D, "pnl.json"), "w"), separators=(",", ":"))
 att = sum(len(e["joined_now"]) for e in ents)
 print(f"entities: {len(out)} ({sum(1 for e in out if e['kind']=='linked')} linked groups) · {sum(e['n'] for e in out)} wallets · {att} joined this run · "
       f"{sum(len(e['provisional']) for e in out)} provisional · {sum(1 for e in out if e['forming'])} forming · {len(alerts)} alerts · since {since}")
