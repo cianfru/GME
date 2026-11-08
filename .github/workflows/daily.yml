@@ -141,6 +141,12 @@ jobs:
       - name: Entity registry
         run: python3 scripts/entities.py
 
+      # The Visualizer's transfer graph (every pair, per month). ~4.5 MB, so like wallets.json it is only committed by
+      # the full daily run.
+      - name: Visualizer graph
+        continue-on-error: true
+        run: python3 scripts/graph.py
+
       # ETH side: who signed new purchases into study wallets (public nodes, incremental), then the ETH study from the
       # committed BigQuery results (data/bq, refreshed by the manual bigquery.yml workflow).
       - name: ETH side
@@ -167,7 +173,7 @@ jobs:
         run: |
           git config user.name "gme-terminal bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ "$MODE" = "light" ]; then git checkout HEAD -- data/wallets.json 2>/dev/null || true; fi
+          if [ "$MODE" = "light" ]; then git checkout HEAD -- data/wallets.json data/graph.json 2>/dev/null || true; fi
           git add data
           if git diff --cached --quiet; then echo "no changes"; exit 0; fi
           if [ "$MODE" = "light" ]; then git commit -m "data: refresh $(date -u +'%F %H:%M') UTC (light)"; else git commit -m "data: daily refresh $(date -u +%F)"; fi

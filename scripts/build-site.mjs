@@ -103,6 +103,8 @@ copyFileSync(join(ROOT, "site/index.html"), join(OUT, "index.html"));
 copyFileSync(join(ROOT, "site/logo.png"), join(OUT, "logo.png"));   // the token's logo (CoinGecko "GME (Ethereum)")
 // Daily cost-basis distribution of held supply (engine, ~900 × 40): fetched only by the Crowd page's heatmap.
 if (existsSync(join(D, "engine/urpd-history.json"))) copyFileSync(join(D, "engine/urpd-history.json"), join(OUT, "urpd-history.json"));
+// The Visualizer's transfer graph (graph.py → graph.json, ~1.6 MB gzipped): fetched only by #visualizer.
+if (existsSync(join(D, "graph.json"))) copyFileSync(join(D, "graph.json"), join(OUT, "graph.json"));
 // Per-group P/L tracks and trades (entities.py → pnl.json): fetched only when a group's P&L chart is opened.
 if (existsSync(join(D, "pnl.json"))) copyFileSync(join(D, "pnl.json"), join(OUT, "pnl.json"));
 // Per-wallet histories: a separate file, fetched only when a wallet is opened.

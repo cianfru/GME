@@ -345,6 +345,39 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 .foot a { color: var(--fg-2) }
 #err { display: none; margin: 1rem var(--gut); padding: 1rem; border: 1px solid var(--crit); color: var(--crit) }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important } }
+/* visualizer: full-bleed canvas with floating glass panels */
+body.vzmode main.wrap { max-width: none; padding: 0 } body.vzmode .foot { display: none } .vz [hidden] { display: none !important }
+.vz { position: relative; height: calc(100dvh - var(--hdrh, 57px)); overflow: hidden; border-top: 1px solid var(--line) }
+.vz canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab }
+.vzbox { background: var(--glass-pop); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border: 1px solid var(--line-2); padding: 10px 12px }
+.vzbar { position: absolute; z-index: 5; top: 12px; left: 12px; display: flex; flex-direction: column; gap: 8px; width: min(440px, calc(100% - 24px)) }
+.vzsearch .eyebrow { display: block; margin-bottom: 7px; color: var(--accent) }
+.vzq { display: flex; gap: 6px } .vzq input { flex: 1; min-width: 0; height: 36px; background: var(--glass-2); border: 1px solid var(--line); color: var(--fg); padding: 0 .7rem; font: 400 13px var(--sans) }
+.vzq input:focus { outline: 1px solid var(--accent); outline-offset: -1px } .vzq .mini { height: 36px } .vzq .mini.on { border-color: var(--accent); color: var(--accent) }
+.vzsug { margin-top: 6px; display: flex; flex-direction: column; border: 1px solid var(--line); max-height: 330px; overflow-y: auto }
+.vzsug button { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 10px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--fg); text-align: left; cursor: pointer; font: 400 13px var(--sans) }
+.vzsug button:last-child { border-bottom: 0 } .vzsug button:hover, .vzsug button.on { background: var(--accent-2) } .vzsug small { color: var(--muted); font: 400 11px var(--mono); white-space: nowrap }
+.vzfil { display: flex; flex-direction: column; gap: 8px } .vzrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap } .vzrow > .eyebrow { width: 70px; flex: none } .vzrow .chips { padding: 0; gap: .35rem }
+.vztools { position: absolute; z-index: 4; right: 384px; bottom: 12px; display: flex }
+.vztools button { width: 36px; height: 36px; background: var(--glass-pop); border: 1px solid var(--line-2); margin-left: -1px; cursor: pointer; font: 500 15px var(--mono); color: var(--fg-2) } .vztools button:hover { color: var(--accent) }
+.vzlegend { position: absolute; z-index: 3; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px 14px; max-width: calc(100% - 520px); font: 400 11.5px var(--sans); color: var(--fg-2); background: var(--glass-pop); border: 1px solid var(--line); padding: 7px 10px }
+.vzlegend span { display: inline-flex; align-items: center; gap: 6px } .vzlegend .ln { width: 16px; height: 2px; display: inline-block } .vzlegend svg { display: block }
+.vzside { position: absolute; z-index: 4; top: 12px; right: 12px; bottom: 12px; width: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 14px }
+.vzph { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px } .vzph h4 { margin: 4px 0 0; font: 600 17px/1.25 var(--sans); color: var(--fg); word-break: break-word }
+.vzph .x { background: none; border: 1px solid var(--line); min-width: 36px; min-height: 36px; cursor: pointer; font-size: 18px; color: var(--fg-2) }
+.vzaddr { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; color: var(--fg-2) } .vzaddr .mono { width: 100%; word-break: break-all; font-size: 11.5px; color: var(--muted) }
+.vzkv { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); margin: 0 } .vzkv div { padding: 8px 10px; box-shadow: 1px 1px 0 var(--line); min-width: 0 }
+.vzkv dt { font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) } .vzkv dd { margin: 3px 0 0; font: 500 13px var(--mono); color: var(--fg) } .vzkv small { color: var(--muted); font-size: 11px }
+.vzact { display: flex; flex-wrap: wrap; gap: 6px }
+.vzlist { display: flex; flex-direction: column; border-top: 1px solid var(--line) }
+.vzlist button { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 2px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--fg); font: 400 12.5px var(--sans); text-align: left; cursor: pointer; min-height: 34px }
+.vzlist button:hover { background: var(--row) } .vzlist button.off { color: var(--muted) } .vzlist button > b { font: 500 12px var(--mono); white-space: nowrap }
+.vzload { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--muted); font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; pointer-events: none }
+@media (max-width: 760px) {
+  .vzbar { width: calc(100% - 24px) } .vzrow > .eyebrow { width: 100% }
+  .vzside { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 55%; display: none; border-left: 0; border-right: 0; border-bottom: 0 } .vzside.open { display: flex }
+  .vztools { right: 12px; bottom: 12px } .vzside.open ~ .vztools, .vz:has(.vzside.open) .vztools { display: none } .vzlegend { display: none }
+}
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { :root[data-theme="dark"] { --glass: rgb(16 24 40 / .92) } :root[data-theme="light"] { --glass: rgb(255 255 255 / .9) } }
 </style>
 </head>
@@ -420,7 +453,7 @@ let S, T, DD, N, IDX = null, AGEH = 0, STALE = false, PARTIAL = false;
 const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
-const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["methodology", "Methodology"]];
+const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["visualizer", "Visualizer"], ["methodology", "Methodology"]];
 // Group names end in a short handle: the last four characters of the wallet the group is named after ("Accumulator
 // efdb", "Linked group 847d"). fbb4's group is just "fbb4" (the owner's X name, the end of 0xe147…fbb4).
 const nm = (s) => esc(s).replace(/(^|\s)([0-9a-f]{4,6})$/, (m, sp, h) => (sp ? "&nbsp;" : "") + `<span class="hd">${h}</span>`);   // nbsp: flex buttons drop a plain trailing space
@@ -490,6 +523,7 @@ function onClick(e) {
   if (cp) { e.preventDefault(); copyText(cp.dataset.copy, cp); return; }
   const a = e.target.closest("[data-addr]");
   if (a) { e.preventDefault(); openWallet(a.dataset.addr); return; }
+  if (e.target.closest('a[href^="#visualizer"]')) closeWallet();
   const pl = e.target.closest("[data-pnl]");
   if (pl) { e.preventDefault(); openEntity(pl.dataset.pnl); return; }
   const o = e.target.closest("[data-owner]");
@@ -509,7 +543,9 @@ function render() {
   document.querySelectorAll("#nav a").forEach((a) => { const on = a.dataset.p === page; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   draws.length = 0; if (bubSim) { bubSim.stop(); bubSim = null; }
   const v = $("view"); v.innerHTML = ""; v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
-  ({ overview, holders, crowd, transfers, entities, methodology })[page]();
+  document.body.classList.toggle("vzmode", page === "visualizer");
+  if (page !== "visualizer" && VZ.sim) { VZ.sim.stop(); VZ.sim = null; }
+  ({ overview, holders, crowd, transfers, entities, visualizer, methodology })[page]();
   document.title = (page === "overview" ? "GME on Ethereum" : PAGES.find((p) => p[0] === page)[1] + " · GME on Ethereum") + " · Terminal";
   markRange(); redraw();
   if (page !== lastPage) scrollTo({ top: 0 });
@@ -1572,7 +1608,7 @@ function ecard({ e, x, st }, wl) {
       <div><dt>Active</dt><dd>${esc(e.firstSeen)} → ${esc(e.lastActive)}</dd></div></dl>
     <p class="ecnote">${esc(evid)}${srcTxt ? ` Held coins came from ${srcTxt}.` : ""}</p>
     ${pv.length ? `<p class="ecnote" style="color:var(--warn)">${pv.length} provisional wallet(s) received coins from it and hold ${fB(pvB)}; no linking rule has fired, so they are not counted.</p>` : ""}
-    <footer><button type="button" class="mini" data-pnl="${e.id}">P&amp;L chart →</button>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Wallet map →</button>` : ""}<button type="button" class="mini" data-emap="${e.id}">Entity map →</button>
+    <footer><button type="button" class="mini" data-pnl="${e.id}">P&amp;L chart →</button><a class="mini" href="#visualizer/${e.id}">Visualize →</a>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Wallet map →</button>` : ""}<button type="button" class="mini" data-emap="${e.id}">Entity map →</button>
       <details><summary class="mini">Wallets (${e.n})</summary><div class="chips">${e.members.slice(0, 80).map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>${(() => { const j = e.attached.find((j) => j.a === a); return j ? `<span class="ev" data-tip="${esc(`Joined ${j.d}: ${HOWN[j.how] || j.how} with ${short(j.frm)}`)}">joined · ${esc(HOWS[j.how] || j.how)}</span>` : ""; })()}`).join("")}${pv.map((p) => `<button class="addr" data-addr="${p.a}" style="opacity:.7">${short(p.a)}</button><span class="ev inf">provisional</span>`).join("")}</div></details></footer>
   </article>`;
 }
@@ -1877,6 +1913,377 @@ function methodology() {
   </article>`);
 }
 
+// ---------- VISUALIZER: explore who sent GME to whom, centred on any wallet or group (data/graph.json, this page only) ----------
+// Canvas graph with a force layout: drag a node to move and pin it, drag the background to pan, scroll or pinch to
+// zoom, click to inspect, double-click (or "Expand") to add its largest counterparties. Venues (pools, routers,
+// exchanges) are collapsed into named nodes by graph.py. With "Merge groups" on, the wallets of one group are one node.
+let VG = null;
+const VZ = { inc: new Set(), pos: new Map(), hidden: new Set(), pinned: new Set(), base: null, baseRef: null, sel: null, hov: null, hovE: null,
+  merge: true, flow: "all", minUsd: 0, preset: "all", show: { dex: true, cex: true, dep: true }, t: null, sim: null, D: null, filters: false, built: false };
+const VZK = ["wallet", "contract", "deposit", "cex", "dex", "lp", "burn", "mint", "token"];
+async function loadVG() {
+  if (VG) return VG;
+  const g = await (await fetch("/graph.json", { cache: "no-store" })).json();
+  const adj = Array.from({ length: g.nodes.length }, () => []);
+  g.edges.forEach((e, k) => { adj[e[0]].push(k); adj[e[1]].push(k); });
+  const entMembers = g.entities.map(() => []);
+  g.nodes.forEach((n, i) => { if (n[3] >= 0) entMembers[n[3]].push(i); });
+  const entById = new Map(g.entities.map((e, x) => [e[0], x]));
+  VG = { ...g, adj, entMembers, entById, byKey: new Map(g.nodes.map((n, i) => [n[0], i])) };
+  return VG;
+}
+const vzKind = (i) => VZK[VG.nodes[i][1]];
+const vzShown = (i) => { const k = vzKind(i); return !((k === "dex" || k === "lp") && !VZ.show.dex) && !(k === "cex" && !VZ.show.cex) && !(k === "deposit" && !VZ.show.dep); };
+const vzDid = (i) => (VZ.merge && VG.nodes[i][3] >= 0 ? "E" + VG.nodes[i][3] : "N" + i);
+const vzRaws = (id) => (id[0] === "E" ? VG.entMembers[+id.slice(1)] : [+id.slice(1)]);
+function vzRange() {
+  const M = VG.months, last = M.length - 1;
+  if (VZ.preset === "3m") return [Math.max(0, last - 2), last];
+  if (/^\d{4}$/.test(VZ.preset)) { const a = M.findIndex((m) => m.startsWith(VZ.preset)), b = M.map((m) => m.startsWith(VZ.preset)).lastIndexOf(true); return a < 0 ? [1, 0] : [a, b]; }
+  return [0, last];
+}
+function vzAmt(e, R) {
+  let g = 0, u = 0, n = 0, a = null, b = null;
+  for (const [m, gb, us, c] of e[2]) if (m >= R[0] && m <= R[1]) { g += gb; u += us; n += c; if (a == null) a = m; b = m; }
+  return { g, u, n, a, b };
+}
+function vzLook(id) {
+  if (id[0] === "E") { const x = +id.slice(1), e = VG.entities[x]; return { kind: "entity", label: e[1], glyph: e[3] === "focus" ? FNAME : (e[2] || e[0].slice(0, 4)), bal: e[4], ent: x, n: e[5] }; }
+  const i = +id.slice(1), n = VG.nodes[i], k = VZK[n[1]], ent = n[3];
+  const glyph = k === "wallet" || k === "contract" ? n[0].slice(-4) : k === "cex" ? (/^Unidentified/.test(n[2]) ? "CEX" : n[2].replace(/[^A-Za-z]/g, "").slice(0, 4).toUpperCase()) : k === "dex" ? (/Uniswap/.test(n[2]) ? "UNI" : /1inch/.test(n[2]) ? "1INCH" : /0x/.test(n[2]) ? "0X" : /CoW/.test(n[2]) ? "COW" : "DEX")
+    : k === "deposit" ? "DEP" : k === "burn" ? "✕" : k === "mint" ? "+" : k === "token" ? "GME" : "LP";
+  const label = n[2] || (ent >= 0 ? `${short(n[0])}` : short(n[0]));
+  return { kind: k, label, glyph, bal: n[4], ent, addr: k === "wallet" || k === "contract" || k === "deposit" ? n[0] : null };
+}
+const VZPAL = ["--s1", "--s3", "--s7", "--s5", "--s2", "--s4", "--s8"];
+function vzColor(d) {
+  if (d.kind === "cex" || d.kind === "deposit") return C("--s4");
+  if (d.kind === "dex" || d.kind === "lp") return C("--s7");
+  if (d.kind === "burn" || d.kind === "mint" || d.kind === "token") return C("--neutral");
+  if (d.ent >= 0) return VG.entities[d.ent][3] === "focus" ? C("--accent") : C(VZPAL[d.ent % VZPAL.length]);
+  return C("--fg-2");
+}
+// Rebuild the display graph (nodes + aggregated edges) from the included raw nodes and the filters.
+function vzBuild() {
+  const R = vzRange(), nodes = new Map(), em = new Map();
+  for (const i of VZ.inc) { if (!vzShown(i)) continue; const id = vzDid(i); if (VZ.hidden.has(id)) continue; if (!nodes.has(id)) nodes.set(id, { id, ...vzLook(id) }); }
+  const seen = new Set();
+  for (const i of VZ.inc) for (const k of VG.adj[i]) {
+    if (seen.has(k)) continue; seen.add(k);
+    const e = VG.edges[k], a = vzDid(e[0]), b = vzDid(e[1]);
+    if (a === b || !nodes.has(a) || !nodes.has(b) || !VZ.inc.has(e[0]) || !VZ.inc.has(e[1])) continue;
+    const x = vzAmt(e, R); if (!x.u) continue;
+    const key = a + ">" + b; let y = em.get(key); if (!y) { y = { id: key, s: a, t: b, source: a, target: b, g: 0, u: 0, n: 0, a: x.a, b: x.b }; em.set(key, y); }
+    y.g += x.g; y.u += x.u; y.n += x.n; y.a = Math.min(y.a, x.a); y.b = Math.max(y.b, x.b);
+  }
+  const edges = [...em.values()].filter((e) => e.u >= VZ.minUsd);
+  const deg = new Set(edges.flatMap((e) => [e.s, e.t])); let lone = 0;    // nodes with no link in these filters are hidden
+  for (const id of [...nodes.keys()]) if (!deg.has(id) && id !== VZ.base && !VZ.pinned.has(id) && id !== VZ.sel) { nodes.delete(id); lone++; }
+  const mb = d3.max([...nodes.values()].filter((d) => d.kind === "wallet" || d.kind === "entity" || d.kind === "contract"), (d) => d.bal) || 1;
+  for (const d of nodes.values()) {
+    d.r = d.kind === "wallet" || d.kind === "entity" || d.kind === "contract" ? 11 + 17 * Math.sqrt(Math.max(0, d.bal) / mb) : d.kind === "deposit" ? 9 : 17;
+    if (d.id === VZ.base) d.r = Math.max(d.r, 24);
+    const p = VZ.pos.get(d.id); if (p) Object.assign(d, p);
+    if (d.id === VZ.base) { d.fx = 0; d.fy = 0; } else if (VZ.pinned.has(d.id) && p) { d.fx = p.x; d.fy = p.y; }
+  }
+  const sum = (id, dir) => d3.sum(edges.filter((e) => (dir === "in" ? e.t : e.s) === id), (e) => e.u);
+  for (const d of nodes.values()) { d.in = sum(d.id, "in"); d.out = sum(d.id, "out"); }
+  VZ.D = { nodes: [...nodes.values()], edges, byId: nodes, maxU: d3.max(edges, (e) => e.u) || 1, R, lone };
+  return VZ.D;
+}
+function vzAdd(raws, near) {
+  const P = near && VZ.pos.get(near);
+  for (const i of raws) {
+    if (VZ.inc.has(i)) continue; VZ.inc.add(i);
+    if (VZ.merge && VG.nodes[i][3] >= 0) for (const j of VG.entMembers[VG.nodes[i][3]]) VZ.inc.add(j);
+    const id = vzDid(i); VZ.hidden.delete(id);
+    if (!VZ.pos.has(id)) { const a = Math.random() * Math.PI * 2, rr = 140 + Math.random() * 90; VZ.pos.set(id, { x: (P ? P.x : 0) + Math.cos(a) * rr, y: (P ? P.y : 0) + Math.sin(a) * rr }); }
+  }
+}
+// Counterparties of a display node in the current range, largest first (all of them, from the data, not just on screen).
+function vzCounterparties(id, flow = "all") {
+  const R = vzRange(), raws = new Set(vzRaws(id)), agg = new Map();
+  for (const i of raws) for (const k of VG.adj[i]) {
+    const e = VG.edges[k], out = raws.has(e[0]), j = out ? e[1] : e[0];
+    if (raws.has(j) || (flow === "in" && out) || (flow === "out" && !out) || !vzShown(j)) continue;
+    const x = vzAmt(e, R); if (!x.u) continue;
+    const d = vzDid(j); let y = agg.get(d); if (!y) { y = { id: d, raws: new Set(), inU: 0, outU: 0, inG: 0, outG: 0, n: 0 }; agg.set(d, y); }
+    y.raws.add(j); y.n += x.n; if (out) { y.outU += x.u; y.outG += x.g; } else { y.inU += x.u; y.inG += x.g; }
+  }
+  return [...agg.values()].map((y) => ({ ...y, u: y.inU + y.outU })).filter((y) => y.u >= VZ.minUsd).sort((a, b) => b.u - a.u);
+}
+function vzExpand(id, n = 12) {
+  const have = new Set(VZ.D ? VZ.D.nodes.map((d) => d.id) : []);
+  const c = vzCounterparties(id, VZ.flow).filter((y) => !have.has(y.id));
+  c.slice(0, n).forEach((y) => vzAdd([...y.raws], id));
+  vzAdd(vzRaws(id).filter((i) => VZ.inc.has(i)), id);
+  return Math.max(0, c.length - n);
+}
+function vzRefFor(ref) {          // "e1476704" (entity id), "fbb4"/handle, or an address → { id: display id, raws }
+  ref = String(ref || "").trim().toLowerCase();
+  if (!ref) return null;
+  const ex = VG.entById.get(ref) ?? VG.entities.findIndex((e) => e[2] === ref || (e[3] === "focus" && ref === FNAME));
+  if (ex != null && ex >= 0) return { ent: ex };
+  const i = VG.byKey.get(ref);
+  return i != null ? { raw: i } : null;
+}
+function vzSetBase(ref, push = true) {
+  const r = vzRefFor(ref); if (!r) return false;
+  VZ.inc.clear(); VZ.pos.clear(); VZ.hidden.clear(); VZ.pinned.clear(); VZ.sel = null;
+  const raws = r.ent != null ? VG.entMembers[r.ent] : [r.raw];
+  raws.forEach((i) => VZ.inc.add(i));
+  VZ.baseRef = ref; VZ.base = vzDid(raws[0]); VZ.pos.set(VZ.base, { x: 0, y: 0 });
+  if (!VZ.merge && r.ent != null) raws.forEach((i) => { const id = vzDid(i); if (!VZ.pos.has(id)) { const a = Math.random() * 6.28; VZ.pos.set(id, { x: Math.cos(a) * 90, y: Math.sin(a) * 90 }); } });
+  vzBuild(); vzExpand(VZ.base, 20); VZ.sel = mobile() ? null : VZ.base;   // on a phone the panel opens on tap only
+  if (push) history.replaceState(null, "", "#visualizer/" + (r.ent != null ? VG.entities[r.ent][0] : VG.nodes[r.raw][0]));
+  return true;
+}
+
+function visualizer() {
+  document.body.classList.add("vzmode");
+  add(`<section class="vz" id="vz"><canvas id="vzc" aria-label="Transfer graph"></canvas>
+    <div class="vzbar">
+      <div class="vzbox vzsearch"><span class="eyebrow">Visualizer</span><div class="vzq"><input id="vzq" type="search" autocomplete="off" spellcheck="false" placeholder="Search a wallet, group or handle (fbb4, 9717, 0x…)" aria-label="Search"><button type="button" class="mini" id="vzft" aria-expanded="false">Filters</button></div><div class="vzsug" id="vzsug" hidden></div></div>
+      <div class="vzbox vzfil" id="vzfil" hidden></div>
+    </div>
+    <div class="vztools"><button type="button" data-vz="in" aria-label="Zoom in">+</button><button type="button" data-vz="out" aria-label="Zoom out">−</button><button type="button" data-vz="fit" aria-label="Fit to screen">⤢</button><button type="button" data-vz="reset" aria-label="Back to the starting graph">↺</button></div>
+    <div class="vzlegend" id="vzleg"></div>
+    <aside class="vzside vzbox" id="vzside"></aside>
+    <p class="vzload" id="vzload">Loading every transfer since launch…</p></section>`);
+  draws.push(() => vzMount());
+}
+function vzMount() {
+  const el = $("vz"); if (!el) return;
+  if (el.dataset.on) { if (VZ.draw) { VZ.draw(); vzLegend(); } return; }
+  el.dataset.on = "1";
+  const hh = document.querySelector(".hdr")?.offsetHeight || 57; el.style.setProperty("--hdrh", hh + "px");
+  loadVG().then(() => {
+    if (!$("vz")) return;
+    $("vzload").hidden = true;
+    const want = (location.hash.split("/")[1] || "").toLowerCase();
+    if (want && want !== VZ.baseRef) vzSetBase(want, false);
+    else if (!VZ.base) vzSetBase(VG.entities.find((e) => e[3] === "focus")?.[0] || VG.nodes[0][0]);
+    vzStart();
+  }).catch((e) => { console.error(e); $("vzload").textContent = "The Visualizer data is not available in this build."; });
+}
+function vzStart() {
+  const el = $("vz"), cv = $("vzc"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, dpr = 1;
+  const size = () => { dpr = Math.min(2, devicePixelRatio || 1); W = el.clientWidth; H = el.clientHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); };
+  size();
+  if (!VZ.t) VZ.t = d3.zoomIdentity.translate(mobile() ? W / 2 : W / 2 - 120, mobile() ? H * 0.38 : H / 2);
+  const toW = (px, py) => [(px - VZ.t.x) / VZ.t.k, (py - VZ.t.y) / VZ.t.k];
+  const ptOf = (ev) => { const b = cv.getBoundingClientRect(); return [ev.clientX - b.left, ev.clientY - b.top]; };
+  const nodeAt = (px, py) => { const [x, y] = toW(px, py); let best = null, bd = Infinity; for (const d of VZ.D.nodes) { const dd = Math.hypot(d.x - x, d.y - y); if (dd < d.r + 4 / VZ.t.k && dd < bd) { bd = dd; best = d; } } return best; };
+  const ctrl = (s, t) => { const dx = t.x - s.x, dy = t.y - s.y, L = Math.hypot(dx, dy) || 1; return [(s.x + t.x) / 2 - (dy / L) * L * 0.14, (s.y + t.y) / 2 + (dx / L) * L * 0.14]; };
+  const qpt = (s, c, t, u) => [(1 - u) * (1 - u) * s.x + 2 * (1 - u) * u * c[0] + u * u * t.x, (1 - u) * (1 - u) * s.y + 2 * (1 - u) * u * c[1] + u * u * t.y];
+  const edgeAt = (px, py) => { const [x, y] = toW(px, py), tol = 6 / VZ.t.k; let best = null, bd = tol;
+    for (const e of VZ.D.edges) { const s = e.source, t = e.target; if (!s.x && s.x !== 0) continue; const c = ctrl(s, t); let p0 = [s.x, s.y];
+      for (let k = 1; k <= 14; k++) { const p1 = qpt(s, c, t, k / 14), vx = p1[0] - p0[0], vy = p1[1] - p0[1], L2 = vx * vx + vy * vy || 1, u = Math.max(0, Math.min(1, ((x - p0[0]) * vx + (y - p0[1]) * vy) / L2));
+        const dd = Math.hypot(x - p0[0] - u * vx, y - p0[1] - u * vy); if (dd < bd) { bd = dd; best = e; } p0 = p1; } }
+    return best; };
+  const ecol = (e) => { const a = e.source.kind, b = e.target.kind, ven = (k) => k === "dex" || k === "cex" || k === "deposit" || k === "lp" || k === "mint";
+    if (b === "burn") return C("--neutral"); if (ven(a) && !ven(b)) return C("--up"); if (ven(b) && !ven(a)) return C("--down"); return C("--s1"); };
+  function draw() {
+    if (!VZ.D) return;
+    const t = VZ.t, k = t.k, D = VZ.D, focus = VZ.hov || (VZ.sel && D.byId.get(VZ.sel)) || null, fid = focus && focus.id;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    // dot grid in world space (pans and zooms with the graph)
+    if (k > 0.3) { const sp = 40 * k, ox = ((t.x % sp) + sp) % sp, oy = ((t.y % sp) + sp) % sp; ctx.fillStyle = C("--grid");
+      for (let x = ox; x < W; x += sp) for (let y = oy; y < H; y += sp) ctx.fillRect(x - 0.75, y - 0.75, 1.5, 1.5); }
+    const S = (p) => [p[0] * k + t.x, p[1] * k + t.y];
+    // edges: curved, width by $ (sqrt), arrow at the middle pointing to the receiver
+    for (const e of D.edges) {
+      const s = e.source, tg = e.target; if (s.x == null) continue;
+      const on = !fid || s.id === fid || tg.id === fid, hot = VZ.hovE === e;
+      const c = ctrl(s, tg), [x0, y0] = S([s.x, s.y]), [cx, cy] = S(c), [x1, y1] = S([tg.x, tg.y]);
+      const w = Math.min(9, 1 + 7 * Math.sqrt(e.u / D.maxU)) * Math.min(1.4, Math.max(0.6, k));
+      ctx.globalAlpha = hot ? 1 : on ? (fid ? 0.95 : 0.55) : 0.07; ctx.strokeStyle = ecol(e); ctx.lineWidth = hot ? w + 1.5 : w;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1); ctx.stroke();
+      const m = qpt({ x: x0, y: y0 }, [cx, cy], { x: x1, y: y1 }, 0.5), m2 = qpt({ x: x0, y: y0 }, [cx, cy], { x: x1, y: y1 }, 0.53), ang = Math.atan2(m2[1] - m[1], m2[0] - m[0]), ah = 5 + w * 0.9;
+      ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.moveTo(m[0] + Math.cos(ang) * ah, m[1] + Math.sin(ang) * ah);
+      ctx.lineTo(m[0] + Math.cos(ang + 2.5) * ah, m[1] + Math.sin(ang + 2.5) * ah); ctx.lineTo(m[0] + Math.cos(ang - 2.5) * ah, m[1] + Math.sin(ang - 2.5) * ah); ctx.closePath(); ctx.fill();
+      if ((hot || (fid && on)) && k > 0.45) { const txt = fU(e.u); ctx.globalAlpha = 1; ctx.font = `500 10.5px ${C("--mono") || "monospace"}`; const tw = ctx.measureText(txt).width;
+        ctx.fillStyle = C("--th"); ctx.fillRect(m[0] - tw / 2 - 4, m[1] - 18, tw + 8, 14); ctx.fillStyle = C("--fg"); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(txt, m[0], m[1] - 11); }
+    }
+    ctx.globalAlpha = 1;
+    // nodes
+    const near = fid ? new Set(D.edges.filter((e) => e.source.id === fid || e.target.id === fid).flatMap((e) => [e.source.id, e.target.id])) : null;
+    for (const d of D.nodes) {
+      if (d.x == null) continue;
+      const [x, y] = S([d.x, d.y]), R = Math.max(5, d.r * k), col = vzColor(d), dim = near && !near.has(d.id);
+      ctx.globalAlpha = dim ? 0.25 : 1;
+      ctx.fillStyle = C("--th"); ctx.strokeStyle = col; ctx.lineWidth = d.id === VZ.base ? 2.6 : 1.8;
+      ctx.beginPath();
+      if (d.kind === "cex") ctx.rect(x - R, y - R, 2 * R, 2 * R);
+      else if (d.kind === "dex" || d.kind === "lp") { for (let q = 0; q < 6; q++) { const a = Math.PI / 6 + (q * Math.PI) / 3; ctx[q ? "lineTo" : "moveTo"](x + R * 1.08 * Math.cos(a), y + R * 1.08 * Math.sin(a)); } ctx.closePath(); }
+      else if (d.kind === "burn" || d.kind === "mint" || d.kind === "token") { ctx.moveTo(x, y - R * 1.15); ctx.lineTo(x + R * 1.15, y); ctx.lineTo(x, y + R * 1.15); ctx.lineTo(x - R * 1.15, y); ctx.closePath(); }
+      else ctx.arc(x, y, R, 0, Math.PI * 2);
+      ctx.fill(); ctx.setLineDash(d.kind === "deposit" ? [3, 2.5] : []); ctx.stroke(); ctx.setLineDash([]);
+      if (d.kind === "entity") { ctx.beginPath(); ctx.arc(x, y, R + 3.5, 0, Math.PI * 2); ctx.lineWidth = 1; ctx.stroke(); }
+      if (d.id === VZ.base) { ctx.beginPath(); ctx.arc(x, y, R + (d.kind === "entity" ? 7.5 : 5), 0, Math.PI * 2); ctx.strokeStyle = C("--accent"); ctx.lineWidth = 1.2; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]); }
+      if (VZ.sel === d.id) { ctx.beginPath(); ctx.arc(x, y, R + 10, 0, Math.PI * 2); ctx.strokeStyle = C("--fg"); ctx.lineWidth = 1.4; ctx.stroke(); }
+      if (VZ.pinned.has(d.id) && d.id !== VZ.base) { ctx.fillStyle = C("--fg-2"); ctx.beginPath(); ctx.arc(x + R * 0.75, y - R * 0.75, 2.6, 0, 6.29); ctx.fill(); }
+      if (R >= 9) { ctx.fillStyle = col; ctx.font = `600 ${Math.max(8, Math.min(13, R * 0.55))}px ${C("--mono") || "monospace"}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(d.glyph, x, y + 0.5); }
+      if (k >= 0.8 || R >= 15 || d.id === VZ.base || d.id === fid || (near && near.has(d.id) && k >= 0.5)) {
+        const max = k >= 1 ? 30 : 20;
+        ctx.fillStyle = C("--fg"); ctx.font = `500 12px ${C("--sans") || "sans-serif"}`; ctx.textAlign = "center"; ctx.textBaseline = "top";
+        ctx.fillText(d.label.length > max ? d.label.slice(0, max - 1) + "…" : d.label, x, y + R + 6);
+        const sub = d.kind === "wallet" || d.kind === "entity" || d.kind === "contract" ? `${fBb(d.bal)} · ${fPct((100 * d.bal * 1e9) / SUPPLY, 2)}` : d.kind === "deposit" ? short(d.addr) : "";
+        if (sub) { ctx.fillStyle = C("--muted"); ctx.font = `400 10.5px ${C("--mono") || "monospace"}`; ctx.fillText(sub, x, y + R + 21); }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  VZ.draw = draw; window.__vz = VZ;                              // handle for browser checks and the console
+  function restart(alpha = 0.6) {
+    VZ.hov = null; VZ.hovE = null;
+    const D = vzBuild();
+    if (VZ.sim) VZ.sim.stop();
+    VZ.sim = d3.forceSimulation(D.nodes)
+      .force("link", d3.forceLink(D.edges).id((d) => d.id).distance((e) => 120 + e.source.r + e.target.r).strength(0.18))
+      .force("charge", d3.forceManyBody().strength(-420).distanceMax(900))
+      .force("collide", d3.forceCollide((d) => d.r + 30).strength(0.9))
+      .force("x", d3.forceX(0).strength(0.015)).force("y", d3.forceY(0).strength(0.015))
+      .alpha(alpha).alphaDecay(0.035)
+      .on("tick", () => { for (const d of D.nodes) VZ.pos.set(d.id, { x: d.x, y: d.y }); draw(); });
+    vzPanel(); vzLegend(); vzFilters();
+  }
+  VZ.restart = restart;
+  // pan / zoom (not when the press starts on a node: that drags the node)
+  const zoom = d3.zoom().scaleExtent([0.12, 4]).filter((ev) => (ev.type === "wheel" || !nodeAt(...ptOf(ev.touches ? ev.touches[0] : ev))) && !ev.button)
+    .on("zoom", (ev) => { VZ.t = ev.transform; draw(); });
+  const sel = d3.select(cv).call(zoom).on("dblclick.zoom", null);
+  VZ.zoom = zoom; VZ.zsel = sel;
+  sel.call(zoom.transform, VZ.t);
+  let drag = null;
+  cv.addEventListener("pointerdown", (ev) => { const [px, py] = ptOf(ev), d = nodeAt(px, py); if (!d) return; drag = { d, x0: px, y0: py, moved: false }; cv.setPointerCapture(ev.pointerId); });
+  cv.addEventListener("pointermove", (ev) => {
+    const [px, py] = ptOf(ev);
+    if (drag) { if (Math.hypot(px - drag.x0, py - drag.y0) > 3) drag.moved = true;
+      if (drag.moved && drag.d.id !== VZ.base) { const [x, y] = toW(px, py); drag.d.fx = x; drag.d.fy = y; VZ.pinned.add(drag.d.id); VZ.sim.alphaTarget(0.25).restart(); }
+      hideTip(); return; }
+    const d = nodeAt(px, py), e = d ? null : edgeAt(px, py);
+    if (d !== VZ.hov || e !== VZ.hovE) { VZ.hov = d; VZ.hovE = e; cv.style.cursor = d ? "pointer" : e ? "help" : "grab"; draw(); }
+    if (d) showTip(`<div class="h">${esc(d.label)}</div>` + trow(vzColor(d), VZKL[d.kind] || d.kind, d.kind === "wallet" || d.kind === "entity" || d.kind === "contract" ? fBb(d.bal) + " GME" : "")
+      + trow(C("--up"), "in, on screen", fU(d.in)) + trow(C("--down"), "out, on screen", fU(d.out)) + `<p style="margin-top:.3rem">Click to inspect · double-click to expand · drag to move</p>`, ev);
+    else if (e) showTip(`<div class="h">${esc(e.source.label)} → ${esc(e.target.label)}</div>` + trow(ecol(e), "GME", fBb(e.g)) + trow("", "≈ $", fU(e.u)) + trow("", "transfers", fN(e.n))
+      + trow("", "months", VG.months[e.a] === VG.months[e.b] ? VG.months[e.a] : `${VG.months[e.a]} → ${VG.months[e.b]}`), ev);
+    else hideTip();
+  });
+  let lastTap = { id: null, t: 0 };
+  const up = (ev) => { if (!drag) return; const d = drag.d, moved = drag.moved; drag = null; VZ.sim.alphaTarget(0);
+    if (moved) return;
+    const pick = () => { VZ.sel = d.id; if (mobile() && VZ.filters) { VZ.filters = false; vzFilters(); } vzPanel(); draw(); };
+    if (ev.pointerType === "mouse") { pick(); return; }
+    // touch: a second tap within 380 ms expands; the panel opens only once that window has passed, so it can't cover the node
+    const now = performance.now();
+    if (lastTap.id === d.id && now - lastTap.t < 380) { lastTap = { id: null, t: 0 }; VZ.tapX = now; vzExpand(d.id, 12); VZ.sel = d.id; restart(0.5); return; }
+    lastTap = { id: d.id, t: now }; setTimeout(() => { if (lastTap.id === d.id && lastTap.t === now) pick(); }, 390); };
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  cv.addEventListener("pointerleave", () => { if (!drag) { VZ.hov = null; VZ.hovE = null; hideTip(); draw(); } });
+  cv.addEventListener("click", (ev) => { const [px, py] = ptOf(ev); if (!nodeAt(px, py) && !edgeAt(px, py) && VZ.sel) { VZ.sel = null; vzPanel(); draw(); } });
+  cv.addEventListener("dblclick", (ev) => { if (performance.now() - (VZ.tapX || 0) < 700) return; const d = nodeAt(...ptOf(ev)); if (!d) return; ev.preventDefault(); vzExpand(d.id, 12); VZ.sel = d.id; restart(0.5); });
+  const ro = new ResizeObserver(() => { if (!$("vz")) { ro.disconnect(); return; } size(); draw(); }); ro.observe(el);
+  // toolbar, search, panel actions
+  el.querySelector(".vztools").onclick = (ev) => { const b = ev.target.closest("[data-vz]"); if (!b) return; const a = b.dataset.vz;
+    if (a === "in" || a === "out") sel.transition().duration(200).call(zoom.scaleBy, a === "in" ? 1.35 : 1 / 1.35);
+    if (a === "fit") vzFit(); if (a === "reset") { vzSetBase(VZ.baseRef, false); restart(0.8); setTimeout(vzFit, 650); } };
+  const q = $("vzq"), sug = $("vzsug");
+  q.oninput = () => { const r = vzSearch(q.value); sug.hidden = !r.length; sug.innerHTML = r.map((x, i) => `<button type="button" data-vzs="${esc(x.ref)}" class="${i ? "" : "on"}"><span>${x.html}</span><small>${esc(x.sub)}</small></button>`).join(""); };
+  q.onkeydown = (ev) => { if (ev.key === "Enter") { const b = sug.querySelector("[data-vzs]"); if (b) b.click(); } if (ev.key === "Escape") { sug.hidden = true; q.blur(); } };
+  sug.onclick = (ev) => { const b = ev.target.closest("[data-vzs]"); if (!b) return; sug.hidden = true; q.value = "";
+    if (vzSetBase(b.dataset.vzs)) { restart(0.9); setTimeout(vzFit, 650); } };
+  $("vzft").onclick = () => { VZ.filters = !VZ.filters; if (VZ.filters && mobile() && VZ.sel) { VZ.sel = null; vzPanel(); draw(); } vzFilters(); };
+  $("vzfil").onclick = (ev) => { const b = ev.target.closest("[data-vzf]"); if (!b) return; const [f, v] = b.dataset.vzf.split(":");
+    if (f === "range") VZ.preset = v; if (f === "min") VZ.minUsd = +v; if (f === "flow") VZ.flow = v;
+    if (f === "show") VZ.show[v] = !VZ.show[v];
+    if (f === "merge") { VZ.merge = !VZ.merge; const raws = [...VZ.inc]; if (VZ.merge) raws.forEach((i) => { if (VG.nodes[i][3] >= 0) VG.entMembers[VG.nodes[i][3]].forEach((j) => VZ.inc.add(j)); });
+      const b0 = vzRefFor(VZ.baseRef); VZ.base = b0 ? vzDid(b0.ent != null ? VG.entMembers[b0.ent][0] : b0.raw) : VZ.base; VZ.pos.set(VZ.base, { x: 0, y: 0 }); VZ.sel = null; }
+    restart(0.5); };
+  $("vzside").onclick = (ev) => { const b = ev.target.closest("[data-vza]"); if (!b) return; const [a, id] = [b.dataset.vza, b.dataset.id];
+    if (a === "expand") { vzExpand(id, 12); restart(0.5); }
+    if (a === "center") { const r = id[0] === "E" ? VG.entities[+id.slice(1)][0] : VG.nodes[+id.slice(1)][0]; if (vzSetBase(r)) { restart(0.9); setTimeout(vzFit, 650); } }
+    if (a === "pin") { if (VZ.pinned.has(id)) { VZ.pinned.delete(id); const d = VZ.D.byId.get(id); if (d) { d.fx = null; d.fy = null; } VZ.sim.alpha(0.3).restart(); } else { const d = VZ.D.byId.get(id); VZ.pinned.add(id); if (d) { d.fx = d.x; d.fy = d.y; } } vzPanel(); draw(); }
+    if (a === "hide") { VZ.hidden.add(id); VZ.sel = null; restart(0.3); }
+    if (a === "add") { const raws = vzRaws(id); vzAdd(raws, VZ.sel); VZ.sel = id; restart(0.5); }
+    if (a === "sel") { VZ.sel = id; vzPanel(); draw(); }
+    if (a === "close") { VZ.sel = null; vzPanel(); draw(); } };
+  restart(0.9);
+  setTimeout(vzFit, 700);
+}
+const VZKL = { wallet: "Wallet", contract: "Contract", deposit: "Exchange deposit address", cex: "Exchange", dex: "DEX venue", lp: "Liquidity", burn: "Burn", mint: "Mint", token: "Token contract", entity: "Group of wallets" };
+function vzFit() {
+  if (!VZ.D || !VZ.zsel) return; const el = $("vz"); if (!el) return;
+  const ns = VZ.D.nodes.filter((d) => d.x != null); if (!ns.length) return;
+  const W = el.clientWidth, H = el.clientHeight, side = mobile() ? 0 : 360, top = mobile() ? 120 : 0, bot = mobile() ? H * 0.12 : 0;
+  const x0 = d3.min(ns, (d) => d.x - d.r), x1 = d3.max(ns, (d) => d.x + d.r), y0 = d3.min(ns, (d) => d.y - d.r), y1 = d3.max(ns, (d) => d.y + d.r + 30);
+  const k = Math.max(0.15, Math.min(1.6, Math.min((W - side - 60) / (x1 - x0 || 1), (H - top - bot - 60) / (y1 - y0 || 1))));
+  const t = d3.zoomIdentity.translate((W - side) / 2 - k * (x0 + x1) / 2, top + (H - top - bot) / 2 - k * (y0 + y1) / 2).scale(k);
+  VZ.zsel.transition().duration(450).call(VZ.zoom.transform, t);
+}
+function vzSearch(q) {
+  q = q.trim().toLowerCase(); if (q.length < 2 || !VG) return [];
+  const out = [];
+  VG.entities.forEach((e, x) => { const name = e[1].toLowerCase(); if (name.includes(q) || e[2] === q || e[0].startsWith(q) || (e[3] === "focus" && FNAME.includes(q)))
+    out.push({ ref: e[0], html: nm(e[1]), sub: `${e[5]} wallets · ${fBb(e[4])} GME`, s: e[4] }); });
+  const hex = q.replace(/^0x/, "");
+  if (/^[0-9a-f]{3,40}$/.test(hex)) { let n = 0; for (const [a, b, label, ent, bal] of VG.nodes) { if (a.startsWith("0x") && (a.slice(2).startsWith(hex) || a.endsWith(hex))) { out.push({ ref: a, html: esc(short(a)), sub: (label || (ent >= 0 ? VG.entities[ent][1] : "wallet")) + ` · ${fBb(bal)} GME`, s: bal }); if (++n > 12) break; } } }
+  VG.nodes.forEach(([a, k, label, ent, bal]) => { if (label && !a.startsWith("0x") && label.toLowerCase().includes(q)) out.push({ ref: a, html: esc(label), sub: VZKL[VZK[k]], s: 1e9 }); });
+  return out.sort((a, b) => b.s - a.s).slice(0, 9);
+}
+function vzFilters() {
+  const f = $("vzfil"), b = $("vzft"); if (!f || !VG) return;
+  f.hidden = !VZ.filters;
+  const act = (VZ.preset !== "all") + (VZ.minUsd > 0) + (VZ.flow !== "all") + !VZ.show.dex + !VZ.show.cex + !VZ.show.dep + !VZ.merge;
+  if (b) { b.setAttribute("aria-expanded", String(!f.hidden)); b.textContent = "Filters" + (act ? " · " + act : ""); b.classList.toggle("on", !!act); }
+  const years = [...new Set(VG.months.map((m) => m.slice(0, 4)))];
+  const seg = (name, list, cur) => `<div class="seg">${list.map(([l, v]) => `<button type="button" data-vzf="${name}:${v}" class="${String(v) === String(cur) ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  const tog = (v, l) => `<button type="button" class="chip${VZ.show[v] ? " on" : ""}" data-vzf="show:${v}" aria-pressed="${VZ.show[v]}">${l}</button>`;
+  f.innerHTML = `<div class="vzrow"><span class="eyebrow">Time</span>${seg("range", [["All", "all"], ...years.map((y) => [y, y]), ["3M", "3m"]], VZ.preset)}</div>
+    <div class="vzrow"><span class="eyebrow">Min value</span>${seg("min", [["Any", 0], ["$1k", 1000], ["$10k", 10000], ["$100k", 100000]], VZ.minUsd)}</div>
+    <div class="vzrow"><span class="eyebrow">Expand</span>${seg("flow", [["In + out", "all"], ["Received", "in"], ["Sent", "out"]], VZ.flow)}</div>
+    <div class="vzrow"><span class="eyebrow">Show</span><div class="chips">${tog("dex", "DEX")}${tog("cex", "Exchanges")}${tog("dep", "Deposit addresses")}<button type="button" class="chip${VZ.merge ? " on" : ""}" data-vzf="merge:1" aria-pressed="${VZ.merge}">Merge groups</button></div></div>`;
+}
+function vzLegend() {
+  const l = $("vzleg"); if (!l) return;
+  const sv = (inner) => `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke-width="1.5">${inner}</svg>`;
+  const it = (svg, t) => `<span>${svg}${t}</span>`;
+  l.innerHTML = it(sv(`<circle cx="7" cy="7" r="5" stroke="${C("--fg-2")}"/>`), "Wallet") + it(sv(`<circle cx="7" cy="7" r="4" stroke="${C("--accent")}"/><circle cx="7" cy="7" r="6.2" stroke="${C("--accent")}" stroke-width="1"/>`), "Group")
+    + it(sv(`<rect x="2" y="2" width="10" height="10" stroke="${C("--s4")}"/>`), "Exchange") + it(sv(`<polygon points="7,1.5 11.8,4.2 11.8,9.8 7,12.5 2.2,9.8 2.2,4.2" stroke="${C("--s7")}"/>`), "DEX")
+    + it(sv(`<circle cx="7" cy="7" r="5" stroke="${C("--s4")}" stroke-dasharray="2.5 2"/>`), "Deposit address")
+    + `<span><i class="ln" style="background:${C("--up")}"></i>bought / withdrawn</span><span><i class="ln" style="background:${C("--down")}"></i>sold / deposited</span><span><i class="ln" style="background:${C("--s1")}"></i>wallet to wallet</span>`;
+}
+function vzPanel() {
+  const p = $("vzside"); if (!p || !VZ.D) return;
+  const D = VZ.D, R = D.R, rng = VZ.preset === "all" ? "all time" : VZ.preset === "3m" ? "last 3 months" : VZ.preset;
+  const d = VZ.sel && D.byId.get(VZ.sel);
+  p.classList.toggle("open", !!d);
+  if (!d) {
+    const top = [...D.edges].sort((a, b) => b.u - a.u).slice(0, 14);
+    p.innerHTML = `<div class="vzph"><div><span class="eyebrow">On screen · ${esc(rng)} · data to ${esc((VG.asOf || "").slice(0, 10))}</span><h4>${fN(D.nodes.length)} nodes · ${fN(D.edges.length)} links</h4></div></div>
+      <p class="sub">Centred on ${nm(D.byId.get(VZ.base)?.label || "—")}. Click a node to inspect it, double-click (double-tap) to add its largest counterparties, drag to move and pin it.${D.lone ? ` ${fN(D.lone)} node${D.lone === 1 ? "" : "s"} with no transfer in these filters ${D.lone === 1 ? "is" : "are"} hidden.` : ""}</p>
+      <span class="eyebrow">Largest links</span><div class="vzlist">${top.map((e) => `<button type="button" data-vza="sel" data-id="${esc(e.s === VZ.base ? e.t : e.s)}"><span>${esc(e.source.label)} <b class="flat">→</b> ${esc(e.target.label)}</span><b>${fU(e.u)}</b></button>`).join("") || '<p class="sub">No links pass the filters.</p>'}</div>
+      <p class="sub">Arrows point from sender to receiver. Width = dollars moved (exact trade prices for DEX trades, the day's close otherwise). Venues are collapsed: every Uniswap pool, router and aggregator is one node per venue. Links are evidence of transfers, not of ownership.</p>`;
+    return;
+  }
+  const cps = vzCounterparties(d.id, "all"), shown = new Set(D.nodes.map((x) => x.id));
+  const tin = d3.sum(cps, (c) => c.inU), tout = d3.sum(cps, (c) => c.outU), gin = d3.sum(cps, (c) => c.inG), gout = d3.sum(cps, (c) => c.outG);
+  const ent = d.kind === "entity" ? VG.entities[d.ent] : d.ent >= 0 ? VG.entities[d.ent] : null;
+  const isW = d.kind === "wallet" || d.kind === "contract" || d.kind === "entity";
+  p.innerHTML = `<div class="vzph"><div><span class="eyebrow">${esc(VZKL[d.kind] || d.kind)}${d.id === VZ.base ? " · centre" : ""}</span><h4>${nm(d.label)}</h4></div><button type="button" class="x" data-vza="close" aria-label="Close">×</button></div>
+    ${d.addr ? `<div class="vzaddr"><span class="mono">${esc(d.addr)}</span><button class="mini" type="button" data-copy="${d.addr}">Copy</button><a class="mini" href="${ETH(d.addr)}" target="_blank" rel="noopener">Etherscan ↗</a>${d.kind !== "deposit" ? `<button class="mini" type="button" data-addr="${d.addr}">History →</button>` : ""}</div>` : ""}
+    ${ent ? `<div class="vzaddr"><span>${d.kind === "entity" ? `${ent[5]} wallets` : "Member of"} ${d.kind === "entity" ? "" : nm(ent[1])}</span><button class="mini" type="button" data-pnl="${ent[0]}">P&amp;L chart →</button></div>` : ""}
+    <dl class="vzkv">${isW ? `<div><dt>Holds</dt><dd>${fBb(d.bal)} · ${fPct((100 * d.bal * 1e9) / SUPPLY, 2)}</dd></div>` : ""}
+      <div><dt>Received · ${esc(rng)}</dt><dd class="up">${fU(tin)} <small>${fBb(gin)}</small></dd></div><div><dt>Sent · ${esc(rng)}</dt><dd class="down">${fU(tout)} <small>${fBb(gout)}</small></dd></div>
+      <div><dt>Counterparties</dt><dd>${fN(cps.length)}</dd></div></dl>
+    <div class="vzact"><button type="button" class="mini" data-vza="expand" data-id="${esc(d.id)}">Expand +12</button>${d.id !== VZ.base ? `<button type="button" class="mini" data-vza="center" data-id="${esc(d.id)}">Centre here</button><button type="button" class="mini" data-vza="pin" data-id="${esc(d.id)}">${VZ.pinned.has(d.id) ? "Unpin" : "Pin"}</button><button type="button" class="mini" data-vza="hide" data-id="${esc(d.id)}">Hide</button>` : ""}</div>
+    <span class="eyebrow">Counterparties · ${esc(rng)}${VZ.minUsd ? " · ≥ " + fU(VZ.minUsd) : ""}</span>
+    <div class="vzlist">${cps.slice(0, 40).map((c) => { const L = vzLook(c.id), dir = c.inU && c.outU ? "⇄" : c.inU ? "←" : "→";
+      return `<button type="button" data-vza="${shown.has(c.id) ? "sel" : "add"}" data-id="${esc(c.id)}" class="${shown.has(c.id) ? "" : "off"}"><span><b class="${c.inU && !c.outU ? "up" : c.outU && !c.inU ? "down" : "flat"}">${dir}</b> ${nm(L.label)}</span><b>${fU(c.u)}</b></button>`; }).join("") || '<p class="sub">None in this range.</p>'}</div>
+    <p class="sub">← received from · → sent to · ⇄ both. Grey rows are not on screen yet: click to add them.</p>`;
+}
+
 // ---------- wallet drawer ----------
 let WALLETS = null;
 const KIND = { "dex-buy": ["▲ Bought on DEX", "up"], "dex-sell": ["▼ Sold on DEX", "down"], "cex-in": ["◆ From exchange", "up"], "cex-out": ["▼ To exchange", "down"], "lp-add": ["+ Added liquidity", "flat"],
@@ -1884,7 +2291,7 @@ const KIND = { "dex-buy": ["▲ Bought on DEX", "up"], "dex-sell": ["▼ Sold on
 async function openWallet(a) {
   a = a.toLowerCase();
   $("scrim").classList.add("on"); $("drawer").classList.add("open");
-  $("dh").innerHTML = `<span class="mono" style="font-weight:500">${short(a)}</span><button class="mini" type="button" data-copy="${a}">Copy</button><a class="mini" href="${ETH(a)}" target="_blank" rel="noopener">Etherscan ↗</a><a class="mini" href="https://app.zerion.io/${a}/overview" target="_blank" rel="noopener">Zerion ↗</a><button class="x" type="button" aria-label="Close">×</button>`;
+  $("dh").innerHTML = `<span class="mono" style="font-weight:500">${short(a)}</span><button class="mini" type="button" data-copy="${a}">Copy</button><a class="mini" href="${ETH(a)}" target="_blank" rel="noopener">Etherscan ↗</a><a class="mini" href="https://app.zerion.io/${a}/overview" target="_blank" rel="noopener">Zerion ↗</a><a class="mini" href="#visualizer/${a}">Visualize →</a><button class="x" type="button" aria-label="Close">×</button>`;
   $("dh").querySelector(".x").onclick = closeWallet;
   $("db").innerHTML = `<p class="sub">Loading…</p>`;
   if (!WALLETS) { try { WALLETS = await (await fetch("/wallets.json", { cache: "no-store" })).json(); } catch (e) { WALLETS = {}; } }
@@ -2018,7 +2425,7 @@ function profileHtml(pr) {
 async function openEntity(id) {
   const e = S.E && S.E.entities.find((x) => x.id === id); if (!e) return;
   $("scrim").classList.add("on"); $("drawer").classList.add("open");
-  $("dh").innerHTML = `<span style="font-weight:600">${nm(e.name)}</span><span class="ev inf">${KINDE[e.kind] || e.kind}</span><button class="mini" type="button" data-emap="${e.id}">Entity map →</button><button class="x" type="button" aria-label="Close">×</button>`;
+  $("dh").innerHTML = `<span style="font-weight:600">${nm(e.name)}</span><span class="ev inf">${KINDE[e.kind] || e.kind}</span><button class="mini" type="button" data-emap="${e.id}">Entity map →</button><a class="mini" href="#visualizer/${e.id}">Visualize →</a><button class="x" type="button" aria-label="Close">×</button>`;
   $("dh").querySelector(".x").onclick = closeWallet;
   $("dh").querySelector("[data-emap]").addEventListener("click", closeWallet);
   $("db").innerHTML = `<p class="sub">Loading…</p>`;
