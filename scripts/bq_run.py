@@ -2,7 +2,8 @@
 #   every query is first a DRY RUN (free) that reports how many bytes it would scan;
 #   with DRY=false it runs only if that is under MAX_GB, and BigQuery itself refuses to bill more (maximum_bytes_billed).
 # Results go to data/bq/<query>.csv; the byte counts to data/bq/run.json (shown on the site's Methodology page).
-#   env: GCP_PROJECT, BQ_DATASET (default gme_study), DRY (default true), MAX_GB (per query, default 250), QUERIES (comma list)
+#   env: GCP_PROJECT, BQ_DATASET (default gme_study), DRY (default true), MAX_GB (per query, default 250), QUERIES (comma list),
+#        SINCE (the cut-off timestamp for eth_flows_delta, from `scripts/bq_flows.py cutoff`)
 import subprocess, json, os, sys, datetime
 P = os.environ["GCP_PROJECT"]; DS = os.environ.get("BQ_DATASET", "gme_study")
 DRY = os.environ.get("DRY", "true").lower() != "false"; CAP = int(float(os.environ.get("MAX_GB", "250")) * 1e9)
@@ -14,6 +15,10 @@ bq = ["bq", f"--project_id={P}", "query", "--use_legacy_sql=false", "--location=
 total = 0
 for q in QS:
     sql = open(os.path.join(os.path.dirname(OUT), "..", "bigquery", f"{q}.sql")).read().replace("{P}", P).replace("{DS}", DS)
+    if "{SINCE}" in sql:
+        since = os.environ.get("SINCE", "")
+        if not since[:4].isdigit(): print(f"{q}: needs SINCE (a timestamp), skipped"); run[q] = dict(error="no SINCE"); continue
+        sql = sql.replace("{SINCE}", since[:19])
     # drop the comment lines: a query string that starts with "--" is read by the bq tool as a command-line flag
     sql = "\n".join(l for l in sql.splitlines() if not l.strip().startswith("--")).strip()
     d = subprocess.run(bq + ["--dry_run", "--format=json", sql], capture_output=True, text=True)
@@ -25,13 +30,18 @@ for q in QS:
     if not DRY:
         if nb > CAP: print(f"  skipped: above the {CAP/1e9:.0f} GB cap"); rec["skipped"] = "above cap"
         else:
-            path = os.path.join(OUT, f"{q}.csv")
-            with open(path, "w") as f:
+            # written to a temporary file first: a failed query must not replace the last good result
+            path = os.path.join(OUT, f"{q}.csv"); tmp = path + ".tmp"
+            with open(tmp, "w") as f:
                 r = subprocess.run(bq + ["--format=csv", "--max_rows=5000000", f"--maximum_bytes_billed={CAP}", sql], stdout=f, stderr=subprocess.PIPE, text=True)
-            if r.returncode: print(f"  FAILED: {r.stderr[-600:]}"); rec["error"] = r.stderr[-400:]
+            if r.returncode: print(f"  FAILED: {r.stderr[-600:]}"); rec["error"] = r.stderr[-400:]; os.remove(tmp)
             else:
+                os.replace(tmp, path)
                 rows = sum(1 for _ in open(path)) - 1; rec.update(ran=True, rows=rows); total += nb
+                if "{SINCE}" in open(os.path.join(os.path.dirname(OUT), "..", "bigquery", f"{q}.sql")).read(): rec["since"] = os.environ.get("SINCE", "")[:19]
                 print(f"  ran: {rows} rows → data/bq/{q}.csv")
     run[q] = rec
 json.dump(run, open(RJ, "w"), indent=1)
 print(f"{'dry run only' if DRY else 'billed'}: {sum(r.get('bytes', 0) for k, r in run.items() if k in QS)/1e9:.1f} GB measured, {total/1e9:.1f} GB run")
+failed = [q for q in QS if run.get(q, {}).get("error")]
+if failed: sys.exit(f"failed: {', '.join(failed)}")             # a red run, so a failed scheduled refresh gets noticed

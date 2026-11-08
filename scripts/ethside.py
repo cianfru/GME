@@ -66,14 +66,23 @@ def svc(a):
 cls = lambda a: ("exchange" if a in LAB else "service") if svc(a) else ("contract" if AT.get(a) == "contract" else "study" if a in W else "private")
 
 # freshness and first funder
-own_min = {}
+# A wallet is fresh when its own first transaction (nonce 0) is in the window. Its first funder is the earliest ETH it
+# received, but only if that ETH arrived no later than its first transaction: a wallet cannot pay gas before it has
+# ETH, so a "first" transfer that comes later means the real first ETH came some other way (a contract or an exchange
+# paying out through an internal transaction, which this table does not hold). 110 of 1,364 wallets were like that
+# on 2026-11-08; without this check their later funder was wrongly called their first. It also keeps the weekly
+# delta (bq_flows.py) honest: a wallet funded just before the cut-off and first used just after it is not fresh-funded.
+own_min, n0_at = {}, {}
 for f_, t, n, eth, fi, la, mn in pairs:
-    if f_ in W and mn is not None: own_min[f_] = min(own_min.get(f_, mn), mn)
+    if f_ in W and mn is not None:
+        own_min[f_] = min(own_min.get(f_, mn), mn)
+        if mn == 0: n0_at[f_] = min(n0_at.get(f_, fi), fi)        # within one pair the lowest nonce is the earliest
 first_in = {}
 for f_, t, n, eth, fi, la, mn in pairs:
     if t in W and f_ != t and (t not in first_in or fi < first_in[t][1]): first_in[t] = (f_, fi, eth)
 fresh = {a for a, m in own_min.items() if m == 0}
-funder = {a: first_in[a] for a in fresh if a in first_in}
+funder = {a: first_in[a] for a in fresh if a in first_in and first_in[a][1] <= n0_at[a]}
+late_funded = sum(1 for a in fresh if a in first_in and a not in funder)
 
 # ---- links ---------------------------------------------------------------------------------------------------------
 T = load(); bal = collections.Counter(); gme_pairs = set()
@@ -84,7 +93,7 @@ links = []; tradelike = 0                                        # (a, b, kind, 
 for f_, t, n, eth, fi, la, mn in pairs:
     if f_ in W and t in W and f_ != t and eth >= MIN_ETH and not svc(f_) and not svc(t):
         if (t, f_) in gme_pairs: tradelike += 1; continue       # ETH one way, GME the other: looks like a sale
-        k = "ethseed" if t in fresh and first_in.get(t, ("",))[0] == f_ else "gas" if eth <= GAS_MAX else "eth"
+        k = "ethseed" if t in funder and funder[t][0] == f_ else "gas" if eth <= GAS_MAX else "eth"
         links.append((f_, t, k, dict(eth=round(eth, 4), n=n, first=fi[:10], last=la[:10])))
 by_funder = collections.defaultdict(list)
 for a, (fu, fi, eth) in funder.items():
@@ -203,7 +212,7 @@ if os.path.exists(TF):
 svcw = sorted((a for a in W if svc(a)), key=lambda a: -vol[a])
 service_wallets = [dict(a=a, why=svc(a), eth=round(vol[a]), gme=round(max(bal[a], 0)), entity=ename.get(own.get(a)), eid=own.get(a)) for a in svcw[:60]]
 svc_ents = sorted({own[a] for a in svcw if own.get(a)})
-out = dict(window="2024-04-01", serviceWallets=service_wallets, serviceEntities=[dict(id=e, name=ename[e], n=sum(1 for a in svcw if own.get(a) == e)) for e in svc_ents], wallets=len(W), withFlows=len({a for p_ in pairs for a in p_[:2] if a in W}), fresh=len(fresh), funded=len(funder),
+out = dict(window="2024-04-01", serviceWallets=service_wallets, serviceEntities=[dict(id=e, name=ename[e], n=sum(1 for a in svcw if own.get(a) == e)) for e in svc_ents], wallets=len(W), withFlows=len({a for p_ in pairs for a in p_[:2] if a in W}), fresh=len(fresh), funded=len(funder), lateFunded=late_funded, through=max((p_[5] for p_ in pairs), default='')[:16],
            origin=dict(orig), originVenues=dict(orig_v.most_common(12)), originByRole={k: dict(v) for k, v in orig_role.items()},
            distributors=[dict(a=a, n=n, label=svc(a)) for a, n in sorted(distributors.items(), key=lambda kv: -kv[1])[:20]],
            links={k: sum(1 for l in links if l[2] == k) for k in ("ethseed", "gas", "paid", "eth", "funder")}, tradelike=tradelike, paid=paid,
@@ -213,6 +222,6 @@ json.dump(out, open(os.path.join(D, "ethside.json"), "w"))
 strong = sorted({(a, b, k, d.get("first", "")) for a, b, k, d in links if k in STRONG and a != b})
 json.dump(dict(asOf=max((p_[5] for p_ in pairs), default="")[:10], kinds=list(STRONG), links=[list(x) for x in strong]),
           open(os.path.join(D, "eth_links.json"), "w"), separators=(",", ":"))
-print(f"ethside.json: {len(W)} study wallets · {len(fresh)} created since 2024-04, {len(funder)} with a first funder · origin {dict(orig)} · "
+print(f"ethside.json: {len(W)} study wallets · {len(fresh)} created since 2024-04, {len(funder)} with a first funder ({late_funded} funded some other way) · origin {dict(orig)} · "
       f"links {out['links']} · {tradelike} OTC-like skipped · {len(svcw)} service-scale studied wallets in {len(svc_ents)} groups · {len(cand)} candidates "
       f"({sum(1 for c in cand if c['direct'])} direct) · {len(out['tokens'].get('rows', []))} shared tokens")

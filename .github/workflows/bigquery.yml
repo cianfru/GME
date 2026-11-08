@@ -1,15 +1,24 @@
 name: bigquery study (ETH side)
 
 # The ETH side of the study, from Google's public Ethereum dataset: ETH flows and first funders of the study wallets,
-# their other tokens, and who signed each GME purchase. Manual only. Needs the repository secret GCP_SA_KEY (a Google
-# service-account key with BigQuery Job User + Data Editor). Start with dry_run = true: it costs nothing and reports
-# how many GB each query would scan; then run it for real. Free tier: 1 TB scanned per month per Google project.
+# their other tokens, and who signed each GME purchase. Needs the repository secret GCP_SA_KEY (a Google
+# service-account key with BigQuery Job User + Data Editor). Free tier: 1 TB scanned per month per Google project.
+#
+# Scheduled, so the ETH links (first ETH, gas top-ups) that group wallets keep up with new wallets:
+#   weekly  — eth_flows_delta: only transactions after the newest one already in data/bq/eth_flows.csv, for the
+#             current study wallets (a few GB), merged in by scripts/bq_flows.py;
+#   monthly — eth_flows: the whole window again (~220 GB), so wallets that joined the study get their older history.
+# Manual runs: start with dry_run = true (free, reports the GB each query would scan), then run it for real.
+# token_footprint (~200 GB, other tokens traded) stays manual.
 on:
+  schedule:
+    - cron: "37 4 * * 1"     # weekly, Monday: new days only
+    - cron: "37 4 1 * *"     # monthly, 1st: the whole window
   workflow_dispatch:
     inputs:
       dry_run: { description: "Only measure (free)", type: boolean, default: true }
       max_gb: { description: "Cap per query, GB", default: "250" }
-      queries: { description: "Queries to run", default: "eth_flows,token_footprint" }
+      queries: { description: "Queries to run (eth_flows_delta = new days only)", default: "eth_flows,token_footprint" }
 
 permissions:
   contents: write
@@ -50,19 +59,41 @@ jobs:
           bq --project_id="$GCP_PROJECT" mk -f --dataset --location=US "$GCP_PROJECT:$BQ_DATASET" || true
           bq --project_id="$GCP_PROJECT" --location=US load --replace --source_format=CSV --skip_leading_rows=1 "$BQ_DATASET.wallets" data/bq/wallets.csv a:STRING,role:STRING
           if [ -f data/bq/txs.csv ]; then bq --project_id="$GCP_PROJECT" --location=US load --replace --source_format=CSV --skip_leading_rows=1 "$BQ_DATASET.txs" data/bq/txs.csv tx:STRING; fi
+      - name: Plan
+        env:
+          EVENT: "${{ github.event_name }}"
+          SCHED: "${{ github.event.schedule }}"
+          IN_DRY: "${{ inputs.dry_run }}"
+          IN_MAX: "${{ inputs.max_gb }}"
+          IN_Q: "${{ inputs.queries }}"
+        run: |
+          if [ "$EVENT" = "schedule" ]; then
+            DRY=false
+            if [ "$SCHED" = "37 4 1 * *" ]; then QUERIES=eth_flows; MAX_GB=350; else QUERIES=eth_flows_delta; MAX_GB=25; fi
+          else
+            DRY="$IN_DRY"; QUERIES="$IN_Q"; MAX_GB="$IN_MAX"
+          fi
+          if echo ",$QUERIES," | grep -q ",eth_flows_delta,"; then SINCE=$(python3 scripts/bq_flows.py cutoff); echo "SINCE=$SINCE" >> "$GITHUB_ENV"; fi
+          { echo "DRY=$DRY"; echo "QUERIES=$QUERIES"; echo "MAX_GB=$MAX_GB"; } >> "$GITHUB_ENV"
+          echo "queries: $QUERIES · dry run: $DRY · cap: $MAX_GB GB${SINCE:+ · since $SINCE}"
       - name: Queries
         env:
           GCP_PROJECT: "${{ steps.auth.outputs.project_id }}"
-          DRY: "${{ inputs.dry_run }}"
-          MAX_GB: "${{ inputs.max_gb }}"
-          QUERIES: "${{ inputs.queries }}"
         run: python3 scripts/bq_run.py
+      # Folds the weekly delta into eth_flows.csv and keeps the file sorted, so each commit only carries what changed.
+      # Runs even if a query failed, so the other results and run.json (which records the failure) are still kept.
+      - name: Merge ETH flows
+        if: ${{ !cancelled() }}
+        run: |
+          [ -f data/bq/eth_flows.csv ] || exit 0
+          python3 scripts/bq_flows.py merge
       - name: Commit results
+        if: ${{ !cancelled() }}
         run: |
           rm -f data/bq/txs.csv
           git config user.name "gme-terminal bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/bq
           if git diff --cached --quiet; then echo "no changes"; exit 0; fi
-          git commit -m "data: BigQuery study ($([ "${{ inputs.dry_run }}" = "true" ] && echo dry run || echo results))"
+          git commit -m "data: BigQuery study ($([ "$DRY" = "true" ] && echo dry run || echo "$QUERIES"))"
           for i in 1 2 3; do git pull --rebase origin main && git push && exit 0; sleep 5; done; exit 1

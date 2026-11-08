@@ -1,13 +1,16 @@
 name: daily refresh + watch
 
-# Two schedules, one pipeline:
-#   full  — 06:23 UTC daily: everything, including the external lookups (focus wallet ETH history, gas funders).
-#   light — every 4 hours: new transfers, clusters, entity registry (follow the coins), watch, terminal data. Skips the
-#           external lookups and does not commit wallets.json, to keep the git history small.
+# One pipeline, two modes:
+#   full  — once a day after 06:00 UTC: everything, including the external lookups (focus wallet ETH history, gas
+#           funders) and the files only the full run commits (wallets.json, the Visualizer's graph).
+#   light — about every 4 hours: new transfers, clusters, entity registry (follow the coins), watch, terminal data.
+# GitHub starts scheduled runs late or not at all under load (the old fixed 06:23 full run started at 12:46–14:43 UTC
+# for a week, and up to half the light runs were dropped). So the schedule is an hourly tick, and the plan job decides
+# from the data commits whether this tick does a full run, a light run or nothing (scripts/plan-run.mjs). Ticks that
+# do nothing finish in seconds; a dropped tick is covered by the next one.
 on:
   schedule:
-    - cron: "23 6 * * *"     # full
-    - cron: "47 */4 * * *"   # light
+    - cron: "41 * * * *"     # hourly tick: the plan job decides full / light / skip
   workflow_dispatch:
     inputs:
       mode:
@@ -19,27 +22,46 @@ on:
 permissions:
   contents: write
   issues: write
-
-concurrency:
-  group: gme-daily
-  cancel-in-progress: false
+  actions: read
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.p.outputs.mode }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/plan-run.mjs
+          sparse-checkout-cone-mode: false
+      - id: p
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "manual run: ${{ inputs.mode }}"; echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"; exit 0; fi
+          gh api "repos/${{ github.repository }}/commits?path=data/terminal.json&per_page=40" > commits.json
+          gh api "repos/${{ github.repository }}/actions/workflows/daily.yml/runs?per_page=20" > runs.json
+          node scripts/plan-run.mjs commits.json runs.json "${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+
   refresh:
+    needs: plan
+    if: needs.plan.outputs.mode == 'full' || needs.plan.outputs.mode == 'light'
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    # on the job, not the workflow: a tick that skips must not wait behind (or cancel) a queued refresh
+    concurrency:
+      group: gme-daily
+      cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
       PYTHONUNBUFFERED: "1"
+      MODE: ${{ needs.plan.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Mode
-        run: |
-          MODE=full
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" != "23 6 * * *" ]; then MODE=light; fi
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.mode }}" = "light" ]; then MODE=light; fi
-          echo "MODE=$MODE" >> "$GITHUB_ENV"; echo "mode: $MODE"
+        run: echo "running in $MODE mode"
 
       - uses: actions/setup-python@v5
         with:

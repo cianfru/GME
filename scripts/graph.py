@@ -81,11 +81,25 @@ for k, (s, r, ts, v, b) in enumerate(T):
     if u >= 1: legs.append(((ns[0], nr[0]), k, v, u))
 keep = {p: m for p, m in pairs.items() if sum(x[1] for x in m.values()) >= MIN_USD}
 
+# Stable order. graph.json is committed every day and the ledger addresses nodes by index, so an order that changes
+# daily (by balance, say) rewrites both files completely. Nodes and entities keep their position from the previous
+# graph.json; new ones are appended (nodes in order of first appearance). Only nodes that leave the graph shift the
+# ones after them, which is rare: a pair's total only grows.
+prev = {"nodes": [], "entities": []}
+if os.path.exists(os.path.join(D, "graph.json")):
+    try: prev = json.load(open(os.path.join(D, "graph.json")))
+    except ValueError: pass
+def stable(old, new):
+    ns = set(new); keep_ = [k for k in old if k in ns]; have = set(keep_)
+    return keep_ + [k for k in new if k not in have]
+REGE = {e["id"]: e for e in REG.get("entities", [])}
 ent_of, ents = {}, []
-for i, e in enumerate(REG.get("entities", [])):
+for i, eid in enumerate(stable([e[0] for e in prev.get("entities", [])], list(REGE))):
+    e = REGE[eid]
     ents.append([e["id"], e["name"], e.get("tag", ""), e["kind"], round(e["bal"] / 1e9, 4), e["n"]])
     for a in e["members"]: ent_of[a] = i
-used = sorted({a for p in keep for a in p}, key=lambda a: (meta[a][1] == "wallet", -bal.get(a, 0)))
+want = {a for p in keep for a in p}
+used = stable([n[0] for n in prev.get("nodes", [])], [a for a in meta if a in want])     # meta is in first-appearance order
 ix = {a: i for i, a in enumerate(used)}
 KC = {"wallet": 0, "contract": 1, "deposit": 2, "cex": 3, "dex": 4, "lp": 5, "burn": 6, "mint": 7, "token": 8}
 vbal = collections.Counter()                                      # venue balances (sum of their addresses, e.g. the pools)
