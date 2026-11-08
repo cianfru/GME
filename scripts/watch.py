@@ -64,7 +64,7 @@ if prev:
 if prev:
     d = pool - prev["pool"]
     what = "no change" if abs(d) < 1e6 else ("net selling into the pool" if d > 0 else "net buying out of the pool")
-    add("pool", "info", f"Pool GME {'+' if d >= 0 else ''}{d/1e9:.2f}B since last run ({what}); pool now {pool/1e9:.2f}B, price ${price:.3e}", delta=d)
+    add("pool", "info", f"Pool GME {'+' if d >= 0 else ''}{d/1e9:.2f}B since last run ({what}); pool now {pool/1e9:.2f}B, market cap ${price*SUPPLY/1e6:.2f}M", delta=d)
 gbal = {g: sum(max(bal[a], 0) for a in ws) for g, ws in groups.items()}
 if prev:
     for g, b in gbal.items():
@@ -80,7 +80,7 @@ json.dump(dict(summary=summary, alerts=alerts), open(os.path.join(D, "alerts", "
 with open(os.path.join(D, "alerts", "log.jsonl"), "a") as f: f.write(json.dumps(dict(summary=summary, alerts=alerts)) + "\n")
 json.dump(dict(asOf=NOW, pool=pool, groups=gbal, vaults=sorted(V), stealth=sorted(r["owner"] for r in ST),
                members={g: sorted(ws) for g, ws in groups.items()}), open(SP, "w"))
-lines = [f"## GME watch · {NOW[:16]} UTC", f"Price ${price:.3e} · market cap ${price*SUPPLY/1e6:.2f}M · pool {pool/1e9:.2f}B GME · {len(groups)} watched groups", ""]
+lines = [f"## GME watch · {NOW[:16]} UTC", f"Market cap ${price*SUPPLY/1e6:.2f}M · pool {pool/1e9:.2f}B GME · {len(groups)} watched groups", ""]
 lines += [f"- **{a['severity'].upper()}** {a['text']}" for a in alerts] or ["- No alerts since the last run." if prev else "- First run: baseline saved, alerts start tomorrow."]
 md = "\n".join(lines)
 print(md)

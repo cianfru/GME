@@ -101,6 +101,7 @@ Read this file first. It is enough to continue without the original conversation
   
   **Tripwire:** any exchange deposit in 7 days, or the focus wallet selling on the DEX in 30 days. A transfer to the GME token contract itself is NOT a DEX sale; it was the only "sale" in the focus wallet's history.
 - **Chart rules:**
+  - **prices are shown as market cap (owner, 2026-11-08: "price is too small with too many zeroes").** Every per-token price on the site (charts, costs, trades, tooltips, the calculator) is printed as price × 420.69B: `fP(price)` formats the market cap it implies, `tickP` + `mcTicks` put log ticks at round market caps ($1M, $2M, $5M…). Data stays in price units; realized price shows as "Holders' avg cost" and entity / owner costs as "Avg cost, as MC". Alert text too (`watch.py`; `build-site.mjs` rewrites older "price $7.978e-06" text);
   - one y-axis per chart;
   - price and realized price share a log axis (same unit);
   - stacked bars split up (bought, withdrawn) and down (sent to exchanges, sold);

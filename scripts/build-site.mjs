@@ -18,7 +18,9 @@ const json = (p, fallback = null) => (existsSync(join(D, p)) ? JSON.parse(readFi
 const REG = Object.fromEntries(((json("entities.json", { entities: [] }) || {}).entities || []).filter((e) => e.wname).map((e) => [e.wname, e.name]));
 const relabel = (s) =>
   typeof s !== "string" ? s : REG[s] ? REG[s]
-    : s.replace(/\b(?:your|focus) wallet's cluster/gi, "fbb4").replace(/\b(Accumulator|Holding wallet|Sep-2025 wallet|Linked group) 0x[0-9a-fA-F]{4}…([0-9a-fA-F]{4,})/g, "$1 $2");
+    : s.replace(/\b(?:your|focus) wallet's cluster/gi, "fbb4").replace(/\b(Accumulator|Holding wallet|Sep-2025 wallet|Linked group) 0x[0-9a-fA-F]{4}…([0-9a-fA-F]{4,})/g, "$1 $2")
+        // older alerts quote the price ("price $7.978e-06"); the site shows market cap instead
+        .replace(/\bprice \$([0-9.]+e-\d+)/g, (m, p) => "market cap $" + ((+p * SUPPLY) / 1e6).toFixed(2) + "M");
 const pct = (t) => (100 * t) / SUPPLY;
 
 const latest = json("alerts/latest.json", { summary: {}, alerts: [] });

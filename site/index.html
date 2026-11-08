@@ -383,7 +383,10 @@ const short = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "");
 const fB = (t) => t == null ? "—" : Math.abs(t) >= 1e9 ? (t / 1e9).toFixed(Math.abs(t) >= 1e10 ? 1 : 2) + "B" : Math.abs(t) >= 1e6 ? Math.round(t / 1e6) + "M" : Math.round(t).toLocaleString("en-US");
 const fBb = (b) => fB(b * 1e9);
 const fU = (u) => u == null ? "—" : u < 0 ? "−" + fU(-u) : Math.abs(u) >= 1e6 ? "$" + (u / 1e6).toFixed(2) + "M" : Math.abs(u) >= 1e4 ? "$" + (u / 1e3).toFixed(0) + "k" : Math.abs(u) >= 1e3 ? "$" + (u / 1e3).toFixed(1) + "k" : "$" + Math.round(u);
-const fP = (p) => (p == null || !isFinite(p) || p <= 0 ? "—" : "$" + p.toFixed(Math.max(2, 2 - Math.floor(Math.log10(p)))));
+// Owner (2026-11-08): a GME price has too many zeros to read, so every per-token price is shown as the market cap it
+// implies (price × 420.69B total supply). fP takes a price and prints that market cap; data stays in price units.
+const fMcap = (m) => (m >= 1e9 ? "$" + (m / 1e9).toFixed(m >= 1e10 ? 1 : 2) + "B" : m >= 1e6 ? "$" + (m / 1e6).toFixed(m >= 1e8 ? 0 : m >= 1e7 ? 1 : 2) + "M" : m >= 1e3 ? "$" + (m / 1e3).toFixed(0) + "k" : "$" + Math.round(m));
+const fP = (p) => (p == null || !isFinite(p) || p <= 0 ? "—" : fMcap(+(p * SUPPLY).toPrecision(6)));
 const fPct = (p, d = 1) => (p == null || !isFinite(p) ? "—" : p.toFixed(d) + "%");
 const fN = (n) => (n == null || !isFinite(n) ? "—" : Math.round(n).toLocaleString("en-US"));
 const sgn = (v, f) => (v > 0 ? "+" : v < 0 ? "−" : "±") + f(Math.abs(v));
@@ -393,7 +396,9 @@ const pd = d3.utcParse("%Y-%m-%d"), fd = d3.utcFormat("%-d %b %Y"), fdt = d3.utc
 const ETH = (a) => `https://etherscan.io/address/${a}`;
 const mobile = () => innerWidth < 640;
 const mant = (v) => Math.round(v / 10 ** Math.floor(Math.log10(v) + 1e-9));
-const tickP = (v) => "$" + v.toFixed(Math.max(0, -Math.floor(Math.log10(v) + 1e-9)));
+const tickP = (v) => { const m = +(v * SUPPLY).toPrecision(6); return m >= 1e9 ? "$" + +(m / 1e9).toFixed(1) + "B" : m >= 1e6 ? "$" + +(m / 1e6).toFixed(1) + "M" : m >= 1e3 ? "$" + Math.round(m / 1e3) + "k" : "$" + Math.round(m); };
+// Log ticks for a price axis, placed at round market caps ($1M, $2M, $5M, $10M…) and returned in price units.
+const mcTicks = (sc, keep) => { const [a, b] = sc.domain(); return [1, 2, 5].flatMap((k) => d3.range(2, 14).map((e) => k * 10 ** e)).filter((m) => m / SUPPLY >= a && m / SUPPLY <= b && keep(mant(m))).map((m) => m / SUPPLY).sort((p, q) => p - q); };
 const logTicks = (sc, keep) => { const [a, b] = sc.domain(); return [1, 2, 5].flatMap((k) => d3.range(-10, 3).map((e) => k * 10 ** e)).filter((v) => v >= a && v <= b && keep(mant(v))).sort((p, q) => p - q); };
 const agoTxt = (h) => (h < 1 ? Math.max(1, Math.round(h * 60)) + "m ago" : h < 48 ? Math.round(h) + "h ago" : Math.round(h / 24) + "d ago");
 
@@ -602,7 +607,8 @@ function drawTS(id, opt) {
       y = d3.scaleLinear([lo < 0 ? lo - pad : lo, p.yMax ? p.yMax : hi + pad], [h, 0]); if (!p.yMax) y.nice(tickN); }
     p.y = y; p.top = yo;
     const fmt = p.fmt || ((v) => v);
-    const yt = p.log ? logTicks(y, (k) => (y.domain()[1] / y.domain()[0] > 30 || h < 130 ? k === 1 : k !== 2)) : y.ticks(tickN);
+    let yt = p.log ? (p.price ? mcTicks : logTicks)(y, (k) => (y.domain()[1] / y.domain()[0] > 30 || h < 130 ? k === 1 : k !== 2)) : y.ticks(tickN);
+    if (p.log && p.price && yt.length < 3 && h >= 130) yt = mcTicks(y, () => true);         // a narrow market-cap range: 1-2-5 ticks
     g.append("g").attr("class", "gridl").call(d3.axisLeft(y).tickValues(yt).tickSize(-w).tickFormat(""));
     g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(yt).tickFormat(p.log && p.price ? tickP : p.axisFmt || fmt));
     if (pi === panes.length - 1) g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.min(mob ? 4 : 8, Math.floor(w / 95)))).tickSizeOuter(0));
@@ -696,8 +702,8 @@ function metrics() {
   const dd = (v, f, lab) => (v == null ? "" : `<span class="${cls(v)}">${arrow(v)} ${f(Math.abs(v))}</span> ${lab}`);
   const NA = "unavailable in this build";
   const items = [
-    ["Price", fP(p0), dd(c1, fPct, "24h") + (c7 != null ? ` · ${sgn(c7, fPct)} 7d` : ""), "Daily close from DeFiLlama. Its daily stamp is the previous day's close."],
-    ["Market cap", fU(mcap), P.ethUsd ? `≈ ${fN(mcap / P.ethUsd)} ETH` : "", "Price × 420.69B total supply. ETH value at the day's ETH price."],
+    ["Market cap", fP(p0), dd(c1, fPct, "24h") + (c7 != null ? ` · ${sgn(c7, fPct)} 7d` : ""), `Price × 420.69B total supply, at the daily close from DeFiLlama (its daily stamp is the previous day's close).${P.ethUsd ? ` ≈ ${fN(mcap / P.ethUsd)} ETH.` : ""}`],
+    ["Holders' avg cost", fP(lastVal(col("rp"))), lastVal(col("mvrv")) ? `market cap is ${lastVal(col("mvrv")).toFixed(2)}× it (MVRV)` : "", "What holders paid on average for the coins they hold (realized price), shown as the market cap it implies."],
     ["Holders", fN(lastVal(h)), dd(hd, fN, "30d"), "Wallets holding any GME. Pools, exchanges and contracts are excluded."],
     ["Active wallets · 7d", IDX ? fN(IDX.active168h) : "—", IDX ? `${fN(IDX.active24h)} in 24h · ${fN(IDX.active720h)} in 30d` : NA, "Distinct addresses that sent or received GME. Pools, routers, exchanges and contracts excluded."],
     ["Transfers", IDX ? fN(IDX.transfers) : "—", IDX ? `+${fN(IDX.tx24h)} in 24h · +${fN(IDX.tx168h)} in 7d` : NA, "Every GME Transfer event since the first one on 13 May 2024."],
@@ -712,10 +718,10 @@ function primary() {
   const p = col("price"), rp = col("rp"), b = col("buyUsd"), s = col("sellUsd"), net = b.map((v, i) => (v ?? 0) - (s[i] ?? 0)), cl = col("cluster");
   card({ title: "Primary instrument", q: "What is actually happening with GME on Ethereum?", wide: true, key: true, val: rangeCtl(),
     body: `<div class="prim"><div><div class="chart" id="pc"></div><div class="legend" id="pc-l" style="margin-top:8px"></div></div><aside class="sop" id="sop"></aside></div>`,
-    note: "Three panes share one time axis. Price and realized price (what holders paid on average) on a log scale; daily dollars bought minus sold on the DEX; and the GME held by fbb4's wallets (today's members). Shaded spans are past pumps. Ranges over 200 days show weekly totals." });
+    note: "Three panes share one time axis. Market cap and holders' average cost (realized price), both shown as market cap (price × 420.69B), on a log scale; daily dollars bought minus sold on the DEX; and the GME held by fbb4's wallets (today's members). Shaded spans are past pumps. Ranges over 200 days show weekly totals." });
   ts("pc", { bands: runsBands(), panes: [
-    { label: "Price · log scale", h: [250, 190], log: true, price: true, fmt: fP, series: [
-      { label: "Price", color: "--fg", v: p, type: "line", width: 1.8 }, { label: "Realized price", color: "--accent", v: rp, type: "line", dash: "5 3", width: 1.5 }] },
+    { label: "Market cap · log scale", h: [250, 190], log: true, price: true, fmt: fP, series: [
+      { label: "Market cap", color: "--fg", v: p, type: "line", width: 1.8 }, { label: "Holders' avg cost", color: "--accent", v: rp, type: "line", dash: "5 3", width: 1.5 }] },
     { label: "DEX net flow · USD", h: [92, 72], fmt: (v) => sgn(v, fU), axisFmt: fU, series: [{ label: "DEX net flow", colorBy: ["--up", "--down"], v: net, type: "bar" }] },
     { label: "fbb4 · GME held", h: [92, 72], fmt: fBb, axisFmt: (v) => v + "B", zero: false, series: [{ label: "Cluster holdings", color: "--s1", v: cl, type: "area" }] },
   ] });
@@ -729,7 +735,7 @@ function stateOfPlay() {
   const dl = (k) => { const a = col(k); return lastVal(a) - agoC(a, n); };
   const hd = dl("holders"), cd = dl("cluster"), pl = dl("pool"), nw = sumLast(col("newWallets"), n), tx = has("tx") ? sumLast(col("tx"), n) : null;
   const rows = [
-    ["Price", `<b class="${cls(pc)}">${pc == null ? "—" : sgn(pc, fPct)}</b>`],
+    ["Market cap", `<b class="${cls(pc)}">${pc == null ? "—" : sgn(pc, fPct)}</b>`],
     ["DEX net flow", `<b class="${cls(net)}">${sgn(net, fU)}</b>`],
     ["Holders", `<b class="${cls(hd)}">${sgn(hd, fN)}</b>`],
     ["New wallets", `<b>${fN(nw)}</b>`],
@@ -738,7 +744,7 @@ function stateOfPlay() {
     ["Transfers", `<b>${tx == null ? "—" : fN(tx)}</b>`],
     ["Insider status (30d rule)", `<b class="${T.insider.status === "ACCUMULATING" ? "up" : /SELL|DISTRIB/.test(T.insider.status) ? "down" : ""}">${esc(T.insider.status)}</b>`],
   ];
-  const read = `Over the ${lab}, price ${pc == null ? "is unchanged" : (pc >= 0 ? "rose " : "fell ") + fPct(Math.abs(pc))}. DEX trading was net ${net >= 0 ? "buying" : "selling"} of ${fU(Math.abs(net))}, ` +
+  const read = `Over the ${lab}, market cap ${pc == null ? "is unchanged" : (pc >= 0 ? "rose " : "fell ") + fPct(Math.abs(pc))}. DEX trading was net ${net >= 0 ? "buying" : "selling"} of ${fU(Math.abs(net))}, ` +
     `the pool ${pl <= 0 ? "lost" : "gained"} ${fBb(Math.abs(pl))} GME, and holders ${hd >= 0 ? "rose" : "fell"} by ${fN(Math.abs(hd))}. ` +
     `fbb4 ${cd >= 0 ? "added" : "reduced by"} ${fBb(Math.abs(cd))} GME.`;
   el.innerHTML = `<span class="eyebrow" style="margin-bottom:4px">State of play · ${esc(lab)}</span>` + rows.map(([k, v]) => `<div class="row"><span>${k}</span>${v}</div>`).join("") + `<p class="read">${read}</p>`;
@@ -805,7 +811,7 @@ function holders() {
   const age = col("age"), ab = [["< 1 month", 0, "--s8"], ["1–3 months", 1, "--s2"], ["3–6 months", 2, "--s4"], ["6–12 months", 3, "--s3"], ["1 year +", 4, "--s1"]];
   id = card({ title: "Holding age (HODL waves)", wide: true, val: fPct(age[lastIdx(age)]?.[4]) + `<small class="flat">held 1y+</small>`, sub: "Share of held supply by how long it has sat in the same wallet. A growing young band means coins are changing hands." });
   ts(id, { fmt: (v) => v.toFixed(1) + "%", yMax: 100, series: ab.map(([l, k, c]) => ({ label: l, color: c, v: age.map((r) => (r ? r[k] : null)), type: "stack" })) });
-  sect("Cost basis", "What holders paid, where today's price sits against it, and who from each era is still here.");
+  sect("Cost basis", "What holders paid, where today's market cap sits against it, and who from each era is still here.");
   chPrice(true);
   const mv = col("mvrv"); id = card({ title: "MVRV", val: valDelta(lastVal(mv), ago(mv, 30), (v) => v.toFixed(3) + "×", (v) => v.toFixed(3)), sub: "Price ÷ realized price. 1× = the average holder breaks even." });
   ts(id, { fmt: (v) => v.toFixed(2) + "×", log: true, ref: [{ y: 1, label: "break-even" }], series: [{ label: "MVRV", color: "--s1", v: mv, type: "line" }] });
@@ -816,10 +822,10 @@ function holders() {
 function chPrice(wide = true) {
   const p = col("price"), rp = col("rp");
   const o = agoC(p, rangeDays()), ch = o ? (100 * (lastVal(p) - o)) / o : 0;
-  const id = card({ title: "Price vs realized price", wide, val: `${fP(lastVal(p))}<small class="${cls(ch)}">${arrow(ch)} ${fPct(Math.abs(ch))} ${rangeLabel()}</small>`,
-    sub: "Realized price = what holders paid on average (every held coin at its buy price). Price far below it means most holders are underwater." });
+  const id = card({ title: "Market cap vs holders' cost", wide, val: `${fP(lastVal(p))}<small class="${cls(ch)}">${arrow(ch)} ${fPct(Math.abs(ch))} ${rangeLabel()}</small>`,
+    sub: "Holders' cost = what holders paid on average (every held coin at its buy price, the realized price), shown as the market cap it implies. A market cap far below it means most holders are underwater." });
   ts(id, { log: true, price: true, fmt: fP, h: [270, 210], bands: runsBands(), series: [
-    { label: "Price", color: "--fg", v: p, type: "line", width: 1.8 }, { label: "Realized price", color: "--accent", v: rp, type: "line", dash: "5 3" }] });
+    { label: "Market cap", color: "--fg", v: p, type: "line", width: 1.8 }, { label: "Holders' avg cost", color: "--accent", v: rp, type: "line", dash: "5 3" }] });
 }
 const BASIS = (name) => (/^fbb4|cluster|extension|group/i.test(name) ? ["inferred", "Inferred grouping"] : /burn|pool|exchange/i.test(name) ? ["label", "Labelled address"] : ["single", "Single wallets"]);
 function supplySplit() {
@@ -883,13 +889,13 @@ function urpdCard() {
     const bs = U.buckets.filter((b) => b.pct > 0), x = d3.scaleLog([d3.min(bs, (b) => b.lo), d3.max(bs, (b) => b.hi)], [0, w]), y = d3.scaleLinear([0, d3.max(bs, (b) => b.pct) * 1.1], [h, 0]).nice(4);
     g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(4).tickSize(-w).tickFormat(""));
     g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4).tickFormat((v) => v + "%"));
-    g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).tickValues(logTicks(x, (k) => (mob ? k === 1 : k !== 2))).tickFormat(tickP));
+    g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).tickValues(mcTicks(x, (k) => (mob ? k === 1 : k !== 2))).tickFormat(tickP));
     const cP = C("--up"), cU = C("--down");
     g.selectAll("rect").data(bs).join("rect").attr("x", (b) => x(b.lo) + 0.5).attr("width", (b) => Math.max(1, x(b.hi) - x(b.lo) - 1)).attr("y", (b) => y(b.pct)).attr("height", (b) => h - y(b.pct))
       .attr("fill", (b) => (Math.sqrt(b.lo * b.hi) > U.spot ? cU : cP)).attr("fill-opacity", 0.85)
-      .on("pointermove", (ev, b) => showTip(`<div class="h">bought at ${fP(b.lo)}–${fP(b.hi)}</div>` + trow(Math.sqrt(b.lo * b.hi) > U.spot ? cU : cP, Math.sqrt(b.lo * b.hi) > U.spot ? "underwater" : "in profit", fPct(b.pct, 2) + " of held"), ev)).on("pointerleave", hideTip);
+      .on("pointermove", (ev, b) => showTip(`<div class="h">bought at ${fP(b.lo)}–${fP(b.hi)} market cap</div>` + trow(Math.sqrt(b.lo * b.hi) > U.spot ? cU : cP, Math.sqrt(b.lo * b.hi) > U.spot ? "underwater" : "in profit", fPct(b.pct, 2) + " of held"), ev)).on("pointerleave", hideTip);
     const sx = x(U.spot); g.append("line").attr("x1", sx).attr("x2", sx).attr("y1", -6).attr("y2", h).attr("stroke", C("--fg")).attr("stroke-width", 1.2);
-    g.append("text").attr("class", "lbl").attr("x", sx + 5).attr("y", -4).text("today " + fP(U.spot));
+    g.append("text").attr("class", "lbl").attr("x", sx + 5).attr("y", -4).text("today " + fP(U.spot) + " MC");
     $(id + "-l").innerHTML = `<span><i style="background:${cP}"></i>bought below today (in profit)</span><span><i style="background:${cU}"></i>bought above (underwater)</span>`;
   });
 }
@@ -942,7 +948,7 @@ function crowd() {
     { label: "Composite (0–1)", h: [200, 160], fmt: (v) => v.toFixed(2), yMax: 1, ref: [{ y: 0.2, label: "0.2" }, { y: 0.8, label: "0.8" }], series: [{ label: "Composite", color: "--accent", v: Cp.comp, type: "line", width: 2 }] },
     { label: "Input ranks", h: [110, 90], fmt: (v) => v.toFixed(2), yMax: 1, series: [{ label: "MVRV", color: "--s1", v: Cp.R.mvrv, type: "line", width: 1 }, { label: "Supply in profit", color: "--s3", v: Cp.R.sip, type: "line", width: 1 },
       { label: "Trend", color: "--s7", v: Cp.R.trend, type: "line", width: 1 }, { label: "Flow", color: "--s2", v: Cp.R.flow, type: "line", width: 1 }] },
-    { label: "Price · log", h: [90, 70], log: true, price: true, fmt: fP, series: [{ label: "Price", color: "--fg", v: col("price"), type: "line", width: 1.2 }] }] });
+    { label: "Market cap · log", h: [90, 70], log: true, price: true, fmt: fP, series: [{ label: "Market cap", color: "--fg", v: col("price"), type: "line", width: 1.2 }] }] });
   sect("Who is buying, who is leaving", "Market flows only: GME arriving from the DEX or an exchange (bought) and GME going to them (sold). Owners, not wallets.");
   id = card({ title: "Buyers and sellers by type", wide: true, q: "Is new money arriving, or are the same owners trading?", val: `<span id="bsval"></span>`,
     sub: "Up: GME bought by new owners (never held), returning owners (held before, had sold out) and owners adding. Down: GME sold by owners who kept a position and by owners who sold out.",
@@ -1017,7 +1023,7 @@ function smartCards() {
     note: "Hindsight: owners are picked by their record today, so their past trades look better than a live pick would have. Realized profit uses the owner's average cost. Entities count as one owner." });
   ts(id, { fmt: fU, series: [{ label: "Bought", color: "--up", v: col("smBuyUsd").map((v, i) => (i >= N - 90 ? v : null)), type: "bar" }, { label: "Sold", color: "--down", v: col("smSellUsd").map((v, i) => (i >= N - 90 ? v : null)), type: "neg" }] });
   const rows = Sm.rows.slice(0, 40);
-  card({ title: "Smart money owners", wide: true, body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>Owner</th><th class="n">Realized</th><th class="n">On cost</th><th class="n">Bought</th><th class="n">Sold</th><th class="n">Holds</th><th class="n">Avg cost</th><th class="n">Net 7D</th><th class="n">Net 30D</th><th class="n">Net 90D</th><th>Last buy</th><th>Last sale</th></tr></thead><tbody>` +
+  card({ title: "Smart money owners", wide: true, body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table><thead><tr><th>Owner</th><th class="n">Realized</th><th class="n">On cost</th><th class="n">Bought</th><th class="n">Sold</th><th class="n">Holds</th><th class="n">Avg cost, MC</th><th class="n">Net 7D</th><th class="n">Net 30D</th><th class="n">Net 90D</th><th>Last buy</th><th>Last sale</th></tr></thead><tbody>` +
     rows.map((r) => { const own = r.eid ? `<button class="mini" data-emap="${esc(r.eid)}">${nm(r.name || r.eid)}</button>` : `<button class="addr" data-addr="${r.u}">${short(r.u)}</button>`;
       const nc = (v) => `<td class="n ${v > 0 ? "up" : v < 0 ? "down" : "flat"}">${v ? sgn(v, fU) : "—"}</td>`;
       return `<tr><td>${own}</td><td class="n up">${fU(r.realized)}</td><td class="n">+${fPct(100 * r.roi, 0)}</td><td class="n">${fU(r.boughtUsd)}</td><td class="n">${fU(r.soldUsd)}</td><td class="n">${r.bal > 1e6 ? fB(r.bal) : "—"}</td><td class="n">${r.avg ? fP(r.avg) : "—"}</td>${nc(r.net7)}${nc(r.net30)}${nc(r.net90)}<td class="num">${r.lastBuy || "—"}</td><td class="num">${r.lastSell || "—"}</td></tr>`; }).join("") + `</tbody></table></div>` });
@@ -1036,9 +1042,9 @@ function urpdHeat() {
     Wk.forEach((k) => k.pct.forEach((v, j) => { if (!v) return; g.append("rect").attr("x", x(pd(k.d))).attr("width", cw).attr("y", y(E2[j + 1])).attr("height", Math.max(0.5, y(E2[j]) - y(E2[j + 1])))
       .attr("fill", c1).attr("fill-opacity", Math.min(1, 0.08 + Math.sqrt(v / mx))).on("pointermove", (ev) => showTip(`<div class="h">week of ${fd(pd(k.d))}</div>` + trow(c1, `bought at ${fP(E2[j])}–${fP(E2[j + 1])}`, fPct(v, 2) + " of held") + trow("", "price that week", fP(k.spot)), ev)).on("pointerleave", hideTip); }));
     g.append("path").datum(Wk.filter((k) => k.spot > 0)).attr("fill", "none").attr("stroke", C("--fg")).attr("stroke-width", 1.4).attr("d", d3.line().x((k) => x(pd(k.d)) + cw / 2).y((k) => y(Math.max(E2[0], k.spot))));
-    g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(logTicks(y, (kk) => kk !== 2)).tickFormat(tickP));
+    g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(mcTicks(y, (kk) => kk !== 2)).tickFormat(tickP));
     g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(mob ? 4 : 8).tickSizeOuter(0));
-    $(id + "-l").innerHTML = `<span><i style="background:${c1}"></i>share of held supply (darker = more)</span><span><i class="ln" style="background:${C("--fg")}"></i>price</span>`;
+    $(id + "-l").innerHTML = `<span><i style="background:${c1}"></i>share of held supply (darker = more)</span><span><i class="ln" style="background:${C("--fg")}"></i>market cap</span>`;
   });
 }
 let calcMult = 2, calcSell = 25;
@@ -1053,9 +1059,9 @@ function calcCard() {
     const p0 = (P.weth * P.ethUsd) / P.gme, ethNeed = (r) => P.weth * (Math.sqrt(r) - 1);
     const over = (r) => { let gme = 0, usd = 0; Ur.buckets.forEach((b) => { const mid = Math.sqrt(b.lo * b.hi); if (mid > p0 && mid <= p0 * r) { const q = (b.pct / 100) * (held || 0); gme += q; usd += q * mid; } }); return { gme, usd }; };
     const r = calcMult, f = calcSell / 100, base = ethNeed(r) * P.ethUsd, o = over(r), extra = f * o.usd;
-    el.innerHTML = `<div class="ctl"><label class="eyebrow" for="cm">Target price</label>${segBtns([["2×", 2], ["3×", 3], ["5×", 5], ["10×", 10], ["25×", 25]], r, "cm")}<label class="eyebrow">Overhang that sells at break-even</label>${segBtns([["0%", 0], ["10%", 10], ["25%", 25], ["50%", 50]], calcSell, "cs")}</div>
-      <dl class="rd" style="margin-top:12px"><div><dt>Today</dt><dd>Pool price ${fP(p0)} · market cap ${fU(p0 * SUPPLY)} · ${P.weth.toFixed(1)} ETH against ${fB(P.gme)} GME.</dd></div>
-      <div><dt>Target</dt><dd>${fP(p0 * r)} · market cap ${fU(p0 * r * SUPPLY)}.</dd></div>
+    el.innerHTML = `<div class="ctl"><label class="eyebrow" for="cm">Target market cap</label>${segBtns([["2×", 2], ["3×", 3], ["5×", 5], ["10×", 10], ["25×", 25]], r, "cm")}<label class="eyebrow">Overhang that sells at break-even</label>${segBtns([["0%", 0], ["10%", 10], ["25%", 25], ["50%", 50]], calcSell, "cs")}</div>
+      <dl class="rd" style="margin-top:12px"><div><dt>Today</dt><dd>Market cap ${fP(p0)} · ${P.weth.toFixed(1)} ETH against ${fB(P.gme)} GME.</dd></div>
+      <div><dt>Target</dt><dd>Market cap ${fP(p0 * r)}.</dd></div>
       <div><dt>No sellers</dt><dd>${ethNeed(r).toFixed(1)} ETH ≈ <b>${fU(base)}</b> of net buying.</dd></div>
       <div><dt>Overhang crossed</dt><dd>${held ? `${fB(o.gme)} GME (${fPct((100 * o.gme) / held, 1)} of held supply), bought for ${fU(o.usd)}, gets back to break-even on the way.` : "Held supply unavailable in this build."}</dd></div>
       <div><dt>With ${calcSell}% selling</dt><dd>about <b>${fU(base + extra)}</b> of net buying (${fU(extra)} extra to absorb them).</dd></div></dl>`;
@@ -1072,7 +1078,7 @@ function calcCard() {
     const cc = [C("--s1"), C("--s3"), C("--accent"), C("--down")];
     curves.forEach((c, k) => g.append("path").datum(c.pts).attr("fill", "none").attr("stroke", cc[k]).attr("stroke-width", c.s === calcSell ? 2.4 : 1.2).attr("d", d3.line().x((p) => x(p[0])).y((p) => y(p[1]))));
     g.append("line").attr("x1", x(r)).attr("x2", x(r)).attr("y1", 0).attr("y2", h).attr("class", "xhair").style("opacity", 1);
-    $("calcch-l").innerHTML = curves.map((c, k) => `<span><i class="ln" style="background:${cc[k]}"></i>${c.s}% of overhang sells</span>`).join("") + `<span>x = price multiple · y = net buying needed</span>`;
+    $("calcch-l").innerHTML = curves.map((c, k) => `<span><i class="ln" style="background:${cc[k]}"></i>${c.s}% of overhang sells</span>`).join("") + `<span>x = market cap multiple · y = net buying needed</span>`;
   };
   draws.push(draw);
 }
@@ -1527,7 +1533,7 @@ function ecard({ e, x, st }, wl) {
     <svg viewBox="0 0 ${W2} ${H2}" preserveAspectRatio="none" class="ecsp"><rect x="${winStart}" y="0" width="${W2 - winStart}" height="${H2}" fill="var(--accent-2)"/><path d="${area}" fill="var(${svar})" fill-opacity=".14"/><path d="${line}" fill="none" stroke="var(${svar})" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg>
     <div class="ecflow"><span>In</span><div class="ecbar">${inBar}</div><b>${x.inn > 1e-3 ? fBb(x.inn) : "—"}</b><span>Out</span><div class="ecbar">${outBar}</div><b>${x.out > 1e-3 ? fBb(x.out) : "—"}</b></div>
     <div class="how">${ch.join("") || `<span class="flat">No GME moved in or out in the last ${wl}.</span>`}</div>
-    <dl class="eckv"><div><dt>Avg cost</dt><dd>${c.avg ? fP(c.avg) : "—"}${mult ? ` <small class="${mult >= 1 ? "up" : "down"}">${mult.toFixed(2)}× now</small>` : ""}</dd></div>
+    <dl class="eckv"><div><dt>Avg cost, as MC</dt><dd>${c.avg ? fP(c.avg) : "—"}${mult ? ` <small class="${mult >= 1 ? "up" : "down"}">${mult.toFixed(2)}× now</small>` : ""}</dd></div>
       <div><dt>Unrealized</dt><dd class="${(c.unreal ?? 0) >= 0 ? "up" : "down"}">${c.unreal != null ? sgn(c.unreal, fU) : "—"}</dd></div>
       <div><dt>Realized</dt><dd class="${(c.realized ?? 0) >= 0 ? "up" : "down"}">${c.realized != null ? sgn(c.realized, fU) : "—"}</dd></div>
       <div><dt>Active</dt><dd>${esc(e.firstSeen)} → ${esc(e.lastActive)}</dd></div></dl>
@@ -1617,7 +1623,7 @@ function drawEntMap() {
       return; }
     const e = n.e, x = n.x0, oi = ownerIdx(e.id), fl = links.filter((l) => l.source.id === n.id || l.target.id === n.id).sort((a, b) => b.v - a.v);
     box.innerHTML = `<h4>${nm(e.name)}</h4><span class="ecst ${(STN[n.st] || STN.dormant)[1]}">${(STN[n.st] || STN.dormant)[0]}</span>
-      <div class="kvl">${[["Holds", fB(e.bal) + " · " + fPct(e.pct, 2)], ["Wallets", e.n + (e.attached.length ? ` (+${e.attached.length} joined)` : "")], [wl + " net", sgn(x.net, fBb)], ["In", fBb(x.inn)], ["Out", fBb(x.out)], ["↔ internal", fBb(x.internal)], ["Avg cost", e.cost?.avg ? fP(e.cost.avg) : "—"], ["Provisional", (e.provisional || []).length]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>
+      <div class="kvl">${[["Holds", fB(e.bal) + " · " + fPct(e.pct, 2)], ["Wallets", e.n + (e.attached.length ? ` (+${e.attached.length} joined)` : "")], [wl + " net", sgn(x.net, fBb)], ["In", fBb(x.inn)], ["Out", fBb(x.out)], ["↔ internal", fBb(x.internal)], ["Avg cost, as MC", e.cost?.avg ? fP(e.cost.avg) : "—"], ["Provisional", (e.provisional || []).length]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>
       <button type="button" class="mini" data-pnl="${e.id}">P&amp;L chart →</button>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Open its wallets →</button>` : ""}
       <h4 style="margin-top:4px">Flows · ${wl}</h4><div class="kvl">${fl.slice(0, 20).map((l) => { const inn = l.target.id === n.id, o = inn ? l.source : l.target; return `<div><span><i style="display:inline-block;width:8px;height:8px;background:${edgeC(l)[0]};margin-right:.4rem"></i>${inn ? "from" : "to"} ${esc(nl(o))}</span><b>${fBb(l.v)}</b></div>`; }).join("") || "<div><span>No flows in this window</span><b>—</b></div>"}</div>`;
   };
@@ -1790,6 +1796,7 @@ function methodology() {
   <section><span class="dn">03 · Pricing</span><div><h2>Exact prices for trades, daily prices for the rest</h2>
     <p><b>DEX trades are priced at what was actually paid.</b> The same node query that returns the transfers also returns every Swap event of the two GME pools: the WETH that went in or out against the GME. Each wallet's buy or sale in that transaction gets that exact rate, converted to dollars at the day's ETH close. ${S.X ? `This covers ${fN(S.X.matched)} of ${fN(S.X.legs)} DEX trade legs (${fPct(S.X.coverageVol, 1)} of DEX volume). Priced at the day's GME close instead, a single trade was off by ${fPct(S.X.medianAbsErrPct, 1)} at the median and ${fPct(S.X.p90AbsErrPct, 0)} at the 90th percentile; across all of them the day's close put buys at ${fU(S.X.buy.closeUsd)} instead of ${fU(S.X.buy.exactUsd)} and sales at ${fU(S.X.sell.closeUsd)} instead of ${fU(S.X.sell.exactUsd)}.` : "Coverage figures appear after the next full run."} Exact prices feed the entity and owner cost basis, profit and loss, smart money and the DEX dollar flows. The cost engine behind realized price, MVRV and the cost-basis distribution still uses the day's close.</p>
     <p><b>Profit and loss over time.</b> Every group and every tracked wallet has a P&amp;L chart (the “P&amp;L chart →” button on a group card, and the wallet drawer). One method for both, oldest coins sold first (FIFO): a DEX buy costs what was actually paid; anything else that arrives (exchange withdrawal, transfer, liquidity removed) is costed at that day's close. A sale is GME going to the DEX or to an exchange (an exchange deposit is treated as a sale); it realizes the sale price minus the cost of the oldest coins held. Coins sent to other wallets, added to liquidity or burned leave at cost, with no profit or loss, because nothing was sold. Unrealized = holdings × the day's close − cost of the coins still held. For a group, moves between its own wallets are internal; for a single wallet, coins from its group's other wallets count as transfers. The price pane marks each day's trades: filled dots are DEX buys and sales at their average execution price, rings are exchange deposits and withdrawals at the day's close, sized by dollars.</p>
+    <p><b>Prices are shown as market cap.</b> A GME price has too many zeros to read, so every price on this terminal (charts, costs, trades) is shown as the market cap it implies: price × 420.69B total supply. An average cost of $31.5M means the coins were bought, on average, when GME's market cap was $31.5M. The data underneath stays in price units, so this is only a change of scale.</p>
     <p>Everything else uses daily closes from DeFiLlama. DeFiLlama stamps each day with the previous day's close, so daily windows are shifted by one day. Transfers between wallets and exchange moves are valued at their day's price. Coins a wallet received by transfer rather than bought are costed at that day's market price. Market cap is price × 420.69B. Pool liquidity is read live from the Uniswap V2 pair's reserves.</p></div></section>
   <section><span class="dn">04 · Attribution</span><div><h2>When two wallets are treated as one owner</h2>
     <p>Wallets are grouped only when one of these rules holds. Each rule is graded by the kind of evidence behind it.</p>
@@ -1903,11 +1910,10 @@ function behaviourChart(el, P, who) {
   // 1 · price, log, with the trades
   const pr = rows.filter((r) => r.p), pxs = pr.map((r) => r.p).concat(mk.map((q) => q.px).filter((v) => v > 0));
   const y1 = d3.scaleLog(d3.extent(pxs), [h1, 0]).nice();
-  const g1 = g.append("g"); lab(g1, "GME price (log) · the owner's trades, sized by $");
-  const lead = (v) => Math.round(v / 10 ** Math.floor(Math.log10(v) + 1e-9));       // log ticks: powers of ten, or 1-2-5 on a short range
-  let tv = y1.ticks().filter((v) => lead(v) === 1); if (tv.length < 3) tv = y1.ticks().filter((v) => [1, 2, 5].includes(lead(v)));
+  const g1 = g.append("g"); lab(g1, "GME market cap (log) · the owner's trades, sized by $");
+  let tv = mcTicks(y1, (k) => k === 1); if (tv.length < 3) tv = mcTicks(y1, () => true);   // round market caps
   g1.append("g").attr("class", "gridl").call(d3.axisLeft(y1).tickValues(tv).tickSize(-w2).tickFormat(""));
-  g1.append("g").attr("class", "axis").call(d3.axisLeft(y1).tickValues(tv).tickFormat((v) => fP(v)));
+  g1.append("g").attr("class", "axis").call(d3.axisLeft(y1).tickValues(tv).tickFormat(tickP));
   g1.append("path").datum(pr).attr("fill", "none").attr("stroke", C("--fg-2")).attr("stroke-width", 1.2).attr("d", d3.line().x((r) => x(r.d)).y((r) => y1(r.p)));
   // 2 · holdings
   const g2 = g.append("g").attr("transform", `translate(0,${h1 + gap})`); lab(g2, "Holdings, GME");
@@ -1932,7 +1938,7 @@ function behaviourChart(el, P, who) {
   g.append("rect").attr("width", w2).attr("height", h1 + gap + h2 + gap + h3).attr("fill", "transparent").style("touch-action", "pan-y")
     .on("pointermove", (ev) => { const [mx] = d3.pointer(ev, g.node()), r = rows[Math.max(0, Math.min(rows.length - 1, bis(rows, x.invert(mx))))];
       xl.attr("x1", x(r.d)).attr("x2", x(r.d)).style("opacity", 1);
-      showTip(`<div class="h">${fd(r.d)}</div>` + trow("", "price", fP(r.p)) + trow(C("--accent"), "holds", fBb(r.h)) + trow("", "avg cost of held", r.h > 1e-6 ? fP(r.c / (r.h * 1e9)) : "—")
+      showTip(`<div class="h">${fd(r.d)}</div>` + trow("", "market cap", fP(r.p)) + trow(C("--accent"), "holds", fBb(r.h)) + trow("", "avg cost of held, as MC", r.h > 1e-6 ? fP(r.c / (r.h * 1e9)) : "—")
         + trow(C("--accent"), "realized", fU(r.rz)) + trow(C("--s1"), "unrealized", fU(r.un)) + trow(C("--fg"), "total P/L", fU(r.tot))
         + (byDay.get(r.i) || []).map((q) => trow(C(PLK[q.k][1]), PLK[q.k][0], `${fBb(q.b)} · ${fU(q.u)}`)).join(""), ev); })
     .on("pointerleave", () => { xl.style("opacity", 0); hideTip(); });
@@ -1940,7 +1946,7 @@ function behaviourChart(el, P, who) {
   g.append("g").selectAll("circle").data(mk.filter((q) => q.px > 0).sort((a, b) => b.u - a.u)).join("circle")   // above the crosshair layer
     .attr("cx", (q) => x(DD[q.i])).attr("cy", (q) => y1(q.px)).attr("r", (q) => rr(q.u))
     .attr("fill", (q) => (PLK[q.k][2] ? C(PLK[q.k][1]) : "none")).attr("fill-opacity", 0.55).attr("stroke", (q) => C(PLK[q.k][1])).attr("stroke-width", (q) => (PLK[q.k][2] ? 1 : 1.6))
-    .on("pointermove", (ev, q) => showTip(`<div class="h">${fd(DD[q.i])} · ${PLK[q.k][0]}</div>` + trow("", "GME", fBb(q.b)) + trow("", "≈ $", fU(q.u)) + trow("", PLK[q.k][2] ? "avg execution price" : "day's price", fP(q.px)), ev))
+    .on("pointermove", (ev, q) => showTip(`<div class="h">${fd(DD[q.i])} · ${PLK[q.k][0]}</div>` + trow("", "GME", fBb(q.b)) + trow("", "≈ $", fU(q.u)) + trow("", PLK[q.k][2] ? "bought/sold at MC (avg)" : "MC that day", fP(q.px)), ev))
     .on("pointerleave", hideTip);
   const lg = el.parentElement.querySelector(".pl-legend");
   if (lg) lg.innerHTML = Object.values(PLK).map(([l, c, f]) => `<span><i style="${f ? `background:${C(c)}` : `border:1.5px solid ${C(c)};background:none`};border-radius:50%"></i>${l}</span>`).join("")
@@ -1953,8 +1959,8 @@ function wirePl(root, P) {
   box.querySelector(".ctl").onclick = (ev) => { const b = ev.target.closest("[data-plr]"); if (!b) return; plRange = +b.dataset.plr; box.querySelectorAll("[data-plr]").forEach((x) => x.classList.toggle("on", +x.dataset.plr === plRange)); draw(); };
   draw();
 }
-const PLNOTE = "Oldest coins sold first (FIFO). A DEX buy costs what was actually paid; anything else that arrives (exchange withdrawal, transfer, liquidity removed) is costed at that day's close. Sales are DEX sales and exchange deposits (treated as sales); they realize profit or loss. Coins sent to other wallets, added to liquidity or burned leave at cost, with no profit or loss. Unrealized = holdings × the day's close − cost of the coins still held. Markers: filled = DEX trade at its average execution price for the day; ring = exchange deposit or withdrawal at the day's close.";
-const plKv = (now) => now ? [["Bought (DEX + exch.)", fU(now.bu)], ["Sold (DEX + exch.)", fU(now.so)], ["Realized P/L", sgn(now.rz, fU)], ["Unrealized P/L", sgn(now.un, fU)], ["Total P/L", sgn(now.tot, fU)], ["Avg cost of held", now.h > 1e-6 ? fP(now.c / (now.h * 1e9)) : "—"]] : [];
+const PLNOTE = "Oldest coins sold first (FIFO). A DEX buy costs what was actually paid; anything else that arrives (exchange withdrawal, transfer, liquidity removed) is costed at that day's close. Sales are DEX sales and exchange deposits (treated as sales); they realize profit or loss. Coins sent to other wallets, added to liquidity or burned leave at cost, with no profit or loss. Unrealized = holdings × the day's close − cost of the coins still held. Prices are shown as market cap (price × 420.69B supply). Markers: filled = DEX trade at its average execution price for the day; ring = exchange deposit or withdrawal at the day's close.";
+const plKv = (now) => now ? [["Bought (DEX + exch.)", fU(now.bu)], ["Sold (DEX + exch.)", fU(now.so)], ["Realized P/L", sgn(now.rz, fU)], ["Unrealized P/L", sgn(now.un, fU)], ["Total P/L", sgn(now.tot, fU)], ["Avg cost of held, as MC", now.h > 1e-6 ? fP(now.c / (now.h * 1e9)) : "—"]] : [];
 async function openEntity(id) {
   const e = S.E && S.E.entities.find((x) => x.id === id); if (!e) return;
   $("scrim").classList.add("on"); $("drawer").classList.add("open");
@@ -1967,7 +1973,7 @@ async function openEntity(id) {
   const big = ((P && P.marks) || []).slice().sort((a, b) => b[3] - a[3]).slice(0, 12), off = d0off();
   $("db").innerHTML = `<div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
     <div><span class="eyebrow">How it traded · the whole group as one owner</span><div style="margin-top:6px">${plBox("e:" + id)}</div><p class="sub" style="margin-top:6px">${PLNOTE} Moves between the group's own wallets are internal: neither buys nor sales.</p></div>
-    ${big.length ? `<div><span class="eyebrow">Largest trades</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">Price</th></tr></thead><tbody>` +
+    ${big.length ? `<div><span class="eyebrow">Largest trades</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">At MC</th></tr></thead><tbody>` +
       big.map(([d, k, b, u]) => `<tr><td class="num">${fday(DD[d + off] || DD[N - 1])}</td><td class="${PLK[k][1] === "--up" ? "up" : "down"}">${PLK[k][0]}</td><td class="n">${fBb(b)}</td><td class="n">${fU(u)}</td><td class="n">${PLK[k][2] ? fP(u / (b * 1e9)) : "—"}</td></tr>`).join("") + `</tbody></table></div></div>` : ""}
     <div><span class="eyebrow">Wallets (${e.n})</span><div class="chips" style="margin-top:6px">${e.members.slice(0, 120).map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>`).join("")}</div></div>`;
   wirePl($("db"), P);
