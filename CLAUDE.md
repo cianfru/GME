@@ -105,7 +105,7 @@ Read this file first. It is enough to continue without the original conversation
   - one y-axis per chart;
   - price and realized price share a log axis (same unit);
   - stacked bars split up (bought, withdrawn) and down (sent to exchanges, sold);
-  - more than 200 days of bars become weekly totals, and daily-average lines are dropped at that point;
+  - **daily records (owner, 2026-11-08: "the chart is a bit boxy, can we have daily records?").** Lines and areas always draw every daily value. Bars become weekly totals only when there are more days than pixels (`dates.length > max(200, plot width)`, e.g. ALL on a phone); then lines keep their daily points (`dvv` on `dd`), daily-average lines are dropped and the tooltip reads the day under the cursor plus the bar's week. The P&L chart draws holdings and P&L as straight daily lines, not stair steps;
   - % charts are capped at 100;
   - colours are passed as CSS variable names, so the theme toggle repaints.
 - `vercel.json`: no framework, build command `node scripts/build-site.mjs`, output `dist`. Every push to `main`, including the daily data commit, redeploys. **Production URL: https://gme-terminal.vercel.app** (Vercel project `gme-terminal`, team cianfru's projects, repo `cianfru/GME`). Deployment protection is standard: the production domain is public, preview URLs require Vercel login.
