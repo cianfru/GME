@@ -7,10 +7,15 @@ EX = json.load(open(os.path.join(D, "exclude.json"))); CEX = {a for a, v in EX.i
 LP = {"0x05391bd57d8c6fb30d9c39f6618f2207893922dc", "0xc36442b4a4522e871399cd717abdd847ab11fe88"}
 FOC = {m["a"] for m in json.load(open(os.path.join(D, "focus_cluster.json")))["members"]}
 CBG = {r["a"] for r in json.load(open(os.path.join(D, "coinbase_group.json")))} | {"0xe1fc21df6bbe9caa933f93896866501375669717"}
-E = json.load(open(os.path.join(D, "entities_all.json")))["entities"]
+EA = json.load(open(os.path.join(D, "entities_all.json"))); E = EA["entities"]
 owner = {}
 for a in FOC: owner[a] = "FOCUS"
 for a in CBG: owner[a] = "COINBASE"
+# The upper bound: every wallet of a web that contains fbb4's wallets, including the groups split out of it
+# (cluster_all.py), counts as its looser extension here. Those groups are separate owners everywhere else.
+for w in EA.get("webs", []):
+    if set(w["wallets"]) & FOC:
+        for a in set(w["wallets"]) - FOC: owner.setdefault(a, "FOCUS_EXT")
 for i, e in enumerate(E):
     ws = set(e["wallets"])
     if ws & FOC:      # the loose extension of the focus group: keep separate as "FOCUS+" (upper bound)
@@ -27,14 +32,16 @@ bal = collections.defaultdict(float); last = {}; firstseen = {}
 for s, r, ts, v, b in T:
     bal[s] -= v; bal[r] += v; last[s] = ts; last[r] = ts; firstseen.setdefault(r, ts)
 cat = collections.Counter()
+held_by = lambda o: sum(1 for x in owner.values() if x == o)               # members, as the other pages count them
+L_FOC, L_EXT, L_CB = f"Your wallet's cluster ({held_by('FOCUS')})", f"Its looser extension ({held_by('FOCUS_EXT')} more)", f"Coinbase group ({held_by('COINBASE')})"
 for a, b in bal.items():
     if b <= 0: continue
     if a == DEAD: cat["Burned"] += b
     elif a == PAIR: cat["Uniswap V2 pool"] += b
     elif a in infra: cat["Exchanges, other pools & contracts"] += b
-    elif owner.get(a) == "FOCUS": cat["Your wallet's cluster (69)"] += b
-    elif owner.get(a) == "FOCUS_EXT": cat["Its looser extension (88 more)"] += b
-    elif owner.get(a) == "COINBASE": cat["Coinbase group (31)"] += b
+    elif owner.get(a) == "FOCUS": cat[L_FOC] += b
+    elif owner.get(a) == "FOCUS_EXT": cat[L_EXT] += b
+    elif owner.get(a) == "COINBASE": cat[L_CB] += b
     elif a in owner: cat["Other multi-wallet groups"] += b
     else:
         if b < 1e8: cat["Small wallets (<100M GME)"] += b
@@ -42,7 +49,7 @@ for a, b in bal.items():
         elif last[a] < t90: cat["Independent, quiet 3–12 months"] += b
         else: cat["Independent, active last 90 days"] += b
 print(f"as of {NOW}")
-order = ["Burned", "Uniswap V2 pool", "Exchanges, other pools & contracts", "Your wallet's cluster (69)", "Its looser extension (88 more)", "Coinbase group (31)", "Other multi-wallet groups",
+order = ["Burned", "Uniswap V2 pool", "Exchanges, other pools & contracts", L_FOC, L_EXT, L_CB, "Other multi-wallet groups",
          "Independent, untouched >1 year", "Independent, quiet 3–12 months", "Independent, active last 90 days", "Small wallets (<100M GME)"]
 for k in order: print(f"  {k:40s} {cat[k]/1e9:7.2f}B  {100*cat[k]/SUPPLY:5.1f}%")
 print("  total", round(sum(cat.values()) / 1e9, 2))

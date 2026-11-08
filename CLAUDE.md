@@ -135,6 +135,7 @@ Each rule below links two wallets:
 Guards:
 - Any address that seeds more than 40 wallets is a hub, so no links go through it.
 - A group of more than 60 wallets is flagged and not trusted.
+- **Splitting a flagged web (2026-11-08, `cluster_all.py`):** cutting at single links fails here — fbb4's 180-wallet web is mostly a tree (116 of 262 links are the only link between two parts), so it would scatter into 103 lone wallets and break fbb4's own core. Instead, when a flagged web holds wallets of the groups built by their own scripts (fbb4 = `focus_cluster.json` + its joins in `entities.json`, the Coinbase group), those are **set aside** and what stays linked among the rest becomes groups of its own (`splitFrom`), each recording the links that tie it to the set-aside group (`near`, shown on its card as "Also tied to fbb4 by N links… kept as its own group"), never merged. The web is kept under `webs` in `entities_all.json` with its lone wallets; `float.py` still counts all of it as fbb4's "looser extension" (the upper bound, unchanged at ~22B), and its supply labels now carry live counts (fbb4 70, extension 123, Coinbase 31; the old "88 more" was stale). First result: set aside 64, **9 groups of their own holding 18.83B**, 19 lone wallets (1.34B) hanging straight off fbb4. Three clear the 0.05% bar and became entities: **Linked group a8c8** (the #2 holder's network: 13 wallets, 13.70B, seeded and drained from `0x8d10…a8c8`; tied to fbb4 only by two drains from `0x3783…aaf1` into fbb4's `0x78b7…5869`, 2025-03-17 and 06-05), **Linked group dcf4** (9 wallets, 2.42B, 2 seeds to fbb4) and **Linked group 019d** (2 wallets, 2.35B, one shared deposit). `0x78b7…5869` is where several of these networks meet fbb4.
 - **A shared exchange or relayer funder never links anyone.** An earlier "same first funder" rule was removed because those funders were exchanges.
 - Tiny "address poisoning" transfers never link anyone.
 
@@ -236,7 +237,7 @@ Done once with REA, to borrow its information depth rather than its look. Worth 
 
 ## 10. Still open
 - **Assessment 2026-11-08.** Done the same day: hourly plan tick (schedule), weekly/monthly ETH refresh, stable Visualizer order, first-funder guard. Still open:
-  - **The flagged 180-wallet web (fbb4's looser extension) holds 86.7B (20.6%); 66.5B of it is already in fbb4, but 20.2B (4.8%) in 12 wallets is in no trusted group**, mostly the #2 holder `0x8d10…a8c8` (13.7B), then `0xf8ce…019d` (2.35B) and `0x506c…dcf4` (2.21B). Splitting the web at single-link bridges would give those wallets groups of their own.
+  - ~~Split the flagged 180-wallet web~~ — done the same day (§4): 9 groups of their own (18.83B), three of them tracked entities (a8c8, dcf4, 019d).
   - **Owner to verify on Etherscan:** the 6 wallets of "Linked group 73aa" (exchange / market-maker scale), the unnamed exchanges `0x8fca4ade` and `0xf81b45b1`, the contract `0x674bdf20…` (Coinbase-group lead).
   - Tests for the remaining Python builders (`pnl.py`, linking rules, archive merge); `bq_flows.py` has some.
   - `report/gme-study.html` is still the 30 Oct snapshot; the Methodology page does not yet explain the Visualizer and the ledger ($25 floor, 12 largest transfers per node).

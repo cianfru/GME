@@ -78,13 +78,13 @@ for e in ENT:
     ws = {a for a in e["wallets"] if a not in infra}
     if e.get("flagged") or len(ws) < 2 or sum(max(bal[a], 0) for a in ws) < LINKED_MIN: continue
     lead = max(ws, key=lambda a: bal[a])
-    src.append(dict(name=f"Linked group {short(lead)}", wname=None, kind="linked", ws=ws, via=e.get("via", {})))
+    src.append(dict(name=f"Linked group {short(lead)}", wname=None, kind="linked", ws=ws, via=e.get("via", {}), near=e.get("near")))
 own, ents = {}, []
 for x in src:
     ms = [a for a in x["ws"] if a not in infra and a not in own]
     if not ms: continue
     k = len(ents)
-    ents.append(dict(name=x["name"], wname=x["wname"], kind=x["kind"], members=set(ms), attached=[], joined_now=[], capped=False, via=x.get("via")))
+    ents.append(dict(name=x["name"], wname=x["wname"], kind=x["kind"], members=set(ms), attached=[], joined_now=[], capped=False, via=x.get("via"), near=x.get("near")))
     for a in ms: own[a] = k
 
 # ---- stable ids: match each entity to last run's by shared members -----------------------------------------------
@@ -316,7 +316,7 @@ for k, e in enumerate(ents):
         if usd >= MIN_USD and a not in own and bal[a] >= 0.5 * tok:
             prov.append(dict(a=a, recv=round(tok), usd=round(usd), bal=round(max(bal[a], 0)), first=f[:10], last=l[:10]))
     prov.sort(key=lambda x: -x["recv"]); prov = prov[:12]
-    rec = dict(id=e["id"], name=e["name"], tag=e["tag"], anchor=e["anchor"], wname=e["wname"], kind=e["kind"], via=e["via"], created=e["created"], n=len(ms), bal=round(b), pct=round(100 * b / SUPPLY, 4),
+    rec = dict(id=e["id"], name=e["name"], tag=e["tag"], anchor=e["anchor"], wname=e["wname"], kind=e["kind"], via=e["via"], near=e.get("near"), created=e["created"], n=len(ms), bal=round(b), pct=round(100 * b / SUPPLY, 4),
                series=[round(x / 1e9, 4) for x in ser], w=wins, status=sts, cost=cb, firstSeen=fs, lastActive=la, direct=direct, forming=forming,
                capped=e["capped"], flagged=e["kind"] == "linked" and len(ms) > CAP,
                members=ms, attached=e["attached"], provisional=prov)
