@@ -177,6 +177,22 @@ details.about p { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; max-w
 .lbl { font: 500 10.5px var(--sans); fill: var(--fg-2) }
 .plabel { font: 500 9.5px var(--mono); letter-spacing: .13em; text-transform: uppercase; fill: var(--muted) }
 .xhair { stroke: var(--fg-2); stroke-width: 1; stroke-dasharray: 2 3; pointer-events: none }
+/* zoomable time series: navigator strip, drag selection, reset, full-screen viewer */
+.tscard { position: relative } .tscard > .ph { padding-right: 46px }
+.xbtn { position: absolute; z-index: 2; top: 14px; right: 14px; width: 32px; height: 32px; display: grid; place-items: center; background: var(--glass-2); border: 1px solid var(--line-2); color: var(--fg-2); font: 500 16px/1 var(--mono); cursor: pointer }
+.xbtn:hover { color: var(--accent); border-color: var(--accent) }
+.tsn { margin-top: 2px } .tsn svg { display: block; width: 100%; touch-action: none; overflow: visible }
+.tsn .navbg { fill: var(--glass-2); stroke: var(--line) } .tsn .navax text { font-size: 9.5px } .tsn .navax .domain { display: none }
+.tsn .brush .selection { fill: var(--accent); fill-opacity: .16; stroke: var(--accent); stroke-opacity: .8; shape-rendering: crispEdges }
+.tsn .brush .overlay { cursor: pointer } .tsn .grips rect { fill: var(--accent) }
+.zsel { fill: var(--accent); fill-opacity: .14; stroke: var(--accent); stroke-opacity: .6; pointer-events: none }
+.zrs { background: var(--accent-2); border: 1px solid var(--accent); color: var(--accent); font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; padding: 4px 8px; cursor: pointer; min-height: 28px }
+#tip .tiphint { margin: .35rem 0 0; color: var(--muted); font-size: 11px }
+.tsv { position: fixed; inset: 0; z-index: 55; background: rgb(3 7 18 / .72); display: flex; padding: 12px }
+.tsv[hidden] { display: none } body.tsvopen { overflow: hidden }
+.tsvbox { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; background: var(--glass-pop) }
+.tsvbox .ph { flex: none } .tsvr { display: flex; align-items: center; gap: 12px } .tsvbox #tsvc { flex: 1; min-height: 0; overflow: hidden } .tsvbox .legend, .tsvh { flex: none } .tsvh { margin: 0 }
+@media (max-width: 760px) { .tsv { padding: 0 } .tsvbox { padding: 12px } .tsvr .pv { display: none } .xbtn { top: 10px; right: 10px; width: 38px; height: 38px } }
 .empty { border: 1px dashed var(--line-2); padding: 18px; display: flex; flex-direction: column; gap: 4px }
 .empty p { margin: 0; color: var(--fg-2); font-size: 13px }
 
@@ -455,6 +471,9 @@ body.vzmode main.wrap { max-width: none; padding: 0 } body.vzmode .foot { displa
 <div id="scrim"></div>
 <aside id="drawer" aria-label="Wallet"><div class="dh" id="dh"></div><div class="db" id="db"></div></aside>
 <div id="tip" role="status" aria-live="polite"></div>
+<div id="tsv" class="tsv" hidden role="dialog" aria-modal="true" aria-labelledby="tsv-t"><div class="tsvbox panel key">
+  <header class="ph"><div><h3 id="tsv-t"></h3><p class="q" id="tsv-q"></p></div><div class="tsvr"><div class="pv" id="tsv-v"></div><button type="button" class="mini" id="tsv-x" aria-label="Close the full-screen chart">Close ✕</button></div></header>
+  <div class="chart" id="tsvc"></div><div class="legend" id="tsvc-l"></div><p class="sub tsvh" id="tsv-h"></p></div></div>
 
 <script>
 (() => {
@@ -558,7 +577,8 @@ function init() {
   document.addEventListener("pointerout", (e) => { if (tipEl && !tipEl.contains(e.relatedTarget)) { tipEl = null; hideTip(); } });
   document.addEventListener("focusin", (e) => { const t = e.target.closest("[data-tip]"); if (t) tipOn(t); });
   document.addEventListener("focusout", () => { if (tipEl) { tipEl = null; hideTip(); } });
-  $("scrim").onclick = closeWallet; addEventListener("keydown", (e) => { if (e.key === "Escape") closeWallet(); });
+  $("scrim").onclick = closeWallet; addEventListener("keydown", (e) => { if (e.key === "Escape") { if (!$("tsv").hidden) closeChart(); else closeWallet(); } });
+  let vt; addEventListener("resize", () => { clearTimeout(vt); vt = setTimeout(drawViewer, 150); });
   parseHash(); render();
   qWatch.observe($("view"), { childList: true, subtree: true });
 }
@@ -571,7 +591,10 @@ function parseHash() {
 }
 function onClick(e) {
   const r = e.target.closest("[data-r]");
-  if (r) { range = +r.dataset.r; try { localStorage.setItem("gme-range", range); } catch (er) {} markRange(); redraw(); return; }
+  if (r) { range = +r.dataset.r; try { localStorage.setItem("gme-range", range); } catch (er) {} ZOOM.clear(); markRange(); redraw(); return; }
+  const xp = e.target.closest("[data-xp]");
+  if (xp) { e.preventDefault(); openChart(xp.dataset.xp); return; }
+  if (e.target.closest("#tsv-x") || e.target.id === "tsv") { closeChart(); return; }
   const cp = e.target.closest("[data-copy]");
   if (cp) { e.preventDefault(); copyText(cp.dataset.copy, cp); return; }
   const a = e.target.closest("[data-addr]");
@@ -594,7 +617,7 @@ function copyText(txt, el) {
 function markRange() { document.querySelectorAll("[data-r]").forEach((b) => b.classList.toggle("on", +b.dataset.r === range)); }
 function render() {
   document.querySelectorAll("#nav a").forEach((a) => { const on = a.dataset.p === page; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
-  draws.length = 0; if (bubSim) { bubSim.stop(); bubSim = null; }
+  draws.length = 0; ZOOM.clear(); TSOPT.clear(); if (bubSim) { bubSim.stop(); bubSim = null; }
   const v = $("view"); v.innerHTML = ""; v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
   document.body.classList.toggle("vzmode", page === "visualizer");
   if (page !== "visualizer" && VZ.sim) { VZ.sim.stop(); VZ.sim = null; }
@@ -691,121 +714,196 @@ const unavailable = (msg) => `<div class="empty"><span class="eyebrow">Unavailab
 const valDelta = (now, then, f, fd2 = f) => `${f(now)}${then != null ? `<small class="${cls(now - then)}">${arrow(now - then)} ${fd2(Math.abs(now - then))}</small>` : ""}`;
 
 // ---------- the time-series instrument: one or more panes sharing an x axis ----------
-// pane: {label, h:[desktop,mobile], series:[{label,color,v,type:line|area|bar|neg|stack|tip,width,dash,colorBy,agg,dailyOnly,hideTip,noLegend}], log, price, fmt, axisFmt, zero, yMax, ref}
-function ts(id, opt) { draws.push(() => drawTS(id, opt)); }
-function drawTS(id, opt) {
-  const el = $(id); if (!el) return;
-  const mob = mobile(), i0 = startIdx(), res = (c) => (c && c.startsWith("--") ? css(c) : c);
-  const P0 = opt.panes || [opt];
-  let dates = DD.slice(i0);
-  const panes = P0.map((p) => ({ ...p, ser: p.series.filter((s) => s.v && s.v.length).map((s) => ({ ...s, color: res(s.color), colorBy: s.colorBy && s.colorBy.map(res), vv: s.v.slice(i0) })) }));
-  const hasBars = panes.some((p) => p.ser.some((s) => /bar|neg/.test(s.type)));
-  let wk = null;
-  // Daily records throughout. Only when there are more days than pixels (e.g. ALL on a phone) do the BARS become weekly
-  // totals; lines and areas keep their daily values (dvv on dd), and the weekly copy only feeds the tooltip rows.
-  const wPlot = (el.clientWidth || 600) - (opt.left ?? (mob ? 48 : 58)) - (opt.right ?? 10);
-  if (hasBars && dates.length > Math.max(200, wPlot)) {
-    const keys = [], map = [], dd0 = dates; let prev = null;
-    dates.forEach((d) => { const k = +d3.utcMonday.floor(d); if (k !== prev) { keys.push(new Date(k)); prev = k; } map.push(keys.length - 1); });
-    panes.forEach((p) => { p.ser = p.ser.filter((s) => !s.dailyOnly).map((s) => {
-      const agg = s.agg || (/bar|neg/.test(s.type) ? "sum" : "last"), out = new Array(keys.length).fill(null), cnt = new Array(keys.length).fill(0);
-      s.vv.forEach((v, i) => { if (v == null) return; const k = map[i]; if (agg === "last") out[k] = v; else { out[k] = (out[k] ?? 0) + v; cnt[k]++; } });
-      if (agg === "mean") out.forEach((v, k) => { if (v != null) out[k] = v / cnt[k]; });
-      return { ...s, vv: out, ...(s.type === "line" || s.type === "area" ? { dvv: s.vv, dd: dd0 } : {}) }; }); });
-    wk = map; dates = keys;
+// pane: {label, h:[desktop,mobile] (before the tall scale), series:[{label,color,v,type:line|area|bar|neg|stack|tip,width,dash,colorBy,agg,dailyOnly,hideTip,noLegend}], log, price, fmt, axisFmt, zero, yMax, ref}
+// Every time-series chart is full width and tall, and zooms like the SPX charts: drag across it to look at any period
+// (the y axis re-fits to what is visible), double-click to go back, ⌘/Ctrl + scroll (or a trackpad pinch) to zoom
+// around the cursor. Under it a navigator strip shows the whole history with the window on view: drag the window to
+// pan, its edges to resize (this is how phones zoom). ⤢ opens the chart full screen. The page's range buttons set the
+// starting window and reset every zoom.
+const ZOOM = new Map(), TSOPT = new Map(), MIN_WIN = 7;
+function ts(id, opt) {
+  TSOPT.set(id, opt);
+  const card_ = $(id)?.closest(".card");
+  if (card_) {
+    card_.classList.add("wide", "tscard");
+    if (!card_.querySelector(".xbtn")) card_.insertAdjacentHTML("afterbegin", `<button type="button" class="xbtn" data-xp="${id}" aria-label="Open this chart full screen" title="Full screen">⤢</button>`);
   }
-  const n = dates.length;
-  if (!n) { el.innerHTML = unavailable("No data in this range."); return; }
-  const m = { t: 6, r: opt.right ?? 10, b: 22, l: opt.left ?? (mob ? 48 : 58) }, gap = 14;
-  const hs = panes.map((p) => (Array.isArray(p.h) ? p.h[mob ? 1 : 0] : p.h ?? (mob ? 190 : 230)));
-  const lh = panes.map((p) => (p.label ? 22 : 0));
-  const H = m.t + d3.sum(hs) + d3.sum(lh) + gap * (panes.length - 1) + m.b;
-  el.innerHTML = "";
+  draws.push(() => drawTS(id, opt));
+}
+function drawTS(id, opt, view = {}) {
+  const el = $(id); if (!el) return;
+  const mob = mobile(), res = (c) => (c && c.startsWith("--") ? css(c) : c);
+  const P0 = opt.panes || [opt];
+  const m = { t: 6, r: opt.right ?? 10, b: 22, l: opt.left ?? (mob ? 48 : 58) }, gap = 14, NAVH = mob ? 60 : 52;
+  el.innerHTML = `<div class="tsm"></div><div class="tsn"></div>`;
+  const mainEl = el.firstChild, navEl = el.lastChild;
   const W = el.clientWidth || 600, w = W - m.l - m.r;
-  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H);
-  const defs = svg.append("defs");
-  const root = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
-  const step = n > 1 ? (dates[n - 1] - dates[0]) / (n - 1) : 864e5;
-  const x = d3.scaleUtc([dates[0], +dates[n - 1] + (hasBars ? step : 0)], [0, w]);
-  const bw = Math.max(1, w / n - (n > 120 ? 0.5 : 1.5)), off = hasBars ? bw / 2 : 0;
-  const markers = new Map();
-  (opt.markers || []).forEach((mk) => { const j = mk.i - i0; if (j < 0) return; const k = wk ? wk[j] : j; if (k != null && k < n) markers.set(k, mk); });
-  let yo = 0;
-  panes.forEach((p, pi) => {
-    yo += lh[pi];
-    const h = hs[pi], g = root.append("g").attr("transform", `translate(0,${yo})`), ser = p.ser;
-    if (p.label) root.append("text").attr("class", "plabel").attr("x", -m.l + 2).attr("y", yo - 11).text(p.label);
-    const stacks = ser.filter((s) => s.type === "stack");
-    const vals = [];
-    ser.forEach((s) => { if (s.type === "line" || s.type === "area") vals.push(...(s.dvv || s.vv).filter((v) => v != null && (!p.log || v > 0))); });
-    const pos = new Array(n).fill(0), negs = new Array(n).fill(0);
-    ser.filter((s) => s.type === "bar" || s.type === "neg").forEach((s) => {
-      s.rects = s.vv.map((v, i) => { if (!v) return null; const val = s.type === "neg" ? -Math.abs(v) : v;
-        if (val >= 0) { const r = [pos[i], pos[i] + val]; pos[i] += val; return [i, r, v]; }
-        const r = [negs[i] + val, negs[i]]; negs[i] += val; return [i, r, v]; }).filter(Boolean);
-    });
-    const pBars = ser.some((s) => /bar|neg/.test(s.type));
-    if (pBars) vals.push(...pos, ...negs);
-    let stackData = null;
-    if (stacks.length) {
-      const rows = dates.map((d, i) => Object.fromEntries(stacks.map((s, j) => [j, Math.max(0, s.vv[i] ?? 0)])));
-      stackData = d3.stack().keys(stacks.map((_, j) => j))(rows);
-      vals.push(...stackData[stackData.length - 1].map((q) => q[1]), 0);
-    }
-    if (p.ref) vals.push(...p.ref.map((r) => r.y));
-    let lo = d3.min(vals), hi = d3.max(vals);
-    if (lo == null) { g.append("text").attr("class", "lbl").attr("x", 4).attr("y", h / 2).text("No data in this range"); yo += h + gap; return; }
-    const tickN = h < 130 ? 2 : 4;
-    let y;
-    if (p.log) { lo = Math.max(lo, 1e-12); y = d3.scaleLog([lo / 1.15, hi * 1.15], [h, 0]); }
-    else { if (p.zero !== false || pBars) { lo = Math.min(0, lo); hi = Math.max(0, hi); } if (p.yMax) hi = Math.max(hi, p.yMax); const pad = (hi - lo) * 0.06 || 1;
-      y = d3.scaleLinear([lo < 0 ? lo - pad : lo, p.yMax ? p.yMax : hi + pad], [h, 0]); if (!p.yMax) y.nice(tickN); }
-    p.y = y; p.top = yo;
-    const fmt = p.fmt || ((v) => v);
-    let yt = p.log ? (p.price ? mcTicks : logTicks)(y, (k) => (y.domain()[1] / y.domain()[0] > 30 || h < 130 ? k === 1 : k !== 2)) : y.ticks(tickN);
-    if (p.log && p.price && yt.length < 3 && h >= 130) yt = mcTicks(y, () => true);         // a narrow market-cap range: 1-2-5 ticks
-    g.append("g").attr("class", "gridl").call(d3.axisLeft(y).tickValues(yt).tickSize(-w).tickFormat(""));
-    g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(yt).tickFormat(p.log && p.price ? tickP : p.axisFmt || fmt));
-    if (pi === panes.length - 1) g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.min(mob ? 4 : 8, Math.floor(w / 95)))).tickSizeOuter(0));
-    if (!p.log && y.domain()[0] < 0) g.append("line").attr("x1", 0).attr("x2", w).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", css("--fg-2")).attr("stroke-opacity", 0.4);
-    (p.ref || []).forEach((r) => { g.append("line").attr("x1", 0).attr("x2", w).attr("y1", y(r.y)).attr("y2", y(r.y)).attr("stroke", css("--fg-2")).attr("stroke-opacity", 0.7).attr("stroke-dasharray", "3 4");
-      g.append("text").attr("class", "lbl").attr("x", w - 4).attr("y", y(r.y) - 4).attr("text-anchor", "end").text(r.label); });
-    (opt.bands || []).forEach((b) => { const a = x(pd(b.a)), z = x(pd(b.b)); if (z < 0 || a > w) return;
-      g.insert("rect", ":first-child").attr("x", Math.max(0, a)).attr("width", Math.max(1, Math.min(w, z) - Math.max(0, a))).attr("y", 0).attr("height", h).attr("fill", css("--accent")).attr("opacity", 0.08);
-      if (pi === 0 && !mob) g.append("text").attr("class", "lbl").attr("x", Math.max(0, a) + 3).attr("y", 11).text(b.label); });
-    if (pi === 0) markers.forEach((mk, k) => { const X = x(dates[k]) + off;
-      g.insert("line", ":first-child").attr("x1", X).attr("x2", X).attr("y1", 0).attr("y2", h).attr("stroke", css("--accent")).attr("stroke-opacity", 0.35);
-      g.append("path").attr("d", d3.symbol(d3.symbolDiamond, 34)()).attr("transform", `translate(${X},4)`).attr("fill", css("--accent")); });
-    if (stackData) stackData.forEach((layer, j) => {
-      g.append("path").datum(layer).attr("fill", stacks[j].color).attr("fill-opacity", stacks[j].opacity ?? 0.85).attr("stroke", "none")
-        .attr("d", d3.area().x((q, i) => x(dates[i])).y0((q) => y(q[0])).y1((q) => y(q[1])));
-    });
-    ser.forEach((s, si) => {
-      if (s.type === "bar" || s.type === "neg") {
-        g.append("g").selectAll("rect").data(s.rects).join("rect")
-          .attr("x", ([i]) => x(dates[i])).attr("width", bw)
-          .attr("y", ([, r]) => y(r[1])).attr("height", ([, r]) => Math.max(0.5, y(r[0]) - y(r[1])))
-          .attr("fill", ([, r]) => (s.colorBy ? (r[1] > 0 ? s.colorBy[0] : s.colorBy[1]) : s.color));
-      } else if (s.type === "area") {
-        const gid = `${id}-g${pi}-${si}`, lg = defs.append("linearGradient").attr("id", gid).attr("x1", 0).attr("x2", 0).attr("y1", 0).attr("y2", 1);
-        lg.append("stop").attr("offset", "0%").attr("stop-color", s.color).attr("stop-opacity", 0.32); lg.append("stop").attr("offset", "100%").attr("stop-color", s.color).attr("stop-opacity", 0.02);
-        const pts = s.dvv ? s.dvv.map((v, i) => [x(s.dd[i]), v]).filter(([, v]) => v != null) : s.vv.map((v, i) => [x(dates[i]) + off, v]).filter(([, v]) => v != null);
-        g.append("path").datum(pts).attr("fill", `url(#${gid})`).attr("d", d3.area().x(([X]) => X).y0(h).y1(([, v]) => y(v)));
-        g.append("path").datum(pts).attr("fill", "none").attr("stroke", s.color).attr("stroke-width", s.width || 1.6).attr("d", d3.line().x(([X]) => X).y(([, v]) => y(v)));
-      } else if (s.type === "line") {
-        const pts = s.dvv ? s.dvv.map((v, i) => [x(s.dd[i]), v]) : s.vv.map((v, i) => [x(dates[i]) + off, v]);
-        g.append("path").datum(pts).attr("fill", "none").attr("stroke", s.color).attr("stroke-width", s.width || 1.6)
-          .attr("stroke-dasharray", s.dash || null).attr("d", d3.line().defined(([, v]) => v != null && (!p.log || v > 0)).x(([X]) => X).y(([, v]) => y(v)));
+  // heights: tall by default; the full-screen viewer fits them to the space it has
+  const base = P0.map((p) => (Array.isArray(p.h) ? p.h[mob ? 1 : 0] : p.h ?? (mob ? 215 : 250)));
+  const lh = P0.map((p) => (p.label ? 22 : 0));
+  const fixed = m.t + m.b + d3.sum(lh) + gap * (P0.length - 1);
+  const scale = view.fitH ? Math.max(0.55, (view.fitH - fixed - NAVH - 10) / d3.sum(base)) : mob ? 1.4 : 1.7;
+  const hs = base.map((h) => Math.round(h * scale));
+  const home = () => [startIdx(), N - 1];
+  const win = () => { const z = ZOOM.get(id); return z ? z : home(); };
+  const setWin = (a, b) => {
+    a = Math.max(0, Math.min(N - 1, Math.round(a))); b = Math.max(0, Math.min(N - 1, Math.round(b)));
+    if (b - a < MIN_WIN) { const c = (a + b) / 2; a = Math.max(0, Math.round(c - MIN_WIN / 2)); b = Math.min(N - 1, a + MIN_WIN); a = Math.max(0, b - MIN_WIN); }
+    const [h0, h1] = home();
+    if (a === h0 && b === h1) ZOOM.delete(id); else ZOOM.set(id, [a, b]);
+  };
+  let syncNav = () => {}, raf = 0;
+  const later = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { renderMain(); syncNav(); }); };
+
+  // ---- the navigator: the whole history, the window on view ----
+  (() => {
+    const p = P0[0], sers = p.series.filter((s) => s.v && s.v.length === N);
+    const st = sers.filter((s) => s.type === "stack"), ln = sers.find((s) => s.type === "line" || s.type === "area"), br = sers.find((s) => /bar|neg/.test(s.type));
+    // a share stack (yMax 100) always totals 100%, so trace its top band instead; other stacks trace their total
+    const src = st.length ? { v: p.yMax ? st[st.length - 1].v : DD.map((_, i) => d3.sum(st, (s) => Math.max(0, s.v[i] ?? 0))), log: false, color: res(st[st.length - 1].color) }
+      : ln ? { v: ln.v, log: !!p.log, color: res(ln.color) } : br ? { v: br.v.map((v) => (v == null ? null : Math.abs(v))), log: false, color: res(br.color || br.colorBy?.[0]) } : null;
+    const svg = d3.select(navEl).append("svg").attr("viewBox", `0 0 ${W} ${NAVH}`).attr("height", NAVH);
+    const g = svg.append("g").attr("transform", `translate(${m.l},4)`), nh = NAVH - 22;
+    const x2 = d3.scaleUtc([DD[0], DD[N - 1]], [0, w]);
+    g.append("rect").attr("width", w).attr("height", nh).attr("class", "navbg");
+    if (src) {
+      const vals = src.v.filter((v) => v != null && (!src.log || v > 0));
+      if (vals.length) {
+        const y2 = (src.log ? d3.scaleLog([Math.max(1e-12, d3.min(vals)), d3.max(vals)], [nh - 2, 2]) : d3.scaleLinear([Math.min(0, d3.min(vals)), d3.max(vals) || 1], [nh - 1, 2]));
+        g.append("path").datum(src.v.map((v, i) => [x2(DD[i]), v])).attr("fill", src.color).attr("fill-opacity", 0.18).attr("stroke", src.color).attr("stroke-opacity", 0.55).attr("stroke-width", 1)
+          .attr("d", d3.area().defined(([, v]) => v != null && (!src.log || v > 0)).x(([X]) => X).y0(nh).y1(([, v]) => y2(v)));
       }
+    }
+    g.append("g").attr("class", "axis navax").attr("transform", `translate(0,${nh})`).call(d3.axisBottom(x2).ticks(Math.max(2, Math.min(mob ? 4 : 8, Math.floor(w / 110)))).tickSize(3).tickSizeOuter(0));
+    const brush = d3.brushX().extent([[0, 0], [w, nh]]).handleSize(mob ? 22 : 10);
+    const bg = g.append("g").attr("class", "brush");
+    const grips = g.append("g").attr("class", "grips").style("pointer-events", "none");
+    const drawGrips = (sel) => { grips.selectAll("rect").data(sel ? sel : []).join("rect").attr("x", (d) => d - 2).attr("y", nh / 2 - 8).attr("width", 4).attr("height", 16); };
+    let quiet = false;
+    const idxAt = (px) => d3.bisector((d) => d).center(DD, x2.invert(px));
+    brush.on("brush", (ev) => { drawGrips(ev.selection); if (quiet || !ev.sourceEvent || !ev.selection) return; setWin(idxAt(ev.selection[0]), idxAt(ev.selection[1])); cancelAnimationFrame(raf); raf = requestAnimationFrame(renderMain); })
+      .on("end", (ev) => { if (quiet || !ev.sourceEvent) return;
+        if (!ev.selection) {                                    // a click on the strip: centre the window there
+          const [a, b] = win(), [px] = d3.pointer(ev.sourceEvent, g.node()), c = idxAt(px), half = (b - a) / 2;
+          setWin(c - half, c + half); later(); return;
+        }
+        setWin(idxAt(ev.selection[0]), idxAt(ev.selection[1])); later(); });
+    bg.call(brush);
+    syncNav = () => { const [a, b] = win(); quiet = true; bg.call(brush.move, [x2(DD[a]), x2(DD[b])]); quiet = false; drawGrips([x2(DD[a]), x2(DD[b])]); };
+  })();
+
+  // ---- the chart itself, for the window on view ----
+  function renderMain() {
+    const [i0, i1] = win();
+    let dates = DD.slice(i0, i1 + 1);
+    const panes = P0.map((p) => ({ ...p, ser: p.series.filter((s) => s.v && s.v.length).map((s) => ({ ...s, color: res(s.color), colorBy: s.colorBy && s.colorBy.map(res), vv: s.v.slice(i0, i1 + 1) })) }));
+    const hasBars = panes.some((p) => p.ser.some((s) => /bar|neg/.test(s.type)));
+    let wk = null;
+    // Daily records throughout. Only when there are more days on view than pixels do the BARS become weekly totals;
+    // lines and areas keep their daily values (dvv on dd), and the weekly copy only feeds the tooltip rows.
+    if (hasBars && dates.length > Math.max(200, w)) {
+      const keys = [], map = [], dd0 = dates; let prev = null;
+      dates.forEach((d) => { const k = +d3.utcMonday.floor(d); if (k !== prev) { keys.push(new Date(k)); prev = k; } map.push(keys.length - 1); });
+      panes.forEach((p) => { p.ser = p.ser.filter((s) => !s.dailyOnly).map((s) => {
+        const agg = s.agg || (/bar|neg/.test(s.type) ? "sum" : "last"), out = new Array(keys.length).fill(null), cnt = new Array(keys.length).fill(0);
+        s.vv.forEach((v, i) => { if (v == null) return; const k = map[i]; if (agg === "last") out[k] = v; else { out[k] = (out[k] ?? 0) + v; cnt[k]++; } });
+        if (agg === "mean") out.forEach((v, k) => { if (v != null) out[k] = v / cnt[k]; });
+        return { ...s, vv: out, ...(s.type === "line" || s.type === "area" ? { dvv: s.vv, dd: dd0 } : {}) }; }); });
+      wk = map; dates = keys;
+    }
+    const n = dates.length;
+    if (!n) { mainEl.innerHTML = unavailable("No data in this range."); return; }
+    const H = m.t + d3.sum(hs) + d3.sum(lh) + gap * (panes.length - 1) + m.b;
+    mainEl.innerHTML = "";
+    const svg = d3.select(mainEl).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H);
+    const defs = svg.append("defs");
+    const root = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+    const step = n > 1 ? (dates[n - 1] - dates[0]) / (n - 1) : 864e5;
+    const x = d3.scaleUtc([dates[0], +dates[n - 1] + (hasBars ? step : 0)], [0, w]);
+    const bw = Math.min(Math.max(1, w / n - (n > 120 ? 0.5 : 1.5)), 46), off = hasBars ? bw / 2 : 0;
+    const clip = `${id}-clip`;
+    defs.append("clipPath").attr("id", clip).append("rect").attr("x", -1).attr("y", -2).attr("width", w + 2).attr("height", H);
+    const markers = new Map();
+    (opt.markers || []).forEach((mk) => { const j = mk.i - i0; if (j < 0 || mk.i > i1) return; const k = wk ? wk[j] : j; if (k != null && k < n) markers.set(k, mk); });
+    let yo = 0;
+    panes.forEach((p, pi) => {
+      yo += lh[pi];
+      const h = hs[pi], g = root.append("g").attr("transform", `translate(0,${yo})`), ser = p.ser;
+      if (p.label) root.append("text").attr("class", "plabel").attr("x", -m.l + 2).attr("y", yo - 11).text(p.label);
+      const stacks = ser.filter((s) => s.type === "stack");
+      const vals = [];
+      ser.forEach((s) => { if (s.type === "line" || s.type === "area") vals.push(...(s.dvv || s.vv).filter((v) => v != null && (!p.log || v > 0))); });
+      const pos = new Array(n).fill(0), negs = new Array(n).fill(0);
+      ser.filter((s) => s.type === "bar" || s.type === "neg").forEach((s) => {
+        s.rects = s.vv.map((v, i) => { if (!v) return null; const val = s.type === "neg" ? -Math.abs(v) : v;
+          if (val >= 0) { const r = [pos[i], pos[i] + val]; pos[i] += val; return [i, r, v]; }
+          const r = [negs[i] + val, negs[i]]; negs[i] += val; return [i, r, v]; }).filter(Boolean);
+      });
+      const pBars = ser.some((s) => /bar|neg/.test(s.type));
+      if (pBars) vals.push(...pos, ...negs);
+      let stackData = null;
+      if (stacks.length) {
+        const rows = dates.map((d, i) => Object.fromEntries(stacks.map((s, j) => [j, Math.max(0, s.vv[i] ?? 0)])));
+        stackData = d3.stack().keys(stacks.map((_, j) => j))(rows);
+        vals.push(...stackData[stackData.length - 1].map((q) => q[1]), 0);
+      }
+      if (p.ref) vals.push(...p.ref.map((r) => r.y));
+      let lo = d3.min(vals), hi = d3.max(vals);
+      if (lo == null) { g.append("text").attr("class", "lbl").attr("x", 4).attr("y", h / 2).text("No data in this range"); yo += h + gap; return; }
+      const tickN = h < 130 ? 2 : h < 300 ? 4 : 6;
+      let y;
+      if (p.log) { lo = Math.max(lo, 1e-12); y = d3.scaleLog([lo / 1.15, hi * 1.15], [h, 0]); }
+      else { if (p.zero !== false || pBars) { lo = Math.min(0, lo); hi = Math.max(0, hi); } if (p.yMax) hi = Math.max(hi, p.yMax); const pad = (hi - lo) * 0.06 || 1;
+        y = d3.scaleLinear([lo < 0 ? lo - pad : lo, p.yMax ? p.yMax : hi + pad], [h, 0]); if (!p.yMax) y.nice(tickN); }
+      p.y = y; p.top = yo;
+      const fmt = p.fmt || ((v) => v);
+      let yt = p.log ? (p.price ? mcTicks : logTicks)(y, (k) => (y.domain()[1] / y.domain()[0] > 30 || h < 130 ? k === 1 : k !== 2)) : y.ticks(tickN);
+      if (p.log && p.price && yt.length < 3 && h >= 130) yt = mcTicks(y, () => true);         // a narrow market-cap range: 1-2-5 ticks
+      g.append("g").attr("class", "gridl").call(d3.axisLeft(y).tickValues(yt).tickSize(-w).tickFormat(""));
+      g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(yt).tickFormat(p.log && p.price ? tickP : p.axisFmt || fmt));
+      if (pi === panes.length - 1) g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.min(mob ? 4 : 10, Math.floor(w / 95)))).tickSizeOuter(0));
+      const gc = g.append("g").attr("clip-path", `url(#${clip})`);
+      if (!p.log && y.domain()[0] < 0) gc.append("line").attr("x1", 0).attr("x2", w).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", css("--fg-2")).attr("stroke-opacity", 0.4);
+      (p.ref || []).forEach((r) => { gc.append("line").attr("x1", 0).attr("x2", w).attr("y1", y(r.y)).attr("y2", y(r.y)).attr("stroke", css("--fg-2")).attr("stroke-opacity", 0.7).attr("stroke-dasharray", "3 4");
+        g.append("text").attr("class", "lbl").attr("x", w - 4).attr("y", y(r.y) - 4).attr("text-anchor", "end").text(r.label); });
+      (opt.bands || []).forEach((b) => { const a = x(pd(b.a)), z = x(pd(b.b)); if (z < 0 || a > w) return;
+        gc.insert("rect", ":first-child").attr("x", Math.max(0, a)).attr("width", Math.max(1, Math.min(w, z) - Math.max(0, a))).attr("y", 0).attr("height", h).attr("fill", css("--accent")).attr("opacity", 0.08);
+        if (pi === 0 && !mob) g.append("text").attr("class", "lbl").attr("x", Math.max(0, a) + 3).attr("y", 11).text(b.label); });
+      if (pi === 0) markers.forEach((mk, k) => { const X = x(dates[k]) + off;
+        gc.insert("line", ":first-child").attr("x1", X).attr("x2", X).attr("y1", 0).attr("y2", h).attr("stroke", css("--accent")).attr("stroke-opacity", 0.35);
+        g.append("path").attr("d", d3.symbol(d3.symbolDiamond, 34)()).attr("transform", `translate(${X},4)`).attr("fill", css("--accent")); });
+      if (stackData) stackData.forEach((layer, j) => {
+        gc.append("path").datum(layer).attr("fill", stacks[j].color).attr("fill-opacity", stacks[j].opacity ?? 0.85).attr("stroke", "none")
+          .attr("d", d3.area().x((q, i) => x(dates[i])).y0((q) => y(q[0])).y1((q) => y(q[1])));
+      });
+      ser.forEach((s, si) => {
+        if (s.type === "bar" || s.type === "neg") {
+          gc.append("g").selectAll("rect").data(s.rects).join("rect")
+            .attr("x", ([i]) => x(dates[i])).attr("width", bw)
+            .attr("y", ([, r]) => y(r[1])).attr("height", ([, r]) => Math.max(0.5, y(r[0]) - y(r[1])))
+            .attr("fill", ([, r]) => (s.colorBy ? (r[1] > 0 ? s.colorBy[0] : s.colorBy[1]) : s.color));
+        } else if (s.type === "area") {
+          const gid = `${id}-g${pi}-${si}`, lg = defs.append("linearGradient").attr("id", gid).attr("x1", 0).attr("x2", 0).attr("y1", 0).attr("y2", 1);
+          lg.append("stop").attr("offset", "0%").attr("stop-color", s.color).attr("stop-opacity", 0.32); lg.append("stop").attr("offset", "100%").attr("stop-color", s.color).attr("stop-opacity", 0.02);
+          const pts = s.dvv ? s.dvv.map((v, i) => [x(s.dd[i]), v]).filter(([, v]) => v != null) : s.vv.map((v, i) => [x(dates[i]) + off, v]).filter(([, v]) => v != null);
+          gc.append("path").datum(pts).attr("fill", `url(#${gid})`).attr("d", d3.area().x(([X]) => X).y0(h).y1(([, v]) => y(v)));
+          gc.append("path").datum(pts).attr("fill", "none").attr("stroke", s.color).attr("stroke-width", s.width || 1.6).attr("d", d3.line().x(([X]) => X).y(([, v]) => y(v)));
+        } else if (s.type === "line") {
+          const pts = s.dvv ? s.dvv.map((v, i) => [x(s.dd[i]), v]) : s.vv.map((v, i) => [x(dates[i]) + off, v]);
+          gc.append("path").datum(pts).attr("fill", "none").attr("stroke", s.color).attr("stroke-width", s.width || 1.6)
+            .attr("stroke-dasharray", s.dash || null).attr("d", d3.line().defined(([, v]) => v != null && (!p.log || v > 0)).x(([X]) => X).y(([, v]) => y(v)));
+        }
+      });
+      yo += h + gap;
     });
-    yo += h + gap;
-  });
-  const totalH = yo - gap;
-  const bis = d3.bisector((d) => d).center, line = root.append("line").attr("class", "xhair").attr("y1", 0).attr("y2", totalH).style("opacity", 0);
-  const dots = root.append("g").style("pointer-events", "none");
-  svg.append("rect").attr("x", m.l).attr("y", 0).attr("width", w).attr("height", H).attr("fill", "transparent").style("touch-action", "pan-y")
-    .on("pointermove", (ev) => {
-      const [mx] = d3.pointer(ev, root.node()); const i = Math.max(0, Math.min(n - 1, bis(dates, x.invert(mx - off))));
+    const totalH = yo - gap;
+    const bis = d3.bisector((d) => d).center, line = root.append("line").attr("class", "xhair").attr("y1", 0).attr("y2", totalH).style("opacity", 0);
+    const dots = root.append("g").style("pointer-events", "none");
+    const zsel = root.append("rect").attr("class", "zsel").attr("y", 0).attr("height", totalH).attr("width", 0).style("display", "none");
+    const idxOf = (mx) => Math.max(0, Math.min(n - 1, bis(dates, x.invert(mx - off))));
+    const toAbs = (mx) => { const d = x.invert(Math.max(0, Math.min(w, mx))); return d3.bisector((q) => q).center(DD, d); };   // pixel → index into the whole history
+    const tipAt = (ev, mx) => {
+      const i = idxOf(mx);
       const X = x(dates[i]) + off; line.attr("x1", X).attr("x2", X).style("opacity", 1);
       dots.selectAll("*").remove();
       panes.forEach((p) => p.y && p.ser.filter((s) => s.type === "line" || s.type === "area").forEach((s) => {
@@ -818,15 +916,73 @@ function drawTS(id, opt) {
       const rows = panes.flatMap((p) => p.ser.filter((s) => !s.hideTip).map((s) => { const v = s.dvv ? s.dvv[di] : s.vv[i];
         return trow(s.colorBy ? (v != null && v < 0 ? s.colorBy[1] : s.colorBy[0]) : s.color, s.label, v == null ? "—" : (s.tipFmt || p.fmt || ((z) => z))(v)); })).join("");
       const mk = markers.get(i);
-      showTip(`<div class="h">${head}</div>` + rows + (mk ? `<div class="r" style="margin-top:.3rem;color:var(--accent)"><span>◆ unusual</span><b>${esc(mk.label)}</b></div>` : "") + (opt.tipExtra ? opt.tipExtra(dates[i]) : ""), ev);
-    }).on("pointerleave", () => { line.style("opacity", 0); dots.selectAll("*").remove(); hideTip(); });
-  const L = $(id + "-l");
-  if (L) {
-    const all = panes.flatMap((p) => p.ser).filter((s) => !s.noLegend && s.type !== "tip");
-    L.innerHTML = (all.length > 1 || opt.legend ? all.map((s) => `<span><i class="${s.dash ? "dash" : s.type === "line" ? "ln" : ""}" style="${s.dash ? "border-color" : "background"}:${s.color || s.colorBy[0]}"></i>${esc(s.label)}</span>`).join("") : "") +
-      (markers.size ? `<span><i style="background:${css("--accent")};transform:rotate(45deg);width:7px;height:7px"></i>unusual day</span>` : "") +
-      (opt.bands && opt.bands.length ? `<span><i style="background:${css("--accent")};opacity:.3"></i>past pumps</span>` : "");
+      showTip(`<div class="h">${head}</div>` + rows + (mk ? `<div class="r" style="margin-top:.3rem;color:var(--accent)"><span>◆ unusual</span><b>${esc(mk.label)}</b></div>` : "") + (opt.tipExtra ? opt.tipExtra(dates[i]) : "")
+        + (ev.pointerType === "mouse" ? `<p class="tiphint">Drag to zoom · double-click to reset</p>` : ""), ev);
+    };
+    // mouse: drag across the chart to zoom into that period; touch: tap or slide for the readout (the strip below zooms)
+    let sel = null;
+    const ov = svg.append("rect").attr("x", m.l).attr("y", 0).attr("width", w).attr("height", H).attr("fill", "transparent").style("touch-action", "pan-y").style("cursor", "crosshair")
+      .on("pointerdown", (ev) => { if (ev.pointerType !== "mouse" || ev.button !== 0) return; const [mx] = d3.pointer(ev, root.node()); sel = { a: mx }; ov.node().setPointerCapture(ev.pointerId); })
+      .on("pointermove", (ev) => {
+        const [mx] = d3.pointer(ev, root.node());
+        if (sel) { const a = Math.max(0, Math.min(w, sel.a)), b = Math.max(0, Math.min(w, mx)); zsel.style("display", null).attr("x", Math.min(a, b)).attr("width", Math.abs(b - a)); hideTip(); line.style("opacity", 0); return; }
+        tipAt(ev, mx);
+      })
+      .on("pointerup", (ev) => {
+        if (!sel) return; const [mx] = d3.pointer(ev, root.node()), a = sel.a; sel = null; zsel.style("display", "none");
+        if (Math.abs(mx - a) < 6) { tipAt(ev, mx); return; }
+        setWin(toAbs(Math.min(a, mx)), toAbs(Math.max(a, mx))); hideTip(); later();
+      })
+      .on("pointercancel", () => { sel = null; zsel.style("display", "none"); })
+      .on("dblclick", (ev) => { ev.preventDefault(); ZOOM.delete(id); hideTip(); later(); })
+      .on("pointerleave", () => { if (sel) return; line.style("opacity", 0); dots.selectAll("*").remove(); hideTip(); });
+    ov.node().addEventListener("wheel", (ev) => {                 // ⌘/Ctrl + scroll, or a trackpad pinch: zoom around the cursor
+      if (!ev.ctrlKey && !ev.metaKey) return;
+      ev.preventDefault();
+      const [mx] = d3.pointer(ev, root.node()), c = toAbs(mx), [a, b] = win(), f = Math.exp(Math.max(-0.5, Math.min(0.5, ev.deltaY * 0.004)));
+      setWin(c - (c - a) * f, c + (b - c) * f); later();
+    }, { passive: false });
+    // legend, and the zoom state
+    const L = $(id + "-l");
+    if (L) {
+      const all = panes.flatMap((p) => p.ser).filter((s) => !s.noLegend && s.type !== "tip");
+      const z = ZOOM.get(id);
+      L.innerHTML = (z ? `<button type="button" class="zrs" data-zrs="${id}" title="Back to the page range">Reset zoom · ${fd(DD[z[0]])} – ${fd(DD[z[1]])}</button>` : "")
+        + (all.length > 1 || opt.legend ? all.map((s) => `<span><i class="${s.dash ? "dash" : s.type === "line" ? "ln" : ""}" style="${s.dash ? "border-color" : "background"}:${s.color || s.colorBy[0]}"></i>${esc(s.label)}</span>`).join("") : "") +
+        (markers.size ? `<span><i style="background:${css("--accent")};transform:rotate(45deg);width:7px;height:7px"></i>unusual day</span>` : "") +
+        (opt.bands && opt.bands.length ? `<span><i style="background:${css("--accent")};opacity:.3"></i>past pumps</span>` : "");
+      const zr = L.querySelector("[data-zrs]"); if (zr) zr.onclick = () => { ZOOM.delete(id); later(); };
+    }
   }
+  renderMain(); syncNav();
+}
+
+// ---- full-screen chart viewer ----
+let tsvFrom = null;
+function openChart(id) {
+  const opt = TSOPT.get(id), card_ = $(id)?.closest(".card"); if (!opt || !card_) return;
+  tsvFrom = id; hideTip();
+  $("tsv-t").textContent = card_.querySelector("h3")?.textContent || "";
+  $("tsv-q").innerHTML = card_.querySelector(".q")?.innerHTML || "";
+  $("tsv-v").innerHTML = card_.querySelector(".pv")?.innerHTML || "";
+  $("tsv-h").textContent = mobile() ? "Drag the strip under the chart to zoom and pan · tap the chart for values" : "Drag across the chart to zoom into any period · drag the strip below to pan · double-click or Reset zoom to go back · ⌘/Ctrl + scroll zooms around the cursor";
+  if (ZOOM.has(id)) ZOOM.set("tsvc", ZOOM.get(id)); else ZOOM.delete("tsvc");
+  $("tsv").hidden = false; document.body.classList.add("tsvopen");
+  requestAnimationFrame(drawViewer);
+}
+function drawViewer() {
+  if ($("tsv").hidden || !tsvFrom) return;
+  const c = $("tsvc"), opt = TSOPT.get(tsvFrom);
+  drawTS("tsvc", opt, { fitH: c.clientHeight });
+  // the legend fills in during the draw and can wrap onto more lines (phones): measure again and fit to what is left
+  const used = c.querySelector(".tsm")?.offsetHeight + c.querySelector(".tsn")?.offsetHeight;
+  if (used > c.clientHeight + 1) drawTS("tsvc", opt, { fitH: c.clientHeight });
+}
+function closeChart() {
+  if ($("tsv").hidden) return;
+  $("tsv").hidden = true; document.body.classList.remove("tsvopen"); hideTip();
+  const id = tsvFrom; tsvFrom = null;
+  if (id && $(id)) { if (ZOOM.has("tsvc")) ZOOM.set(id, ZOOM.get("tsvc")); else ZOOM.delete(id); drawTS(id, TSOPT.get(id)); }   // the card keeps the zoom you ended on
 }
 
 // ---------- OVERVIEW ----------
@@ -1041,10 +1197,10 @@ function largestEntities() {
 function urpdCard() {
   const U = T.urpd; if (!U) { card({ title: "Cost basis of held supply", body: unavailable("The cost-basis distribution is not in this build.") }); return; }
   const uw = d3.sum(U.buckets.filter((b) => Math.sqrt(b.lo * b.hi) > U.spot), (b) => b.pct);
-  const id = card({ title: "Cost basis of held supply (today)", val: fPct(uw, 0) + `<small class="down">underwater</small>`, sub: "Every coin still held, at the price it was bought for. The line is today's price." });
+  const id = card({ title: "Cost basis of held supply (today)", wide: true, val: fPct(uw, 0) + `<small class="down">underwater</small>`, sub: "Every coin still held, at the price it was bought for. The line is today's price." });
   draws.push(() => {
     const el = $(id); if (!el) return; el.innerHTML = "";
-    const mob = mobile(), H = mob ? 210 : 240, m = { t: 16, r: 12, b: 22, l: 40 }, W = el.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
+    const mob = mobile(), H = mob ? 300 : 420, m = { t: 16, r: 12, b: 22, l: 40 }, W = el.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
     const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
     const bs = U.buckets.filter((b) => b.pct > 0), x = d3.scaleLog([d3.min(bs, (b) => b.lo), d3.max(bs, (b) => b.hi)], [0, w]), y = d3.scaleLinear([0, d3.max(bs, (b) => b.pct) * 1.1], [h, 0]).nice(4);
     g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(4).tickSize(-w).tickFormat(""));
@@ -1163,7 +1319,7 @@ function cohortCards() {
     const rows = months.map((m) => Object.fromEntries(Co.map((c, j) => [j, 0])));
     Co.forEach((c, j) => c.series.forEach(([m, n]) => (rows[mi.get(m)][j] = n)));
     const st = d3.stack().keys(Co.map((_, j) => j))(rows);
-    const mob = mobile(), H = mob ? 220 : 260, m = { t: 8, r: 10, b: 22, l: 46 }, W = el.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
+    const mob = mobile(), H = mob ? 300 : 420, m = { t: 8, r: 10, b: 22, l: 46 }, W = el.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
     const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
     const x = d3.scaleUtc(d3.extent(months, (s) => new Date(s + "-01")), [0, w]), y = d3.scaleLinear([0, d3.max(st[st.length - 1], (p) => p[1])], [h, 0]).nice(4);
     const col2 = d3.scaleSequential([0, Co.length - 1], d3.interpolateRgb(C("--s1"), C("--accent")));
@@ -1201,7 +1357,7 @@ function urpdHeat() {
     loadUH().then((Uh) => {
       if (!Uh || !Uh.weeks || !Uh.weeks.length) { el.innerHTML = unavailable("The cost-basis history arrives with the next full run."); return; }
       el.innerHTML = "";
-      const Wk = Uh.weeks, E2 = Uh.edges, mob = mobile(), H = mob ? 240 : 300, m = { t: 8, r: 10, b: 22, l: 58 }, W = el.clientWidth || 600, w = W - m.l - m.r, h = H - m.t - m.b;
+      const Wk = Uh.weeks, E2 = Uh.edges, mob = mobile(), H = mob ? 340 : 520, m = { t: 8, r: 10, b: 22, l: 58 }, W = el.clientWidth || 600, w = W - m.l - m.r, h = H - m.t - m.b;
       const dates = Wk.map((k) => pd(k.d)), span = (Uh.stride || 7) * 864e5;
       const x = d3.scaleUtc([dates[0], +dates[dates.length - 1] + span], [0, w]), y = d3.scaleLog([E2[0], E2[E2.length - 1]], [h, 0]);
       const mx = d3.max(Wk, (k) => d3.max(k.pct)) || 1, c1 = C("--accent");
