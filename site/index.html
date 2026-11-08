@@ -1036,23 +1036,48 @@ function smartCards() {
       const nc = (v) => `<td class="n ${v > 0 ? "up" : v < 0 ? "down" : "flat"}">${v ? sgn(v, fU) : "—"}</td>`;
       return `<tr><td>${own}</td><td class="n up">${fU(r.realized)}</td><td class="n">+${fPct(100 * r.roi, 0)}</td><td class="n">${fU(r.boughtUsd)}</td><td class="n">${fU(r.soldUsd)}</td><td class="n">${r.bal > 1e6 ? fB(r.bal) : "—"}</td><td class="n">${r.avg ? fP(r.avg) : "—"}</td>${nc(r.net7)}${nc(r.net30)}${nc(r.net90)}<td class="num">${r.lastBuy || "—"}</td><td class="num">${r.lastSell || "—"}</td></tr>`; }).join("") + `</tbody></table></div>` });
 }
+// Cost basis over time: one column per day (engine --urpdhist_stride=1), ~900 × 40 cells, so it is drawn on a canvas
+// and loaded from its own file (urpd-history.json) only when this card is on screen.
+let UH = null;
+async function loadUH() { if (!UH) { try { UH = await (await fetch("/urpd-history.json", { cache: "no-store" })).json(); } catch (e) { UH = {}; } } return UH; }
 function urpdHeat() {
-  const Uh = S.U;
-  if (!Uh || !Uh.weeks) { card({ title: "Cost basis over time", wide: true, body: unavailable("The weekly cost-basis history arrives with the next full run.") }); return; }
-  const id = card({ title: "Cost basis over time", wide: true, q: "Where was today's supply bought, and how did that change?", sub: "Each column is a week; each cell is the share of held supply bought in that price band. The line is that week's price. Cells above the line are underwater.",
-    note: "From the cost engine: every held coin at the price it was bought (first in, first out). Bands are log-spaced. Weekly." });
+  const id = card({ title: "Cost basis over time", wide: true, q: "Where was today's supply bought, and how did that change?", sub: "Each column is a day; each cell is the share of held supply bought in that band, shown as the market cap it was bought at. The line is that day's market cap. Cells above the line are underwater.",
+    note: "From the cost engine: every held coin at the price it was bought (first in, first out), as the market cap that price implies. Bands are log-spaced. Daily." });
   draws.push(() => {
-    const el = $(id); if (!el) return; el.innerHTML = "";
-    const Wk = Uh.weeks, E2 = Uh.edges, mob = mobile(), H = mob ? 240 : 300, m = { t: 8, r: 10, b: 22, l: 58 }, W = el.clientWidth, w = W - m.l - m.r, h = H - m.t - m.b;
-    const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
-    const x = d3.scaleUtc([pd(Wk[0].d), +pd(Wk[Wk.length - 1].d) + 7 * 864e5], [0, w]), y = d3.scaleLog([E2[0], E2[E2.length - 1]], [h, 0]);
-    const mx = d3.max(Wk, (k) => d3.max(k.pct)) || 1, cw = w / Wk.length + 0.5, c1 = C("--accent");
-    Wk.forEach((k) => k.pct.forEach((v, j) => { if (!v) return; g.append("rect").attr("x", x(pd(k.d))).attr("width", cw).attr("y", y(E2[j + 1])).attr("height", Math.max(0.5, y(E2[j]) - y(E2[j + 1])))
-      .attr("fill", c1).attr("fill-opacity", Math.min(1, 0.08 + Math.sqrt(v / mx))).on("pointermove", (ev) => showTip(`<div class="h">week of ${fd(pd(k.d))}</div>` + trow(c1, `bought at ${fP(E2[j])}–${fP(E2[j + 1])}`, fPct(v, 2) + " of held") + trow("", "price that week", fP(k.spot)), ev)).on("pointerleave", hideTip); }));
-    g.append("path").datum(Wk.filter((k) => k.spot > 0)).attr("fill", "none").attr("stroke", C("--fg")).attr("stroke-width", 1.4).attr("d", d3.line().x((k) => x(pd(k.d)) + cw / 2).y((k) => y(Math.max(E2[0], k.spot))));
-    g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(mcTicks(y, (kk) => kk !== 2)).tickFormat(tickP));
-    g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(mob ? 4 : 8).tickSizeOuter(0));
-    $(id + "-l").innerHTML = `<span><i style="background:${c1}"></i>share of held supply (darker = more)</span><span><i class="ln" style="background:${C("--fg")}"></i>market cap</span>`;
+    const el = $(id); if (!el) return;
+    el.innerHTML = `<p class="sub">Loading…</p>`;
+    loadUH().then((Uh) => {
+      if (!Uh || !Uh.weeks || !Uh.weeks.length) { el.innerHTML = unavailable("The cost-basis history arrives with the next full run."); return; }
+      el.innerHTML = "";
+      const Wk = Uh.weeks, E2 = Uh.edges, mob = mobile(), H = mob ? 240 : 300, m = { t: 8, r: 10, b: 22, l: 58 }, W = el.clientWidth || 600, w = W - m.l - m.r, h = H - m.t - m.b;
+      const dates = Wk.map((k) => pd(k.d)), span = (Uh.stride || 7) * 864e5;
+      const x = d3.scaleUtc([dates[0], +dates[dates.length - 1] + span], [0, w]), y = d3.scaleLog([E2[0], E2[E2.length - 1]], [h, 0]);
+      const mx = d3.max(Wk, (k) => d3.max(k.pct)) || 1, c1 = C("--accent");
+      el.style.position = "relative";
+      const cv = document.createElement("canvas"), dpr = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+      Object.assign(cv.style, { position: "absolute", left: m.l + "px", top: m.t + "px", width: w + "px", height: h + "px" });
+      el.appendChild(cv);
+      const ctx = cv.getContext("2d"); ctx.fillStyle = c1;
+      const px = (v) => Math.round(v * dpr);                     // whole device pixels: columns abut, never overlap (no stripes)
+      Wk.forEach((k, i) => { const X0 = px(x(dates[i])), X1 = px(i + 1 < Wk.length ? x(dates[i + 1]) : x(+dates[i] + span)), cw = Math.max(1, X1 - X0);
+        k.pct.forEach((v, j) => { if (!v) return; const Yt = px(y(E2[j + 1])), Yb = px(y(E2[j])); ctx.globalAlpha = Math.min(1, 0.08 + Math.sqrt(v / mx)); ctx.fillRect(X0, Yt, cw, Math.max(1, Yb - Yt)); }); });
+      ctx.globalAlpha = 1;
+      const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H).style("position", "relative"), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+      const sp = Wk.map((k, i) => [i, k.spot]).filter(([, v]) => v > 0);
+      g.append("path").datum(sp).attr("fill", "none").attr("stroke", C("--fg")).attr("stroke-width", 1.4).attr("d", d3.line().x(([i]) => x(dates[i])).y(([, v]) => y(Math.max(E2[0], v))));
+      g.append("g").attr("class", "axis").call(d3.axisLeft(y).tickValues(mcTicks(y, (kk) => kk !== 2)).tickFormat(tickP));
+      g.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(mob ? 4 : 8).tickSizeOuter(0));
+      const xl = g.append("line").attr("class", "xhair").attr("y1", 0).attr("y2", h).style("opacity", 0);
+      g.append("rect").attr("width", w).attr("height", h).attr("fill", "transparent").style("touch-action", "pan-y")
+        .on("pointermove", (ev) => { const [px, py] = d3.pointer(ev, g.node()), i = Math.max(0, Math.min(Wk.length - 1, d3.bisectRight(dates, x.invert(px)) - 1));   // the column under the cursor
+          const k = Wk[i], pv = y.invert(py), j = Math.max(0, Math.min(E2.length - 2, d3.bisectRight(E2, pv) - 1)), v = k.pct[j] || 0;
+          xl.attr("x1", x(dates[i])).attr("x2", x(dates[i])).style("opacity", 1);
+          showTip(`<div class="h">${Uh.stride === 1 ? fd(dates[i]) : "week of " + fd(dates[i])}</div>` + trow(c1, `bought at ${fP(E2[j])}–${fP(E2[j + 1])} market cap`, fPct(v, 2) + " of held") + trow("", "market cap that day", fP(k.spot))
+            + trow("", "held supply underwater that day", fPct(d3.sum(k.pct.filter((_, q) => Math.sqrt(E2[q] * E2[q + 1]) > k.spot)), 1)), ev); })
+        .on("pointerleave", () => { xl.style("opacity", 0); hideTip(); });
+      $(id + "-l").innerHTML = `<span><i style="background:${c1}"></i>share of held supply (darker = more)</span><span><i class="ln" style="background:${C("--fg")}"></i>market cap</span>`;
+    });
   });
 }
 let calcMult = 2, calcSell = 25;

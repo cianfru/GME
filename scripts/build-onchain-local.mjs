@@ -692,7 +692,7 @@ export function replayFifo(transfers, priceAt, sampleTs, opts = {}) {
     };
     if (urpdHist) out.urpdHistory = {
       updated: iso(lastTs), pMin: +Math.exp(uGrid.loLog).toFixed(7), pMax: +Math.exp(uGrid.hiLog).toFixed(7),
-      nBuckets: uGrid.nBuckets, edges: uGrid.edges, weeks: urpdHist,
+      nBuckets: uGrid.nBuckets, edges: uGrid.edges, stride: uStride, weeks: urpdHist,   // "weeks" = the slices (daily when stride 1)
     };
     return out;
   }
@@ -931,7 +931,7 @@ async function main() {
 
   const { rows, urpd, whales, urpdHistory, selfMoves, entities } = replayFifo(transfers, priceAt, grid, { externalAddrs, thresholdDays: Number(args.threshold ?? 90), collectUrpd: true, urpdBuckets: Number(args.buckets ?? 72), collectWhales: true,
     collectEntities: true,
-    collectUrpdHistory: true, urpdHistBuckets: Number(args.urpdhist_buckets ?? 40), urpdHistStride: args.daily ? 7 : 1,
+    collectUrpdHistory: true, urpdHistBuckets: Number(args.urpdhist_buckets ?? 40), urpdHistStride: Number(args.urpdhist_stride ?? (args.daily ? 7 : 1)),   // GME runs --urpdhist_stride=1: one slice per day
     whaleTop: Number(args.whales_top ?? 8000),
     minTokens: Number(args.whale_min ?? 5000),
     minDays: Number(args.whale_days ?? 90),

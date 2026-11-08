@@ -134,7 +134,7 @@ jobs:
           t = json.load(open('data/addr-types.json'))
           json.dump({'types': {a: ('contract' if v == 'contract' else 'eoa') for a, v in t.items()}}, open('data/addr-types-engine.json', 'w'))"
           node scripts/build-onchain-local.mjs --transfers=data/transfers.csv --prices=data/prices.csv --decimals=9 --daily \
-            --threshold=155 --whale_min=100000000 --whale_days=30 \
+            --threshold=155 --whale_min=100000000 --whale_days=30 --urpdhist_stride=1 \
             --out=data/engine/onchain.json --urpd=data/engine/urpd.json --addrtypes=data/addr-types-engine.json
 
       # Entities with stable ids; follows coins into fresh wallets (seed / drain rules); tripwires since the last run.

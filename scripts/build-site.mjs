@@ -91,7 +91,6 @@ const site = {
   C: json("crowd.json"),                          // crowd behaviour (owner level)
   X: json("trades_check.json"),                   // exact trade pricing: coverage and the day-close error it removes
   H: json("ethside.json"),                        // ETH side: funding, ETH links, paid purchases, flows, other tokens
-  U: json("engine/urpd-history.json"),            // weekly cost-basis distribution of held supply (engine)
   windows: (market.windows || []).map((w) => ({
     days: w.days, buyers: w.buyers, sellers: w.sellers, buyUsd: w.buyUsd, sellUsd: w.sellUsd, newBuyers: w.newBuyers, clusterNet: w.clusterNet,
   })),
@@ -102,6 +101,8 @@ mkdirSync(OUT, { recursive: true });
 writeFileSync(join(OUT, "site.json"), JSON.stringify(site));
 copyFileSync(join(ROOT, "site/index.html"), join(OUT, "index.html"));
 copyFileSync(join(ROOT, "site/logo.png"), join(OUT, "logo.png"));   // the token's logo (CoinGecko "GME (Ethereum)")
+// Daily cost-basis distribution of held supply (engine, ~900 × 40): fetched only by the Crowd page's heatmap.
+if (existsSync(join(D, "engine/urpd-history.json"))) copyFileSync(join(D, "engine/urpd-history.json"), join(OUT, "urpd-history.json"));
 // Per-group P/L tracks and trades (entities.py → pnl.json): fetched only when a group's P&L chart is opened.
 if (existsSync(join(D, "pnl.json"))) copyFileSync(join(D, "pnl.json"), join(OUT, "pnl.json"));
 // Per-wallet histories: a separate file, fetched only when a wallet is opened.
