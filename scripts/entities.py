@@ -20,13 +20,15 @@
 # the end of 0xe147…fbb4); the others read "Accumulator efdb", "Holding wallet b749", "Linked group 847d", …
 #
 # Per entity: holdings and 90-day series (today's members, so moves between its own wallets cancel), flows by channel
-# over 1/7/30/90 days, a status per window, a cost basis (FIFO over the entity's external flows; coins that arrived by
-# transfer are costed at that day's price), evidence strength (focus cluster), "forming" flags and tripwires since the
-# last run.
+# over 1/7/30/90 days, a status per window, a cost basis and profit and loss (pnl.py: FIFO over the entity's external
+# flows; DEX sales and exchange deposits realize, other outflows leave at cost; coins that arrived by transfer are
+# costed at that day's price), evidence strength (focus cluster), "forming" flags and tripwires since the last run.
+# data/pnl.json carries each entity's day-by-day P/L track and its trades for the page's P/L chart.
 import sys, json, os, collections, datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from txlib import *
 from groups import base_groups, short, display, FOCUS_NAME, COLLECTOR
+from pnl import Book
 
 MIN_USD, HUB, CAP, PER_RUN = 2000.0, 40, 60, 25
 WIN = (24, 168, 720, 2160)
@@ -205,20 +207,13 @@ for s, r, ts, v, b in T:
         for k, key in keys: W[k][wi][key] += v; W[k][wi]["n"] += 1
         if ks != kr: edges[wi][(node(s), node(r))] += v
 
-# ---- cost basis: FIFO over each entity's external flows, full history ----------------------------------------------
-lots = [collections.deque() for _ in ents]
-cost = [dict(realized=0.0, invested=0.0, proceeds=0.0) for _ in ents]
-for k, (s, r, ts, v, b) in enumerate(T):
+# ---- cost basis and P/L over time: FIFO over each entity's external flows, full history (pnl.py) -------------------
+books = [Book(T[0][2][:10]) for _ in ents]
+for j, (s, r, ts, v, b) in enumerate(T):
     ks, kr = own.get(s), own.get(r)
     if ks == kr: continue
-    px = PX[k]
-    if kr is not None:
-        lots[kr].append([v, px, "D" if is_dex(s) else "C" if is_cex(s) else "W"]); cost[kr]["invested"] += v * px
-    if ks is not None:
-        c = cost[ks]; c["proceeds"] += v * px; q = v; L = lots[ks]
-        while q > 1e-9 and L:
-            lot = L[0]; t = min(q, lot[0]); c["realized"] += t * (px - lot[1]); lot[0] -= t; q -= t
-            if lot[0] <= 1e-9: L.popleft()
+    if kr is not None: books[kr].inflow(ts, v, PX[j], "D" if is_dex(s) else "C" if is_cex(s) else "W")
+    if ks is not None: books[ks].outflow(ts, v, PX[j], "D" if is_dex(r) else "C" if is_cex(r) else None)
 
 # ---- evidence strength (focus cluster): holdings reachable from the focus wallet through direct evidence only ------
 FC = json.load(open(os.path.join(D, "focus_cluster.json")))
@@ -248,12 +243,9 @@ for k, e in enumerate(ents):
     ms = sorted(e["members"]); b = sum(max(bal[a], 0) for a in ms)
     ser = [0.0] * 91; ser[90] = b
     for i in range(90, 0, -1): ser[i - 1] = max(0.0, ser[i] - dn[k][i])
-    L = lots[k]; held = sum(l[0] for l in L); chel = sum(l[0] * l[1] for l in L)
-    srcq = collections.Counter(); [srcq.update({l[2]: l[0]}) for l in L]
-    c = cost[k]
+    bk = books[k]; held, chel = bk.hold, bk.cost
     cb = dict(avg=chel / held if held > 1 else None, costUsd=round(chel), valueUsd=round(held * spot), unreal=round(held * spot - chel),
-              realized=round(c["realized"]), invested=round(c["invested"]), proceeds=round(c["proceeds"]),
-              src={kk: round(100 * vv / held, 1) for kk, vv in srcq.items()} if held > 1 else {})
+              realized=round(bk.realized), invested=round(bk.bought), proceeds=round(bk.sold), src=bk.source_mix())
     wins = [[round(W[k][wi][ch] / 1e9, 5) if ch != "n" else W[k][wi]["n"] for ch in CH] for wi in range(NW)]
     sts = [status(W[k][wi], b) for wi in range(NW)]
     direct = None
@@ -311,6 +303,9 @@ events = (alerts + [dict(x, text=display(x["text"])) for x in (prev or {}).get("
 E = [[[s_, t_, round(v / 1e9, 4)] for (s_, t_), v in sorted(edges[wi].items(), key=lambda kv: -kv[1])[:400] if v >= 1e6] for wi in range(NW)]
 out.sort(key=lambda x: -x["bal"])
 json.dump(dict(asOf=NOW, since=since, spot=spot, windows=list(WIN), channels=CH, entities=out, edges=E, alerts=alerts, events=events), open(RP, "w"))
+json.dump(dict(asOf=NOW, d0=T[0][2][:10], kinds=dict(b="DEX buy", s="DEX sale", ci="from an exchange", co="to an exchange"),
+               track=["day", "holdB", "costUsd", "realizedUsd", "boughtUsd", "soldUsd"],
+               ents={e["id"]: books[k].finish() for k, e in enumerate(ents)}), open(os.path.join(D, "pnl.json"), "w"), separators=(",", ":"))
 att = sum(len(e["joined_now"]) for e in ents)
 print(f"entities: {len(out)} ({sum(1 for e in out if e['kind']=='linked')} linked groups) · {sum(e['n'] for e in out)} wallets · {att} joined this run · "
       f"{sum(len(e['provisional']) for e in out)} provisional · {sum(1 for e in out if e['forming'])} forming · {len(alerts)} alerts · since {since}")

@@ -22,6 +22,7 @@ if REG_FOCUS: FOC |= {x["a"] for x in REG_FOCUS["attached"]}      # wallets join
 WS = json.load(open(os.path.join(D, "watch_state.json")))
 # Display names ("fbb4", "Accumulator efdb", …); the watch files keep their original keys.
 from groups import namer, FOCUS_NAME
+from pnl import Book                   # per-wallet P/L track and trades for the wallet drawer (same method as entities)
 relabel = namer()
 MEMBERS = {relabel(g): set(ws) for g, ws in WS.get("members", {}).items()}
 NOW = T[-1][2]; TODAY = NOW[:10]
@@ -307,8 +308,14 @@ for a in watch:
         if key in agg: agg[key][1] += dv; agg[key][3] += abs(dv) * px
         else: agg[key] = [ts[:10], dv, k, abs(dv) * px, o]
     evs = [[x[0], round(x[1] / 1e9, 4), x[2], round(x[3]), x[4]] for x in agg.values()]
+    bk = Book(T[0][2][:10])
+    for ts, dv, k, o, px in e:
+        if dv > 0: bk.inflow(ts, dv, px, "D" if k == "dex-buy" else "C" if k == "cex-in" else "W")
+        else: bk.outflow(ts, -dv, px, "D" if k == "dex-sell" else "C" if k == "cex-out" else None)
+    pl = bk.finish()
     wallets[a] = dict(bal=round(bal[a] / 1e9, 4), group=gname.get(a) or (FOCUS_NAME if a in FOC else None),
-                      first=first.get(a, "")[:10], last=last.get(a, "")[:10], n=len(evs), series=series, events=evs[-400:])
+                      first=first.get(a, "")[:10], last=last.get(a, "")[:10], n=len(evs), series=series, events=evs[-400:],
+                      pnl=pl["track"], marks=pl["marks"])
 json.dump(wallets, open(os.path.join(D, "wallets.json"), "w"), separators=(",", ":"))
 
 print(f"terminal.json: {N} days · insider {status} ({why}){' · TRIPWIRE ' + '; '.join(tripwire) if tripwire else ''} · "

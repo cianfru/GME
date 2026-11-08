@@ -326,6 +326,7 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 #drawer.open { transform: none }
 #drawer .dh { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: 12px 16px; border-bottom: 1px solid var(--line) }
 #drawer .db { overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px }
+#drawer .db > * { flex-shrink: 0 }
 #drawer .x { margin-left: auto; background: none; border: 1px solid var(--line); min-width: 40px; min-height: 40px; cursor: pointer; font-size: 18px; color: var(--fg-2) }
 .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: 0; border: 1px solid var(--line); overflow: hidden }
 .kv div { padding: 10px 12px; box-shadow: 1px 1px 0 var(--line) }
@@ -484,6 +485,8 @@ function onClick(e) {
   if (cp) { e.preventDefault(); copyText(cp.dataset.copy, cp); return; }
   const a = e.target.closest("[data-addr]");
   if (a) { e.preventDefault(); openWallet(a.dataset.addr); return; }
+  const pl = e.target.closest("[data-pnl]");
+  if (pl) { e.preventDefault(); openEntity(pl.dataset.pnl); return; }
   const o = e.target.closest("[data-owner]");
   if (o) { e.preventDefault(); bubOwner = +o.dataset.owner; bubSel = null; bubMode = "wallets"; if (location.hash === "#entities/map") render(); else location.hash = "#entities/map"; return; }
   const em = e.target.closest("[data-emap]");
@@ -1188,6 +1191,12 @@ function entities() {
 }
 function entCluster() {
   insiderCard(false); chCluster(false);
+  const fe = S.E && S.E.entities.find((x) => x.kind === "focus");
+  if (fe) {
+    const id = card({ title: "fbb4 · how it traded", wide: true, q: "When did the group buy and sell, and is it up or down on what it holds?",
+      body: plBox("e:" + fe.id), note: PLNOTE + " The whole group counts as one owner: moves between its own wallets are internal." });
+    draws.push(() => { const el = document.querySelector(`[data-plkey="e:${fe.id}"]`); if (!el) return; loadPnl().then((P) => wirePl(el.parentElement, P.ents[fe.id])); });
+  }
   const up1 = col("clusterDexBuy"), up2 = col("clusterFromCex"), dn1 = col("clusterToCex"), dn2 = col("clusterDexSell");
   let id = card({ title: "Cluster flows", sub: "What the linked wallets did each day, in GME: bought on the DEX and withdrew from exchanges (up), sent to exchanges and sold on the DEX (down). Moves between its own wallets are not counted." });
   ts(id, { fmt: fBb, axisFmt: (v) => v + "B", series: [
@@ -1524,7 +1533,7 @@ function ecard({ e, x, st }, wl) {
       <div><dt>Active</dt><dd>${esc(e.firstSeen)} → ${esc(e.lastActive)}</dd></div></dl>
     <p class="ecnote">${esc(evid)}${srcTxt ? ` Held coins came from ${srcTxt}.` : ""}</p>
     ${pv.length ? `<p class="ecnote" style="color:var(--warn)">${pv.length} provisional wallet(s) received coins from it and hold ${fB(pvB)}; no linking rule has fired, so they are not counted.</p>` : ""}
-    <footer>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Wallet map →</button>` : ""}<button type="button" class="mini" data-emap="${e.id}">Entity map →</button>
+    <footer><button type="button" class="mini" data-pnl="${e.id}">P&amp;L chart →</button>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Wallet map →</button>` : ""}<button type="button" class="mini" data-emap="${e.id}">Entity map →</button>
       <details><summary class="mini">Wallets (${e.n})</summary><div class="chips">${e.members.slice(0, 80).map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>${(() => { const j = e.attached.find((j) => j.a === a); return j ? `<span class="ev" data-tip="${esc(`Joined ${j.d}: ${HOWN[j.how] || j.how} with ${short(j.frm)}`)}">joined · ${esc(HOWS[j.how] || j.how)}</span>` : ""; })()}`).join("")}${pv.map((p) => `<button class="addr" data-addr="${p.a}" style="opacity:.7">${short(p.a)}</button><span class="ev inf">provisional</span>`).join("")}</div></details></footer>
   </article>`;
 }
@@ -1609,7 +1618,7 @@ function drawEntMap() {
     const e = n.e, x = n.x0, oi = ownerIdx(e.id), fl = links.filter((l) => l.source.id === n.id || l.target.id === n.id).sort((a, b) => b.v - a.v);
     box.innerHTML = `<h4>${nm(e.name)}</h4><span class="ecst ${(STN[n.st] || STN.dormant)[1]}">${(STN[n.st] || STN.dormant)[0]}</span>
       <div class="kvl">${[["Holds", fB(e.bal) + " · " + fPct(e.pct, 2)], ["Wallets", e.n + (e.attached.length ? ` (+${e.attached.length} joined)` : "")], [wl + " net", sgn(x.net, fBb)], ["In", fBb(x.inn)], ["Out", fBb(x.out)], ["↔ internal", fBb(x.internal)], ["Avg cost", e.cost?.avg ? fP(e.cost.avg) : "—"], ["Provisional", (e.provisional || []).length]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>
-      ${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Open its wallets →</button>` : ""}
+      <button type="button" class="mini" data-pnl="${e.id}">P&amp;L chart →</button>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Open its wallets →</button>` : ""}
       <h4 style="margin-top:4px">Flows · ${wl}</h4><div class="kvl">${fl.slice(0, 20).map((l) => { const inn = l.target.id === n.id, o = inn ? l.source : l.target; return `<div><span><i style="display:inline-block;width:8px;height:8px;background:${edgeC(l)[0]};margin-right:.4rem"></i>${inn ? "from" : "to"} ${esc(nl(o))}</span><b>${fBb(l.v)}</b></div>`; }).join("") || "<div><span>No flows in this window</span><b>—</b></div>"}</div>`;
   };
   gsel.on("pointerenter", (ev, d) => hl(d)).on("pointerleave", () => { hl(emSel ? nodes.get(emSel) : null); hideTip(); })
@@ -1780,6 +1789,7 @@ function methodology() {
     <li>Uniswap V3 liquidity deposits are liquidity, not sales.</li></ul></div></section>
   <section><span class="dn">03 · Pricing</span><div><h2>Exact prices for trades, daily prices for the rest</h2>
     <p><b>DEX trades are priced at what was actually paid.</b> The same node query that returns the transfers also returns every Swap event of the two GME pools: the WETH that went in or out against the GME. Each wallet's buy or sale in that transaction gets that exact rate, converted to dollars at the day's ETH close. ${S.X ? `This covers ${fN(S.X.matched)} of ${fN(S.X.legs)} DEX trade legs (${fPct(S.X.coverageVol, 1)} of DEX volume). Priced at the day's GME close instead, a single trade was off by ${fPct(S.X.medianAbsErrPct, 1)} at the median and ${fPct(S.X.p90AbsErrPct, 0)} at the 90th percentile; across all of them the day's close put buys at ${fU(S.X.buy.closeUsd)} instead of ${fU(S.X.buy.exactUsd)} and sales at ${fU(S.X.sell.closeUsd)} instead of ${fU(S.X.sell.exactUsd)}.` : "Coverage figures appear after the next full run."} Exact prices feed the entity and owner cost basis, profit and loss, smart money and the DEX dollar flows. The cost engine behind realized price, MVRV and the cost-basis distribution still uses the day's close.</p>
+    <p><b>Profit and loss over time.</b> Every group and every tracked wallet has a P&amp;L chart (the “P&amp;L chart →” button on a group card, and the wallet drawer). One method for both, oldest coins sold first (FIFO): a DEX buy costs what was actually paid; anything else that arrives (exchange withdrawal, transfer, liquidity removed) is costed at that day's close. A sale is GME going to the DEX or to an exchange (an exchange deposit is treated as a sale); it realizes the sale price minus the cost of the oldest coins held. Coins sent to other wallets, added to liquidity or burned leave at cost, with no profit or loss, because nothing was sold. Unrealized = holdings × the day's close − cost of the coins still held. For a group, moves between its own wallets are internal; for a single wallet, coins from its group's other wallets count as transfers. The price pane marks each day's trades: filled dots are DEX buys and sales at their average execution price, rings are exchange deposits and withdrawals at the day's close, sized by dollars.</p>
     <p>Everything else uses daily closes from DeFiLlama. DeFiLlama stamps each day with the previous day's close, so daily windows are shifted by one day. Transfers between wallets and exchange moves are valued at their day's price. Coins a wallet received by transfer rather than bought are costed at that day's market price. Market cap is price × 420.69B. Pool liquidity is read live from the Uniswap V2 pair's reserves.</p></div></section>
   <section><span class="dn">04 · Attribution</span><div><h2>When two wallets are treated as one owner</h2>
     <p>Wallets are grouped only when one of these rules holds. Each rule is graded by the kind of evidence behind it.</p>
@@ -1840,46 +1850,127 @@ async function openWallet(a) {
   if (!WALLETS) { try { WALLETS = await (await fetch("/wallets.json", { cache: "no-store" })).json(); } catch (e) { WALLETS = {}; } }
   const w = WALLETS[a];
   if (!w) { $("db").innerHTML = unavailable("This wallet isn't on the watchlist, so the terminal keeps no history for it. Open it on Etherscan for the raw transfers.") + `<p class="mono" style="word-break:break-all;font-size:12px;color:var(--muted)">${a}</p>`; return; }
-  const sum = (k) => d3.sum(w.events.filter((e) => e[2] === k), (e) => Math.abs(e[1])), usd = (k) => d3.sum(w.events.filter((e) => e[2] === k), (e) => e[3]);
-  const kv = [["Holds", fBb(w.bal) + " GME"], ["% of supply", fPct((100 * w.bal * 1e9) / SUPPLY, 3)], ["Group · inferred", w.group || "—"], ["First seen", w.first], ["Last active", w.last],
-    ["Bought on DEX", fBb(sum("dex-buy")) + " · " + fU(usd("dex-buy"))], ["Sold on DEX", fBb(sum("dex-sell")) + " · " + fU(usd("dex-sell"))], ["To exchanges", fBb(sum("cex-out"))], ["From exchanges", fBb(sum("cex-in"))]];
+  const ent = S.E && S.E.entities.find((x) => x.members.includes(a));
+  if (ent) $("dh").querySelector(".x").insertAdjacentHTML("beforebegin", `<button class="mini" type="button" data-pnl="${ent.id}">${nm(ent.name)}&nbsp;· P&amp;L →</button>`);
+  const P = { track: w.pnl || [], marks: w.marks || [], missing: !w.pnl }, now = plNow(P);
+  const kv = [["Holds", fBb(w.bal) + " GME"], ["% of supply", fPct((100 * w.bal * 1e9) / SUPPLY, 3)], ["Group · inferred", w.group || "—"], ["First seen", w.first], ["Last active", w.last], ...plKv(now)];
   $("db").innerHTML = `<div class="mono" style="font-size:12px;color:var(--muted);word-break:break-all">${a}</div><div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
-    <div><span class="eyebrow">Balance and price</span><div class="chart" id="wchart" style="margin-top:6px"></div></div>
+    <div><span class="eyebrow">How it traded · this wallet on its own</span><div style="margin-top:6px">${plBox(a)}</div><p class="sub" style="margin-top:6px">${PLNOTE}${w.group ? " Coins from the group's other wallets count as transfers here; open the group's P&amp;L chart to see the owner as a whole." : ""}</p></div>
     <div><span class="eyebrow">Activity (${w.n}${w.n > w.events.length ? ", latest " + w.events.length : ""})</span>
     <div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th>Counterparty</th></tr></thead><tbody>` +
     [...w.events].reverse().map((e) => { const [l, c] = KIND[e[2]] || [e[2], "flat"]; const cp = e[4];
       return `<tr><td class="num">${e[0]}</td><td class="${c}">${l}</td><td class="n">${sgn(e[1], fBb)}</td><td class="n">${fU(e[3])}</td><td>${/dex|lp/.test(e[2]) ? '<span class="flat">pool / router</span>' : WALLETS[cp] ? `<button class="addr" data-addr="${cp}">${short(cp)}</button>` : `<a class="mono" href="${ETH(cp)}" target="_blank" rel="noopener">${short(cp)}</a>`}</td></tr>`; }).join("") +
     `</tbody></table></div></div>`;
-  walletChart(w);
+  wirePl($("db"), P);
 }
 function closeWallet() { $("scrim").classList.remove("on"); $("drawer").classList.remove("open"); hideTip(); }
-function walletChart(w) {
-  const el = $("wchart"); if (!el || !w.series.length) return;
-  const start = pd(w.series[0][0]), dates = DD.filter((d) => d >= start), bmap = new Map(w.series.map(([d, b]) => [d, b]));
-  let b = 0; const bal = dates.map((d) => { const k = fday(d); if (bmap.has(k)) b = bmap.get(k); return Math.max(0, b); });
-  const i0 = DD.indexOf(dates[0]), price = col("price").slice(i0);
-  const W = el.clientWidth, H = 270, m = { t: 8, r: 10, b: 22, l: 52 }, w2 = W - m.l - m.r, h1 = 140, gap = 28, h2 = H - m.t - m.b - h1 - gap;
+// ---------- behaviour chart: price with the owner's trades, holdings, and profit and loss (data from pnl.py) ----------
+// P = {track: [[day, holdB, costUsd, realizedUsd, boughtUsd, soldUsd]…], marks: [[day, kind, GME B, $]…]}; days count from
+// the first GME transfer. Unrealized on a day = holdings × that day's close − cost of the coins still held.
+const PLK = { b: ["Bought on DEX", "--up", true], s: ["Sold on DEX", "--down", true], ci: ["From an exchange", "--up", false], co: ["To an exchange", "--down", false] };
+let PNL = null;
+async function loadPnl() { if (!PNL) { try { PNL = await (await fetch("/pnl.json", { cache: "no-store" })).json(); } catch (e) { PNL = { ents: {} }; } } return PNL; }
+const d0off = () => Math.round((pd(T.index.firstTransfer.slice(0, 10)) - DD[0]) / 864e5);
+function plSeries(P) {
+  const tr = (P && P.track) || []; if (!tr.length) return null;
+  const off = d0off(), price = col("price"), i0 = Math.max(0, tr[0][0] + off), out = [];
+  let j = 0, cur = [0, 0, 0, 0, 0];
+  for (let i = i0; i < N; i++) {
+    while (j < tr.length && tr[j][0] + off <= i) { cur = tr[j].slice(1); j++; }
+    const [h, c, rz, bu, so] = cur, p = price[i], un = p ? h * 1e9 * p - c : null;
+    out.push({ i, d: DD[i], p, h, c, rz, un, tot: un == null ? null : rz + un, bu, so });
+  }
+  return out;
+}
+function plNow(P) { const s = plSeries(P); if (!s) return null; for (let k = s.length - 1; k >= 0; k--) if (s[k].un != null) return s[k]; return s[s.length - 1]; }   // latest day with a price
+let plRange = 0;
+const PLR = [["All", 0], ["1Y", 365], ["90D", 90]];
+function behaviourChart(el, P, who) {
+  if (!el) return; el.innerHTML = "";
+  const all = plSeries(P);
+  if (!all) { el.innerHTML = unavailable(P && P.missing ? "This wallet's P&amp;L history appears after the next daily full run." : "No GME has moved in or out of this owner yet."); return; }
+  const rows = plRange ? all.filter((r) => r.i >= N - plRange) : all;
+  if (!rows.length) { el.innerHTML = unavailable("Nothing in this range."); return; }
+  const off = d0off(), iA = rows[0].i, at = new Map(rows.map((r) => [r.i, r]));
+  const mk = (P.marks || []).map(([d, k, b, u]) => ({ i: d + off, k, b, u, px: b > 0 ? u / (b * 1e9) : null })).filter((m) => m.i >= iA && m.i < N && PLK[m.k]);
+  for (const m of mk) { const r = at.get(m.i); if (!PLK[m.k][2] || !m.px) m.px = r && r.p; }
+  const mob = mobile(), W = el.clientWidth || 600, m = { t: 22, r: 12, b: 22, l: 58 }, w2 = W - m.l - m.r;
+  const h1 = mob ? 170 : 210, h2 = mob ? 64 : 76, h3 = mob ? 120 : 150, gap = 30, H = m.t + h1 + gap + h2 + gap + h3 + m.b;
   const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H), g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
-  const x = d3.scaleUtc(d3.extent(dates), [0, w2]), y = d3.scaleLinear([0, d3.max(bal) * 1.08 || 1], [h1, 0]).nice(3);
-  g.append("g").attr("class", "gridl").call(d3.axisLeft(y).ticks(3).tickSize(-w2).tickFormat(""));
-  g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(3).tickFormat((v) => fBb(v)));
-  g.append("path").datum(bal).attr("fill", C("--accent")).attr("fill-opacity", 0.18).attr("stroke", C("--accent")).attr("stroke-width", 1.5)
-    .attr("d", d3.area().x((v, i) => x(dates[i])).y0(h1).y1((v) => y(v)).curve(d3.curveStepAfter));
-  const ev = w.events.filter((e) => /dex-buy|dex-sell|cex-out|cex-in/.test(e[2]));
-  const g2 = g.append("g").attr("transform", `translate(0,${h1 + gap})`), pr = price.map((p, i) => [dates[i], p]).filter(([, p]) => p);
-  const y2 = d3.scaleLog(d3.extent(pr, (d) => d[1]), [h2, 0]);
-  g2.append("text").attr("class", "plabel").attr("y", -8).text("price · ▲ buys ▼ sells");
-  g2.append("path").datum(pr).attr("fill", "none").attr("stroke", C("--fg-2")).attr("stroke-width", 1.2).attr("d", d3.line().x((d) => x(d[0])).y((d) => y2(d[1])));
-  const pAt = new Map(pr.map(([d, p]) => [fday(d), p]));
-  g2.selectAll("path.m").data(ev.filter((e) => pAt.has(e[0]))).join("path")
-    .attr("d", () => d3.symbol(d3.symbolTriangle, 40)()).attr("fill", (e) => (/buy|cex-in/.test(e[2]) ? C("--up") : C("--down")))
-    .attr("transform", (e) => `translate(${x(pd(e[0]))},${y2(pAt.get(e[0]))}) rotate(${/buy|cex-in/.test(e[2]) ? 0 : 180})`);
-  g2.append("g").attr("class", "axis").attr("transform", `translate(0,${h2})`).call(d3.axisBottom(x).ticks(5));
-  const bis = d3.bisector((d) => d).center, ln = g.append("line").attr("class", "xhair").attr("y1", 0).attr("y2", h1 + gap + h2).style("opacity", 0);
-  svg.append("rect").attr("x", m.l).attr("width", w2).attr("height", H).attr("fill", "transparent").style("touch-action", "pan-y")
-    .on("pointermove", (e2) => { const [mx] = d3.pointer(e2, g.node()); const i = Math.max(0, Math.min(dates.length - 1, bis(dates, x.invert(mx)))); ln.attr("x1", x(dates[i])).attr("x2", x(dates[i])).style("opacity", 1);
-      showTip(`<div class="h">${fd(dates[i])}</div>` + trow(C("--accent"), "holds", fBb(bal[i])) + trow("", "price", fP(price[i])), e2); })
-    .on("pointerleave", () => { ln.style("opacity", 0); hideTip(); });
+  const x = d3.scaleUtc(d3.extent(rows, (r) => r.d), [0, w2]);
+  if (rows.length === 1) x.domain([d3.utcDay.offset(rows[0].d, -1), d3.utcDay.offset(rows[0].d, 1)]);
+  const lab = (gg, t) => gg.append("text").attr("class", "plabel").attr("y", -8).text(t);
+  // 1 · price, log, with the trades
+  const pr = rows.filter((r) => r.p), pxs = pr.map((r) => r.p).concat(mk.map((q) => q.px).filter((v) => v > 0));
+  const y1 = d3.scaleLog(d3.extent(pxs), [h1, 0]).nice();
+  const g1 = g.append("g"); lab(g1, "GME price (log) · the owner's trades, sized by $");
+  const lead = (v) => Math.round(v / 10 ** Math.floor(Math.log10(v) + 1e-9));       // log ticks: powers of ten, or 1-2-5 on a short range
+  let tv = y1.ticks().filter((v) => lead(v) === 1); if (tv.length < 3) tv = y1.ticks().filter((v) => [1, 2, 5].includes(lead(v)));
+  g1.append("g").attr("class", "gridl").call(d3.axisLeft(y1).tickValues(tv).tickSize(-w2).tickFormat(""));
+  g1.append("g").attr("class", "axis").call(d3.axisLeft(y1).tickValues(tv).tickFormat((v) => fP(v)));
+  g1.append("path").datum(pr).attr("fill", "none").attr("stroke", C("--fg-2")).attr("stroke-width", 1.2).attr("d", d3.line().x((r) => x(r.d)).y((r) => y1(r.p)));
+  // 2 · holdings
+  const g2 = g.append("g").attr("transform", `translate(0,${h1 + gap})`); lab(g2, "Holdings, GME");
+  const y2 = d3.scaleLinear([0, d3.max(rows, (r) => r.h) * 1.08 || 1], [h2, 0]).nice(2);
+  g2.append("g").attr("class", "axis").call(d3.axisLeft(y2).ticks(2).tickFormat((v) => fBb(v)));
+  g2.append("path").datum(rows).attr("fill", C("--accent")).attr("fill-opacity", 0.16).attr("stroke", C("--accent")).attr("stroke-width", 1.3)
+    .attr("d", d3.area().x((r) => x(r.d)).y0(h2).y1((r) => y2(r.h)).curve(d3.curveStepAfter));
+  // 3 · profit and loss, $
+  const g3 = g.append("g").attr("transform", `translate(0,${h1 + gap + h2 + gap})`); lab(g3, "Profit and loss, $ (since first activity)");
+  const vals = rows.flatMap((r) => [r.rz, r.un, r.tot]).filter((v) => v != null);
+  const y3 = d3.scaleLinear(d3.extent(vals.concat([0])), [h3, 0]).nice(4);
+  g3.append("g").attr("class", "gridl").call(d3.axisLeft(y3).ticks(4).tickSize(-w2).tickFormat(""));
+  g3.append("g").attr("class", "axis").call(d3.axisLeft(y3).ticks(4).tickFormat((v) => fU(v)));
+  g3.append("line").attr("x1", 0).attr("x2", w2).attr("y1", y3(0)).attr("y2", y3(0)).attr("stroke", C("--fg-2")).attr("stroke-width", 1).attr("stroke-dasharray", "2 3");
+  const ln = (k, c, wd, dash) => g3.append("path").datum(rows.filter((r) => r[k] != null)).attr("fill", "none").attr("stroke", C(c)).attr("stroke-width", wd).attr("stroke-dasharray", dash || null)
+    .attr("d", d3.line().x((r) => x(r.d)).y((r) => y3(r[k])).curve(d3.curveStepAfter));
+  ln("un", "--s1", 1.3, "4 3"); ln("rz", "--accent", 1.6); ln("tot", "--fg", 1.9);
+  g3.append("g").attr("class", "axis").attr("transform", `translate(0,${h3})`).call(d3.axisBottom(x).ticks(mob ? 4 : 6));
+  // crosshair (under the trade markers, so a marker can still be hovered)
+  const bis = d3.bisector((r) => r.d).center, xl = g.append("line").attr("class", "xhair").attr("y1", 0).attr("y2", h1 + gap + h2 + gap + h3).style("opacity", 0);
+  const byDay = d3.group(mk, (q) => q.i);
+  g.append("rect").attr("width", w2).attr("height", h1 + gap + h2 + gap + h3).attr("fill", "transparent").style("touch-action", "pan-y")
+    .on("pointermove", (ev) => { const [mx] = d3.pointer(ev, g.node()), r = rows[Math.max(0, Math.min(rows.length - 1, bis(rows, x.invert(mx))))];
+      xl.attr("x1", x(r.d)).attr("x2", x(r.d)).style("opacity", 1);
+      showTip(`<div class="h">${fd(r.d)}</div>` + trow("", "price", fP(r.p)) + trow(C("--accent"), "holds", fBb(r.h)) + trow("", "avg cost of held", r.h > 1e-6 ? fP(r.c / (r.h * 1e9)) : "—")
+        + trow(C("--accent"), "realized", fU(r.rz)) + trow(C("--s1"), "unrealized", fU(r.un)) + trow(C("--fg"), "total P/L", fU(r.tot))
+        + (byDay.get(r.i) || []).map((q) => trow(C(PLK[q.k][1]), PLK[q.k][0], `${fBb(q.b)} · ${fU(q.u)}`)).join(""), ev); })
+    .on("pointerleave", () => { xl.style("opacity", 0); hideTip(); });
+  const rr = d3.scaleSqrt([0, d3.max(mk, (q) => q.u) || 1], [2.5, mob ? 11 : 14]);
+  g.append("g").selectAll("circle").data(mk.filter((q) => q.px > 0).sort((a, b) => b.u - a.u)).join("circle")   // above the crosshair layer
+    .attr("cx", (q) => x(DD[q.i])).attr("cy", (q) => y1(q.px)).attr("r", (q) => rr(q.u))
+    .attr("fill", (q) => (PLK[q.k][2] ? C(PLK[q.k][1]) : "none")).attr("fill-opacity", 0.55).attr("stroke", (q) => C(PLK[q.k][1])).attr("stroke-width", (q) => (PLK[q.k][2] ? 1 : 1.6))
+    .on("pointermove", (ev, q) => showTip(`<div class="h">${fd(DD[q.i])} · ${PLK[q.k][0]}</div>` + trow("", "GME", fBb(q.b)) + trow("", "≈ $", fU(q.u)) + trow("", PLK[q.k][2] ? "avg execution price" : "day's price", fP(q.px)), ev))
+    .on("pointerleave", hideTip);
+  const lg = el.parentElement.querySelector(".pl-legend");
+  if (lg) lg.innerHTML = Object.values(PLK).map(([l, c, f]) => `<span><i style="${f ? `background:${C(c)}` : `border:1.5px solid ${C(c)};background:none`};border-radius:50%"></i>${l}</span>`).join("")
+    + `<span><i class="ln" style="background:${C("--fg")}"></i>total P/L</span><span><i class="ln" style="background:${C("--accent")}"></i>realized</span><span><i class="dash" style="border-color:${C("--s1")}"></i>unrealized</span>`;
+}
+const plBox = (key) => `<div class="pl-box" data-plkey="${esc(key)}"><div class="ctl" style="margin-bottom:8px">${segBtns(PLR, plRange, "plr")}</div><div class="chart pl-chart"></div><div class="legend pl-legend"></div></div>`;
+function wirePl(root, P) {
+  const box = root.querySelector(".pl-box"); if (!box) return;
+  const draw = () => behaviourChart(box.querySelector(".pl-chart"), P);
+  box.querySelector(".ctl").onclick = (ev) => { const b = ev.target.closest("[data-plr]"); if (!b) return; plRange = +b.dataset.plr; box.querySelectorAll("[data-plr]").forEach((x) => x.classList.toggle("on", +x.dataset.plr === plRange)); draw(); };
+  draw();
+}
+const PLNOTE = "Oldest coins sold first (FIFO). A DEX buy costs what was actually paid; anything else that arrives (exchange withdrawal, transfer, liquidity removed) is costed at that day's close. Sales are DEX sales and exchange deposits (treated as sales); they realize profit or loss. Coins sent to other wallets, added to liquidity or burned leave at cost, with no profit or loss. Unrealized = holdings × the day's close − cost of the coins still held. Markers: filled = DEX trade at its average execution price for the day; ring = exchange deposit or withdrawal at the day's close.";
+const plKv = (now) => now ? [["Bought (DEX + exch.)", fU(now.bu)], ["Sold (DEX + exch.)", fU(now.so)], ["Realized P/L", sgn(now.rz, fU)], ["Unrealized P/L", sgn(now.un, fU)], ["Total P/L", sgn(now.tot, fU)], ["Avg cost of held", now.h > 1e-6 ? fP(now.c / (now.h * 1e9)) : "—"]] : [];
+async function openEntity(id) {
+  const e = S.E && S.E.entities.find((x) => x.id === id); if (!e) return;
+  $("scrim").classList.add("on"); $("drawer").classList.add("open");
+  $("dh").innerHTML = `<span style="font-weight:600">${nm(e.name)}</span><span class="ev inf">${KINDE[e.kind] || e.kind}</span><button class="mini" type="button" data-emap="${e.id}">Entity map →</button><button class="x" type="button" aria-label="Close">×</button>`;
+  $("dh").querySelector(".x").onclick = closeWallet;
+  $("dh").querySelector("[data-emap]").addEventListener("click", closeWallet);
+  $("db").innerHTML = `<p class="sub">Loading…</p>`;
+  const P = (await loadPnl()).ents[id], now = plNow(P);
+  const kv = [["Holds", fBb(e.bal / 1e9) + " GME"], ["% of supply", fPct(e.pct, 2)], ["Wallets", e.n + (e.attached.length ? ` (+${e.attached.length} joined)` : "")], ...plKv(now)];
+  const big = ((P && P.marks) || []).slice().sort((a, b) => b[3] - a[3]).slice(0, 12), off = d0off();
+  $("db").innerHTML = `<div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
+    <div><span class="eyebrow">How it traded · the whole group as one owner</span><div style="margin-top:6px">${plBox("e:" + id)}</div><p class="sub" style="margin-top:6px">${PLNOTE} Moves between the group's own wallets are internal: neither buys nor sales.</p></div>
+    ${big.length ? `<div><span class="eyebrow">Largest trades</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">Price</th></tr></thead><tbody>` +
+      big.map(([d, k, b, u]) => `<tr><td class="num">${fday(DD[d + off] || DD[N - 1])}</td><td class="${PLK[k][1] === "--up" ? "up" : "down"}">${PLK[k][0]}</td><td class="n">${fBb(b)}</td><td class="n">${fU(u)}</td><td class="n">${PLK[k][2] ? fP(u / (b * 1e9)) : "—"}</td></tr>`).join("") + `</tbody></table></div></div>` : ""}
+    <div><span class="eyebrow">Wallets (${e.n})</span><div class="chips" style="margin-top:6px">${e.members.slice(0, 120).map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>`).join("")}</div></div>`;
+  wirePl($("db"), P);
 }
 })();
 </script>

@@ -100,6 +100,8 @@ mkdirSync(OUT, { recursive: true });
 writeFileSync(join(OUT, "site.json"), JSON.stringify(site));
 copyFileSync(join(ROOT, "site/index.html"), join(OUT, "index.html"));
 copyFileSync(join(ROOT, "site/logo.png"), join(OUT, "logo.png"));   // the token's logo (CoinGecko "GME (Ethereum)")
+// Per-group P/L tracks and trades (entities.py → pnl.json): fetched only when a group's P&L chart is opened.
+if (existsSync(join(D, "pnl.json"))) copyFileSync(join(D, "pnl.json"), join(OUT, "pnl.json"));
 // Per-wallet histories: a separate file, fetched only when a wallet is opened.
 if (existsSync(join(D, "wallets.json")))
   writeFileSync(join(OUT, "wallets.json"), relabel(readFileSync(join(D, "wallets.json"), "utf8")));
