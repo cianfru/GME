@@ -8,17 +8,19 @@ name: daily refresh + watch
 # for a week, up to half the light runs were dropped, and a new hourly "41 * * * *" did not fire once in 5.5 hours on
 # 8 Nov). So the schedule is a tick twice an hour, and the plan job decides
 # from the data commits whether this tick does a full run, a light run or nothing (scripts/plan-run.mjs). Ticks that
-# do nothing finish in seconds; a dropped tick is covered by the next one.
+# do nothing finish in seconds; a dropped tick is covered by the next one. GitHub delivered only 2 of the 29 ticks due
+# overnight 8-9 Nov, so an outside timer can also dispatch this workflow with mode "auto": the plan job then decides
+# exactly as for a scheduled tick.
 on:
   schedule:
     - cron: "7,37 * * * *"   # tick twice an hour: the plan job decides full / light / skip
   workflow_dispatch:
     inputs:
       mode:
-        description: "full or light"
+        description: "full, light, or auto (the plan job decides, as for a scheduled tick)"
         default: full
         type: choice
-        options: [full, light]
+        options: [full, light, auto]
 
 permissions:
   contents: write
@@ -40,7 +42,7 @@ jobs:
           sparse-checkout-cone-mode: false
       - id: p
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "manual run: ${{ inputs.mode }}"; echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.mode }}" != "auto" ]; then echo "manual run: ${{ inputs.mode }}"; echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT"; exit 0; fi
           gh api "repos/${{ github.repository }}/commits?path=data/terminal.json&per_page=40" > commits.json
           gh api "repos/${{ github.repository }}/actions/workflows/daily.yml/runs?per_page=20" > runs.json
           node scripts/plan-run.mjs commits.json runs.json "${{ github.run_id }}" >> "$GITHUB_OUTPUT"
