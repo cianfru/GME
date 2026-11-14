@@ -1,34 +1,20 @@
 {
  "summary": {
-  "asOf": "2026-11-14T08:32:47Z",
-  "since": "2026-11-14T01:32:35Z",
+  "asOf": "2026-11-14T15:21:23Z",
+  "since": "2026-11-14T08:32:47Z",
   "price": 7.0021105884526766e-06,
   "mcap": 2945717.9034561566,
-  "pool": 44329189172.58067,
+  "pool": 44732131806.16941,
   "watchedGroups": 21,
-  "alerts": 3,
-  "high": 1
+  "alerts": 1,
+  "high": 0
  },
  "alerts": [
   {
-   "kind": "new_vault",
-   "severity": "high",
-   "text": "New buy-and-forward holding wallet 0x6bba\u20263c1b: 1 fresh wallet(s) forwarded 0.15B (bought for $1,051)",
-   "wallet": "0x6bba2e7d34f8ba353681467b6484ce0282533c1b"
-  },
-  {
-   "kind": "flow",
-   "severity": "info",
-   "text": "fbb4: from other wallets 0.15B GME (~$1,051, 0.04% of supply)",
-   "group": "fbb4",
-   "what": "from other wallets",
-   "tokens": 150135635.68912715
-  },
-  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME +0.83B since last run (net selling into the pool); pool now 44.33B, market cap $2.95M",
-   "delta": 826650945.6018295
+   "text": "Pool GME +0.40B since last run (net selling into the pool); pool now 44.73B, market cap $2.95M",
+   "delta": 402942633.5887375
   }
  ]
 }
