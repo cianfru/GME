@@ -82,6 +82,14 @@ input, select { border-radius: 0 }
 .hstat.stale, .dstat.stale { color: var(--accent) } .hstat.stale { border-color: var(--accent) } .hstat.stale i, .dstat.stale i { background: var(--accent) }
 .tbtn { background: none; border: 1px solid var(--line); height: 30px; padding: 0 .7rem; font: 500 10.5px var(--mono); letter-spacing: .12em; color: var(--muted); cursor: pointer }
 .tbtn:hover { color: var(--fg) }
+/* eight sections: tighten the header, then give the nav its own row before it can run under the status */
+@media (max-width: 1340px) { .nav { gap: 1.15rem } .nav a { letter-spacing: .1em } .brand span, .hs-age { display: none } }
+@media (max-width: 1180px) {
+  .hbar { flex-wrap: wrap; height: auto; padding-top: 10px; gap: 8px 10px }
+  .brand { flex: 1 }
+  .nav { order: 3; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; gap: 1.3rem; height: 42px; margin: 0 calc(-1 * var(--gut)); padding: 0 var(--gut) }
+  .nav::-webkit-scrollbar { display: none }
+}
 @media (max-width: 900px) {
   .hbar { flex-wrap: wrap; height: auto; padding-top: 10px; gap: 8px 10px }
   .brand { flex: 1 }
@@ -246,6 +254,16 @@ input.q { width: 15rem; max-width: 100% } select.q { max-width: 100% }
 /* evidence */
 .ev { display: inline-flex; align-items: center; font: 500 9.5px/1.6 var(--mono); letter-spacing: .1em; text-transform: uppercase; padding: 0 .4rem; border: 1px solid var(--line-2); color: var(--fg-2); white-space: nowrap; margin-right: .3rem }
 .ev.inf { border-style: dashed; color: var(--muted) }
+.wsearch { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px }
+.wq { display: flex; gap: 8px } .wq input.q { flex: 1; width: auto; height: 42px; font: 500 13px var(--mono) } .wq .mini { height: 42px; padding: 0 .9rem }
+.wq input.q:focus { outline: 1px solid var(--accent); outline-offset: -1px }
+.wrecent { display: flex; flex-wrap: wrap; gap: .4rem .9rem; align-items: baseline } .wrecent .eyebrow { color: var(--accent) }
+.whead { display: flex; flex-wrap: wrap; gap: 6px; align-items: center } .wa { font-size: 13px; margin-right: 6px; word-break: break-all }
+.wtags { display: flex; flex-wrap: wrap; gap: 6px 0; align-items: center } .wtags .ev.up { color: var(--up); border-color: var(--up) } .wtags .ev.mv-move { color: var(--warn); border-color: var(--warn) }
+.wtags button.ev { cursor: pointer; background: none } .wlinks td { white-space: normal; vertical-align: top } .wlinks .addr, .wlinks .tag { margin-right: .3rem }
+.wchk { display: inline-flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--fg-2); cursor: pointer } .wchk input { accent-color: var(--accent); width: 16px; height: 16px }
+.wex { color: var(--accent); font-style: normal; font-size: 9px }
+@media (max-width: 760px) { .wq { flex-direction: column } .wq input.q { flex: none; width: 100% } .wq .mini { justify-content: center } .wkv { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 .evleg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 14px }
 .evleg > div { padding: 14px 18px; display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 3px 12px; align-items: start }
 .evleg > div + div { border-left: 1px solid var(--line) }
@@ -524,7 +542,7 @@ let S, T, DD, N, IDX = null, AGEH = 0, STALE = false, PARTIAL = false;
 const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
-const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["visualizer", "Visualizer"], ["methodology", "Methodology"]];
+const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["visualizer", "Visualizer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
 // Group names end in a short handle: the last four characters of the wallet the group is named after ("Accumulator
 // efdb", "Linked group 847d"). fbb4's group is just "fbb4" (the owner's X name, the end of 0xe147…fbb4).
 const nm = (s) => esc(s).replace(/(^|\s)([0-9a-f]{4,6})$/, (m, sp, h) => (sp ? "&nbsp;" : "") + `<span class="hd">${h}</span>`);   // nbsp: flex buttons drop a plain trailing space
@@ -588,6 +606,7 @@ function parseHash() {
   const [p, s] = h.split("/");
   page = PAGES.some((x) => x[0] === p) ? p : "overview";
   if (page === "entities") sub = SUBS.some((x) => x[0] === s) ? s : "cards";
+  if (page === "wallet") { const m = W_ADDR.exec(s || ""); wAddr = m ? m[0].toLowerCase() : ""; wAll = false; }
 }
 function onClick(e) {
   const r = e.target.closest("[data-r]");
@@ -599,7 +618,7 @@ function onClick(e) {
   if (cp) { e.preventDefault(); copyText(cp.dataset.copy, cp); return; }
   const a = e.target.closest("[data-addr]");
   if (a) { e.preventDefault(); openWallet(a.dataset.addr); return; }
-  if (e.target.closest('a[href^="#visualizer"]')) closeWallet();
+  if (e.target.closest('a[href^="#visualizer"], a[href^="#wallet"]')) closeWallet();
   const pl = e.target.closest("[data-pnl]");
   if (pl) { e.preventDefault(); openEntity(pl.dataset.pnl); return; }
   const o = e.target.closest("[data-owner]");
@@ -622,7 +641,7 @@ function render() {
   document.body.classList.toggle("vzmode", page === "visualizer");
   if (page !== "visualizer" && VZ.sim) { VZ.sim.stop(); VZ.sim = null; }
   if (page !== "visualizer" && VZ.keys) { removeEventListener("keydown", VZ.keys); VZ.keys = null; }
-  ({ overview, holders, crowd, transfers, entities, visualizer, methodology })[page]();
+  ({ overview, holders, crowd, transfers, entities, visualizer, wallet, methodology })[page]();
   document.title = (page === "overview" ? "GME on Ethereum" : PAGES.find((p) => p[0] === page)[1] + " · GME on Ethereum") + " · Terminal";
   markRange(); redraw(); qTables();
   if (page !== lastPage) scrollTo({ top: 0 });
@@ -2300,8 +2319,12 @@ function methodology() {
     <li>A wallet that receives coins from a group but meets no linking rule stays outside the group (shown as provisional) until a rule fires. Until then, the group shows those coins as moved out, never as sold.</li>
     <li>Dollar values use daily prices. The market is thin, so small trades move the metrics. Every read describes a position, never a buy or sell signal. Nothing here is financial advice.</li></ul></div></section>
   <section><span class="dn">08 · Freshness</span><div><h2>Live index and research are separate</h2>
-    <p>The index is rebuilt about every 4 hours by a scheduled job, and fully once a day (the first run after 06:00 UTC) including the external lookups of ETH funders and the Visualizer's graph. GitHub often starts scheduled jobs late or skips them, so the job checks every hour and works out from the last rebuild whether one is due: a missed check is made up by the next. The header shows when it last ran and turns to “Data stale” after 12 hours without a new run. The last day in every daily chart is partial: it runs up to the latest indexed transfer.</p>
+    <p>The index is rebuilt about every 4 hours by a scheduled job, and fully once a day (the first run after 06:00 UTC) including the external lookups of ETH funders and the Visualizer's graph. GitHub often starts scheduled jobs late or skips them, so the job checks twice an hour and works out from the last rebuild whether one is due: a missed check is made up by the next. The header shows when it last ran and turns to “Data stale” after 12 hours without a new run. The last day in every daily chart is partial: it runs up to the latest indexed transfer.</p>
     <p>The written study is a snapshot of ${STUDY_DATE}. The daily run does not update its findings. <a class="more" href="/study.html">Read the full study →</a></p></div></section>
+  <section><span class="dn">09 · Wallet analysis</span><div><h2>Any address, its whole GME history</h2>
+    <p>The <a href="#wallet">Wallet</a> page works for every address that ever sent or received GME (about 35,000). With every run the terminal writes one record per wallet: every transfer with its transaction, priced at the exact execution price when it is a DEX trade matched to a pool swap and at that day's close otherwise; profit and loss by the same FIFO method as the group charts (a DEX sale or an exchange deposit realizes, coins sent to other wallets leave at cost); and what the terminal already knows about it: its tracked or linked group, watch tags, where its first GME came from, which wallets it seeded with $2,000 or more (the grouping rules' bar), exchange deposit addresses it shares with other wallets, and strong ETH links.</p>
+    <p>ETH funding comes from the BigQuery study for about 4,400 study wallets (top-level ETH transfers since April 2024; a first funder counts only if its ETH arrived before the wallet's own first transaction). For any other wallet the page asks Ethplorer's free API from your browser. It lists top-level transactions only, so ETH paid out by a contract or through an exchange's internal transaction does not show.</p>
+    <p>“Bought the same way” compares buying fingerprints, not links: GME bought and number of DEX buys within 2.5× of the wallet's, the same main way of buying, and shares sold, sent on and received from other wallets within 15 points; ranked by how close they are, then by how near in time the buying started. Two wallets that behaved alike are not shown to be one owner.</p></div></section>
   </article>`);
 }
 
@@ -2818,7 +2841,7 @@ function vzPanel() {
     <dl class="vzkv">${isW ? `<div><dt>Holds</dt><dd>${fBb(d.bal)} · ${fPct((100 * d.bal * 1e9) / SUPPLY, 2)}</dd></div>` : ""}
       <div><dt>Received · ${esc(rng)}</dt><dd class="up">${fU(tin)} <small>${fBb(gin)}</small></dd></div><div><dt>Sent · ${esc(rng)}</dt><dd class="down">${fU(tout)} <small>${fBb(gout)}</small></dd></div>
       <div><dt>Counterparties</dt><dd>${fN(cps.length)}</dd></div></dl>
-    <div class="vzact"><button type="button" class="mini" data-vza="expand" data-id="${esc(d.id)}">Expand +12</button>${d.id !== VZ.base ? `<button type="button" class="mini" data-vza="center" data-id="${esc(d.id)}">Centre here</button><button type="button" class="mini" data-vza="pin" data-id="${esc(d.id)}">${VZ.pinned.has(d.id) ? "Unpin" : "Pin"}</button><button type="button" class="mini" data-vza="hide" data-id="${esc(d.id)}">Hide</button>` : ""}</div>
+    <div class="vzact"><button type="button" class="mini" data-vza="expand" data-id="${esc(d.id)}">Expand +12</button>${/^0x[0-9a-f]{40}$/.test(d.id) ? `<a class="mini" href="#wallet/${d.id}">Analyse →</a>` : ""}${d.id !== VZ.base ? `<button type="button" class="mini" data-vza="center" data-id="${esc(d.id)}">Centre here</button><button type="button" class="mini" data-vza="pin" data-id="${esc(d.id)}">${VZ.pinned.has(d.id) ? "Unpin" : "Pin"}</button><button type="button" class="mini" data-vza="hide" data-id="${esc(d.id)}">Hide</button>` : ""}</div>
     <span class="eyebrow">Counterparties · ${esc(rng)}${VZ.minUsd ? " · ≥ " + fU(VZ.minUsd) : ""}</span>
     <div class="vzlist">${cps.slice(0, 40).map((c) => { const L = vzLook(c.id), dir = c.inU && c.outU ? "⇄" : c.inU ? "←" : "→";
       return `<button type="button" data-vza="${shown.has(c.id) ? "sel" : "add"}" data-id="${esc(c.id)}" class="${shown.has(c.id) ? "" : "off"}"><span><b class="${c.inU && !c.outU ? "up" : c.outU && !c.inU ? "down" : "flat"}">${dir}</b> ${nm(L.label)}</span><b>${fU(c.u)}</b></button>`; }).join("") || '<p class="sub">None in this range.</p>'}</div>
@@ -2853,6 +2876,216 @@ function vzLedger(d) {
       ${rows.length > 150 ? `Showing the first 150 of ${fN(rows.length)}.` : ""}</p>`;
 }
 
+// ---------- wallet page (#wallet/<address>): paste any address, get its whole GME history ----------
+// Data: wallet_index.py → dist/w/<3 hex chars>.json (the wallets whose address starts with those characters after 0x),
+// w/_meta.json, w/_labels.json (infrastructure, exchange deposit addresses, ETH-side exchanges) and w/_fp.json (buying
+// fingerprints, fetched only for "bought the same way"). The ETH funding of wallets outside the BigQuery study is looked
+// up live from Ethplorer's free API by the viewer's browser.
+let wAddr = "", wTok = 0, wAll = false, wDust = false;
+const WI = { meta: null, labels: null, fp: null, shards: new Map() };
+const WK = { b: ["▲ Bought on DEX", "up"], s: ["▼ Sold on DEX", "down"], ci: ["◆ From exchange", "up"], co: ["▼ To exchange", "down"], la: ["+ Added liquidity", "flat"],
+  lr: ["− Removed liquidity", "flat"], i: ["← Received", "up"], o: ["→ Sent", "mv-move"], x: ["✕ Burned", "flat"] };
+const W_ADDR = /0x[0-9a-fA-F]{40}/;
+const wget = async (p) => { const r = await fetch("/w/" + p + ".json"); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); };
+async function wLoad(name) { if (!WI[name]) WI[name] = await wget("_" + name); return WI[name]; }
+async function wRec(a) { const k = a.slice(2, 5); if (!WI.shards.has(k)) WI.shards.set(k, await wget(k).catch(() => ({}))); return WI.shards.get(k)[a] || null; }
+let ENTOF = null;
+const entOf = (a) => { if (!ENTOF) { ENTOF = new Map(); for (const e of (S.E && S.E.entities) || []) for (const m of e.members) ENTOF.set(m, e); } return ENTOF.get(a); };
+const wLabel = (a) => (WI.labels && WI.labels[a]) || null;
+const isInfra = (a) => { const L = wLabel(a); return !!L && L[0] !== "deposit"; };
+const wLink = (a) => `<a class="addr" href="#wallet/${a}">${short(a)}</a>`;
+function cpHtml(a) {
+  const L = wLabel(a);
+  if (L && L[0] !== "deposit") return `<span class="flat" title="${a}">${esc(L[1])}</span>`;
+  const e = entOf(a);
+  return wLink(a) + (L ? ` <span class="tag">${esc(L[1])}</span>` : e ? ` <span class="tag hd">${nm(e.name)}</span>` : "");
+}
+const wcard = (title, q, body, o = {}) => `<section class="panel card${o.wide ? " wide" : ""}${o.key ? " key" : ""}"${o.id ? ` id="${o.id}"` : ""}><header class="ph"><div><h3>${esc(title)}</h3>${q ? `<p class="q">${q}</p>` : ""}</div>${o.val ? `<div class="pv">${o.val}</div>` : ""}</header>${body}${o.note ? `<details class="about"><summary>Method</summary><p>${o.note}</p></details>` : ""}</section>`;
+const wtime = (s) => fdt(new Date(s * 1000)).replace(" UTC", "");
+const fG = (g) => fB(g);
+function wRecent(a) {
+  let r = [];
+  try { r = JSON.parse(localStorage.getItem("gme-wallets") || "[]"); } catch (e) {}
+  if (a) { r = [a, ...r.filter((x) => x !== a)].slice(0, 8); try { localStorage.setItem("gme-wallets", JSON.stringify(r)); } catch (e) {} }
+  return r;
+}
+function wallet() {
+  pageHead("Wallet", "Wallet analysis", "Paste any Ethereum address to get its whole GME history: every transfer at the price actually paid, profit and loss, where the coins went, who funded it with ETH, which wallets it is linked to and which ones bought the same way.");
+  add(`<section class="panel wsearch"><form id="wform" class="wq" autocomplete="off"><input id="wq" class="q" type="search" spellcheck="false" inputmode="text" placeholder="Paste a wallet address (0x…) or an Etherscan link" aria-label="Wallet address" value="${esc(wAddr)}"><button class="mini" type="submit">Analyse →</button></form>
+    <div class="wrecent" id="wrecent"></div><p class="sub" id="wasof"></p></section><div id="wout"></div>`);
+  const f = $("wform"), q = $("wq");
+  f.onsubmit = (ev) => { ev.preventDefault(); const m = W_ADDR.exec(q.value);
+    if (!m) { $("wout").innerHTML = `<div class="grid"><section class="panel card wide">${unavailable("That doesn't contain an Ethereum address. Paste the 42-character address that starts with 0x, or an Etherscan address link.")}</section></div>`; return; }
+    const a = m[0].toLowerCase(); if (a === wAddr) render(); else location.hash = "#wallet/" + a; };
+  q.addEventListener("paste", () => setTimeout(() => { if (W_ADDR.test(q.value)) f.requestSubmit(); }, 0));
+  const rec = wRecent(), top = ((T && T.top) || []).filter((t) => t.a && !isInfra(t.a)).slice(0, 5);
+  $("wrecent").innerHTML = (rec.length ? `<span class="eyebrow">Recent</span>${rec.map(wLink).join("")}` : "") +
+    `<span class="eyebrow">Try</span><a class="addr" href="#wallet/${FOCUS}">fbb4's main wallet</a>${top.filter((t) => t.a !== FOCUS).slice(0, 3).map((t) => wLink(t.a)).join("")}`;
+  wLoad("meta").then((m) => { $("wasof").textContent = `Index covers ${fN(m.wallets)} wallets and ${fN(m.rows)} transfers, up to ${fdt(new Date(m.asOf))}. Rebuilt with every run of the terminal.`; })
+    .catch(() => { $("wasof").textContent = "The wallet index isn't available on this deploy; it appears after the next run of the terminal."; });
+  if (!wAddr) { $("wout").innerHTML = ""; q.focus({ preventScroll: true }); return; }
+  wReport(wAddr);
+}
+async function wReport(a) {
+  const tok = ++wTok, out = $("wout");
+  out.innerHTML = `<p class="sub" style="padding:18px 0">Loading ${short(a)}…</p>`;
+  let rec;
+  try { await Promise.all([wLoad("meta"), wLoad("labels")]); rec = await wRec(a); }
+  catch (e) { if (tok === wTok) out.innerHTML = `<div class="grid"><section class="panel card wide">${unavailable("The wallet index isn't available on this deploy yet. It is rebuilt by every run of the terminal; try again after the next one.")}</section></div>`; return; }
+  if (tok !== wTok) return;
+  wRecent(a);
+  const links = `<button class="mini" type="button" data-copy="${a}">Copy</button><a class="mini" href="${ETH(a)}" target="_blank" rel="noopener">Etherscan ↗</a><a class="mini" href="https://app.zerion.io/${a}/overview" target="_blank" rel="noopener">Zerion ↗</a><a class="mini" href="#visualizer/${a}">Visualize →</a>`;
+  if (!rec) {
+    const L = wLabel(a);
+    out.innerHTML = `<div class="grid"><section class="panel card wide key"><div class="whead"><span class="mono wa">${a}</span>${links}</div>` +
+      (L ? unavailable(`This is <b>${esc(L[1])}</b>: infrastructure (a pool, router, exchange or contract), not a holder, so the terminal keeps no wallet record for it. Its flows are on the Visualizer.`)
+        : unavailable(`No GME has ever moved to or from this address (as of ${fdt(new Date(WI.meta.asOf))}). Check the address, or open it on Etherscan.`)) + `</section></div>`;
+    return;
+  }
+  const t = rec.t, price = lastVal(col("price")), P = { track: rec.pl.track, marks: rec.pl.marks }, now = plNow(P);
+  // ---- totals by kind, counterparties, drains (≥90% of the balance to one wallet, ≥ $2k: the linking rule) ----
+  const by = {}, cps = new Map(); let run = 0; const drains = [];
+  for (const [ts, g, u, k, cp] of t) {
+    const x = (by[k] = by[k] || { n: 0, g: 0, u: 0 }); x.n++; x.g += Math.abs(g); x.u += u;
+    const c = cps.get(cp) || { a: cp, in: 0, out: 0, uin: 0, uout: 0, n: 0, f: ts, l: ts, k: new Set() };
+    if (g > 0) { c.in += g; c.uin += u; } else { c.out -= g; c.uout += u; } c.n++; c.l = ts; c.k.add(k); cps.set(cp, c);
+    if (k === "o" && !isInfra(cp) && run > 0 && -g >= 0.9 * run && u >= 2000) drains.push([cp, ts, -g, u]);
+    run += g;
+  }
+  const K = (k) => by[k] || { n: 0, g: 0, u: 0 };
+  const e = rec.ent && S.E && S.E.entities.find((x) => x.id === rec.ent[0]);
+  const ty = rec.dep ? `Exchange deposit address → ${esc((wLabel(rec.dep) || [, "an exchange"])[1])}` : rec.ty === "7702" ? "Smart account (EIP-7702): a person's wallet" : rec.ty === "contract" ? "Contract" : "Wallet";
+  const tags = [];
+  if (e) tags.push(`<button type="button" class="ev hd" data-pnl="${e.id}" data-tip="Tracked owner group (${esc(KINDE[e.kind] || e.kind)}): ${e.n} wallets holding ${fBb(e.bal / 1e9)} GME. ${rec.ent[1] === "j" ? `This wallet joined on ${rec.ent[4]} (${rec.ent[2]} from ${short(rec.ent[3])}).` : ""} Open the group's P&L.">${nm(e.name)}</button>`);
+  else if (rec.grp) tags.push(`<span class="ev inf" data-tip="${rec.grp.web ? "Part of a large linked web that is flagged and not trusted as one owner." : `Linked by the grouping rules to ${rec.grp.n - 1} other wallet${rec.grp.n === 2 ? "" : "s"} holding ${fG(rec.grp.held)} GME in all; below the 0.05%-of-supply bar for a tracked group.`}">${rec.grp.web ? `flagged web · ${rec.grp.n} wallets` : `linked group · ${rec.grp.n} wallets`}</span>`);
+  const tg = rec.tags || {};
+  if (tg.watch && !e) tags.push(`<span class="ev">${esc(tg.watch)}</span>`);
+  if (tg.acc) tags.push(`<span class="ev up" data-tip="A quiet accumulator owner (90 days): ${tg.acc.n} wallet${tg.acc.n === 1 ? "" : "s"}, net ${sgn(tg.acc.net, fG)} GME, last buy ${tg.acc.lastBuy || "—"}.">quiet accumulator</span>`);
+  if (tg.vault) tags.push(`<span class="ev" data-tip="A fresh wallet fed by ${tg.vault.feeders} buy-and-forward wallet${tg.vault.feeders === 1 ? "" : "s"} since ${tg.vault.first} that kept what it received.">holding wallet</span>`);
+  if (tg.relay) tags.push(`<span class="ev mv-move" data-tip="Received coins through buy-and-forward wallets, then sold or passed them on: a relay, not a holder.">relay</span>`);
+  if (tg.smart) tags.push(`<span class="ev up" data-tip="Smart money (hindsight): realized ${fU(tg.smart.realized)}, ${fPct(100 * tg.smart.roi, 0)} on cost.">smart money</span>`);
+  const kv = [["Holds", fG(rec.b) + " GME"], ["% of supply", fPct((100 * rec.b) / SUPPLY, 3)], ["Worth now", fU(rec.b * price)], ["First GME", rec.f.slice(0, 10)], ["Last active", rec.l.slice(0, 10)], ["Transfers", fN(t.length)], ...plKv(now)];
+  let html = `<div class="grid"><section class="panel card wide key"><div class="whead"><span class="mono wa">${a}</span>${links}</div>
+    <div class="wtags"><span class="ev">${ty}</span>${tags.join("")}</div><div class="kv wkv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div></section></div>`;
+  // ---- how it traded ----
+  html += `<div class="grid">` + wcard("How it traded", "Its trades on the price chart, holdings, and profit and loss.", `<div id="wpl">${plBox("w:" + a)}</div>`, { wide: true, note: PLNOTE + " This is the wallet on its own: coins from its group's other wallets count as transfers. Open the group's P&L chart to see the owner as a whole." }) + `</div>`;
+  // ---- flows by kind ----
+  const rowK = (k, label) => { const x = K(k); return x.n ? `<tr><td class="${WK[k][1]}">${label}</td><td class="n">${fN(x.n)}</td><td class="n">${fG(x.g)}</td><td class="n">${fU(x.u)}</td></tr>` : ""; };
+  const vias = {}; for (const [ts, g, u, k, cp] of t) if (k === "b") { const L = wLabel(cp); const v = cp === "0x2aeee741fa1e21120a21e57db9ee545428e683c9" || cp === "0x05391bd57d8c6fb30d9c39f6618f2207893922dc" ? "Straight from the pool" : (L && L[1]) || "Other"; vias[v] = (vias[v] || 0) + u; }
+  const vtot = d3.sum(Object.values(vias)) || 1;
+  html += `<div class="grid">` + wcard("Where its GME came from and went", null,
+    `<div class="tw"><table><thead><tr><th>What</th><th class="n">Transfers</th><th class="n">GME</th><th class="n">≈ $</th></tr></thead><tbody>` +
+    rowK("b", "▲ Bought on the DEX") + rowK("ci", "◆ Withdrawn from exchanges") + rowK("i", "← Received from other wallets") + rowK("lr", "− Liquidity removed") +
+    rowK("s", "▼ Sold on the DEX") + rowK("co", "▼ Sent to exchanges") + rowK("o", "→ Sent to other wallets") + rowK("la", "+ Liquidity added") + rowK("x", "✕ Burned") +
+    `</tbody></table></div>` + (Object.keys(vias).length ? `<p class="sub">DEX buys executed via: ${Object.entries(vias).sort((p, q) => q[1] - p[1]).map(([v, u]) => `${esc(v)} ${fPct((100 * u) / vtot, 0)}`).join(" · ")}.</p>` : ""),
+    { note: "$ is the exact execution price for DEX trades the terminal matched to a pool swap, otherwise that day's close. An exchange deposit address (one that forwarded ≥95% of its GME to an exchange) counts as the exchange." });
+  const cpRows = (list, dir) => list.length ? `<div class="tw"><table class="q"><thead><tr><th>Counterparty</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">Transfers</th><th>Dates</th></tr></thead><tbody>` +
+    list.map((c) => `<tr><td>${cpHtml(c.a)}</td><td class="n">${fG(dir === "in" ? c.in : c.out)}</td><td class="n">${fU(dir === "in" ? c.uin : c.uout)}</td><td class="n">${fN(c.n)}</td><td class="num">${fday(new Date(c.f * 1000))}${c.l - c.f > 86400 ? " → " + fday(new Date(c.l * 1000)) : ""}</td></tr>`).join("") + `</tbody></table></div>` : `<p class="sub">None.</p>`;
+  const cl = [...cps.values()];
+  html += wcard("Largest counterparties", "Who it got GME from, and who it sent GME to.",
+    `<span class="eyebrow">Sent to</span>${cpRows(cl.filter((c) => c.out > 0).sort((p, q) => q.uout - p.uout).slice(0, 12), "out")}<span class="eyebrow" style="margin-top:8px">Received from</span>${cpRows(cl.filter((c) => c.in > 0).sort((p, q) => q.uin - p.uin).slice(0, 12), "in")}`,
+    { note: "Click a wallet to analyse it the same way and follow the coins one hop further. Pools, routers and exchanges are named, not linked." }) + `</div>`;
+  // ---- links ----
+  const ev = [];   // [evidence, with, when, detail, 1 direct / 0 inferred / -1 information, not a link]
+  if (rec.seed) { const [s0, d0, g0, u0] = rec.seed, L = wLabel(s0);
+    ev.push(L && L[0] !== "deposit" ? ["Its first GME", `<span class="flat">${esc(L[1])}</span>`, d0.slice(0, 10), `${fG(g0)} GME (${fU(u0)}) from ${L[0] === "cex" ? "an exchange" : L[0] === "dex" ? "the DEX" : "infrastructure"}: not a link to a wallet`, -1]
+      : ["Its first GME came from", cpHtml(s0), d0.slice(0, 10), `${fG(g0)} GME (${fU(u0)})${u0 < 2000 ? ", below the $2k bar the grouping rules use" : ""}`, 1]); }
+  for (const s of (rec.seeded || []).slice(0, 25)) ev.push(["Got its first GME from this wallet", cpHtml(s[0]), s[1].slice(0, 10), `${fG(s[2])} GME (${fU(s[3])})`, 1]);
+  const more = rec.seededMore || [0, 0], extra = more[0] + Math.max(0, (rec.seeded || []).length - 25);
+  if (extra || more[1]) ev.push(["Other wallets it seeded", "", "", [extra ? `${extra} more of $2k or more` : "", more[1] ? `${more[1]} small first sends under $2k (often airdrop spam), not listed` : ""].filter(Boolean).join(" · "), -1]);
+  for (const [cp, ts, g, u] of drains) ev.push(["Drained into", cpHtml(cp), wtime(ts).slice(0, 11), `${fG(g)} GME (≥90% of its balance then), ${fU(u)}`, 1]);
+  for (const [d, users] of Object.entries(rec.shared || {})) ev.push(["Shared exchange deposit address", users.map(cpHtml).join(" "), "", `both paid into ${short(d)} (${esc((wLabel(d) || [, "an exchange deposit"])[1])})`, 0]);
+  for (const [o, k, d, dir] of rec.ethl || []) ev.push([k === "ethseed" ? (dir === "o" ? "Gave its first ETH to" : "Its first ETH came from") : dir === "o" ? "Paid gas (ETH) to" : "Its gas (ETH) came from", cpHtml(o), d, k === "ethseed" ? "the first ETH that wallet received" : "a top-up of ≤0.05 ETH, with no GME sent back", 1]);
+  if (rec.eth && rec.eth.funder) ev.push(["First ETH came from", cpHtml(rec.eth.funder[0]), rec.eth.funder[1].slice(0, 10), `${rec.eth.funder[2]} ETH (study data)`, 1]);
+  const ents = new Map();
+  for (const c of cl) { const x = entOf(c.a); if (!x || (e && x.id === e.id) || isInfra(c.a)) continue; const y = ents.get(x.id) || { e: x, in: 0, out: 0, n: 0 }; y.in += c.in; y.out += c.out; y.n += c.n; ents.set(x.id, y); }
+  for (const y of ents.values()) ev.push(["GME moved with a tracked group", `<button type="button" class="ev hd" data-pnl="${y.e.id}">${nm(y.e.name)}</button>`, "", `${y.in ? "received " + fG(y.in) : ""}${y.in && y.out ? " · " : ""}${y.out ? "sent " + fG(y.out) : ""} GME in ${y.n} transfer${y.n === 1 ? "" : "s"}`, 1]);
+  html += `<div class="grid">` + wcard("Links to other wallets", "What ties this wallet to others, and how strong each tie is.",
+    ev.length ? `<div class="tw"><table class="wlinks"><thead><tr><th>Evidence</th><th>With</th><th>When</th><th>Detail</th><th></th></tr></thead><tbody>` +
+      ev.map(([k, w, d, x, dir]) => `<tr><td>${k}</td><td>${w}</td><td class="num">${d}</td><td class="flat">${x}</td><td>${dir > 0 ? '<span class="ev">direct</span>' : dir === 0 ? '<span class="ev inf">inferred</span>' : ""}</td></tr>`).join("") + `</tbody></table></div>`
+      : `<p class="sub">No links: its GME came from and went to the market only, and the grouping rules tie it to no other wallet.</p>`,
+    { wide: true, note: "Direct = the transfer itself is on-chain (GME or ETH between the two wallets). Inferred = derived by a rule, not a transfer between them: two wallets paying into the same exchange deposit address (one exchange account, or a shared relay). A drain is a send of at least 90% of the wallet's balance, worth at least $2k, to another wallet. Links are evidence of shared control, not proof of ownership." }) + `</div>`;
+  // ---- ETH side + bought the same way ----
+  html += `<div class="grid">` + wcard("ETH side", "Who funded it with ETH, and where its ETH went.", `<div id="weth">${wEthStudy(rec.eth)}</div>`,
+    { note: "Study wallets (about 4,400 wallets the terminal tracks closely) come from a BigQuery extract of top-level ETH transfers since April 2024, with the first funder counted only if that ETH arrived before the wallet's own first transaction. For any other wallet the page asks Ethplorer's free API live: it lists top-level transactions, so ETH paid out by a contract or an exchange's internal transaction does not show." })
+    + wcard("Bought the same way", "Other wallets whose GME buying looks like this one's.", `<div id="wlook"><p class="sub">Loading buying fingerprints…</p></div>`,
+    { note: "Compares buying fingerprints, not links: total GME bought and number of DEX buys within 2.5× of this wallet's, the same main way of buying (Uniswap app, a bot, straight from the pool…), and similar shares sold, sent on and received from other wallets (within 15 points). Ranked by how close they are, then by how near in time they started buying. A match says two wallets behaved alike; many unrelated buyers use the Uniswap app the same way." }) + `</div>`;
+  // ---- every transfer ----
+  html += `<div class="grid">` + wcard("Every transfer", `${fN(t.length)} GME transfers, newest first.`, `<div class="ctl" style="margin-bottom:8px"><label class="wchk"><input type="checkbox" id="wdust" ${wDust ? "checked" : ""}> Show transfers under $1 (often address-poisoning spam)</label></div><div id="wtx"></div>`,
+    { wide: true, note: "Every transfer of GME into or out of this address, with its transaction on Etherscan. $ = the exact execution price for DEX trades matched to a pool swap (marked ●), otherwise that day's close. Market cap = the price of that transfer × 420.69B. Sort and filter any column." }) + `</div>`;
+  out.innerHTML = html;
+  const box = out.querySelector("#wpl .pl-box"); wirePl($("wpl"), P);
+  draws.push(() => { if (box.isConnected) behaviourChart(box.querySelector(".pl-chart"), P); });
+  wTx(rec);
+  $("wdust").onchange = (ev2) => { wDust = ev2.target.checked; wTx(rec); };
+  if (!rec.eth) wEthLive(a, tok);
+  wLook(a, rec, tok);
+}
+function wTx(rec) {
+  const rows = rec.t.filter((r) => wDust || r[2] >= 1 || r[3] === "b" || r[3] === "s").slice().reverse();
+  const shown = wAll ? rows : rows.slice(0, 600);
+  $("wtx").innerHTML = `<div class="tw" style="max-height:640px;overflow-y:auto"><table class="q"><thead><tr><th>Time (UTC)</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">At MC</th><th>Counterparty</th><th>Tx</th></tr></thead><tbody>` +
+    shown.map(([ts, g, u, k, cp, tx, li, ex]) => { const [l, c] = WK[k] || [k, "flat"];
+      return `<tr><td class="num">${wtime(ts)}</td><td class="${c}">${l}</td><td class="n">${sgn(g, fG)}</td><td class="n">${fU(u)}${ex ? ' <i class="wex" title="exact execution price">●</i>' : ""}</td><td class="n">${g ? fP(u / Math.abs(g)) : "—"}</td><td>${cpHtml(cp)}</td><td><a class="mono" href="https://etherscan.io/tx/${tx}" target="_blank" rel="noopener">${tx.slice(0, 10)}↗</a></td></tr>`; }).join("") +
+    `</tbody></table></div>` + (rows.length > shown.length ? `<button type="button" class="mini" id="wmore" style="margin-top:8px">Show all ${fN(rows.length)} transfers</button>` : "") +
+    (rec.t.length > rows.length ? `<p class="sub" style="margin-top:6px">${fN(rec.t.length - rows.length)} transfers under $1 hidden.</p>` : "");
+  const m = $("wmore"); if (m) m.onclick = () => { wAll = true; wTx(rec); };
+}
+function wEthStudy(x) {
+  if (!x) return `<p class="sub">Not one of the study wallets: asking Ethplorer…</p>`;
+  const lab = (a) => cpHtml(a);
+  const tb = (list) => list.length ? `<div class="tw"><table><thead><tr><th>Wallet</th><th class="n">ETH</th><th class="n">Txs</th><th>Dates</th></tr></thead><tbody>` +
+    list.map(([a, e, n, f, l]) => `<tr><td>${lab(a)}</td><td class="n">${e.toLocaleString("en-US", { maximumFractionDigits: 3 })}</td><td class="n">${n}</td><td class="num">${f}${l !== f ? " → " + l : ""}</td></tr>`).join("") + `</tbody></table></div>` : `<p class="sub">None.</p>`;
+  const fund = x.fresh === true ? (x.funder ? `First ETH: <b>${x.funder[2]} ETH</b> from ${lab(x.funder[0])} on ${x.funder[1].slice(0, 10)}.` : "Created since April 2024, but its first ETH came some other way (a contract or an exchange's internal transaction), so no first funder is shown.")
+    : x.fresh === false ? "Active before April 2024: its first funder is older than this data." : "";
+  return `<p class="sub">${fund} In total since April 2024: received ${x.inEth.toLocaleString("en-US", { maximumFractionDigits: 3 })} ETH from ${x.inN} wallet${x.inN === 1 ? "" : "s"}, sent ${x.outEth.toLocaleString("en-US", { maximumFractionDigits: 3 })} ETH to ${x.outN}.</p>
+    <span class="eyebrow">Largest ETH senders</span>${tb(x.top_in)}<span class="eyebrow" style="margin-top:8px">Largest ETH recipients</span>${tb(x.top_out)}`;
+}
+async function wEthLive(a, tok) {
+  const el = () => (tok === wTok ? $("weth") : null);
+  let d = null;
+  for (const lim of [100, 50]) {
+    try { const r = await fetch(`https://api.ethplorer.io/getAddressTransactions/${a}?apiKey=freekey&limit=${lim}`); const j = await r.json(); if (Array.isArray(j)) { d = j; break; } } catch (e) {}
+  }
+  const x = el(); if (!x) return;
+  if (!d) { x.innerHTML = `<p class="sub">Ethplorer didn't answer (its free API is rate-limited). <a href="https://etherscan.io/address/${a}#internaltx" target="_blank" rel="noopener">Open the ETH history on Etherscan ↗</a></p>`; return; }
+  const ins = d.filter((t) => (t.to || "").toLowerCase() === a && t.value > 0 && t.success !== false).sort((p, q) => p.timestamp - q.timestamp);
+  const outs = d.filter((t) => (t.from || "").toLowerCase() === a && t.value > 0);
+  const agg = (list, key) => { const m = new Map(); for (const t of list) { const k2 = (t[key] || "").toLowerCase(); const y = m.get(k2) || [k2, 0, 0]; y[1] += t.value; y[2]++; m.set(k2, y); } return [...m.values()].sort((p, q) => q[1] - p[1]).slice(0, 6); };
+  const tb = (list) => list.length ? `<div class="tw"><table><thead><tr><th>Wallet</th><th class="n">ETH</th><th class="n">Txs</th></tr></thead><tbody>` + list.map(([w, e, n]) => `<tr><td>${cpHtml(w)}</td><td class="n">${e.toLocaleString("en-US", { maximumFractionDigits: 3 })}</td><td class="n">${n}</td></tr>`).join("") + `</tbody></table></div>` : `<p class="sub">None in this list.</p>`;
+  const full = d.length < 50, first = ins[0];
+  x.innerHTML = `<p class="sub">${first ? `${full ? "First" : "Oldest in its latest " + d.length + " transactions"}: <b>${(+first.value).toLocaleString("en-US", { maximumFractionDigits: 4 })} ETH</b> from ${cpHtml(first.from.toLowerCase())} on ${fdt(new Date(first.timestamp * 1000))}.` : "No incoming top-level ETH in its latest transactions (it may have been funded by a contract or an exchange's internal transaction)."} Live from Ethplorer, ${d.length} top-level transaction${d.length === 1 ? "" : "s"}${full ? " (its whole history)" : ""}.</p>
+    <span class="eyebrow">Largest ETH senders</span>${tb(agg(ins, "from"))}<span class="eyebrow" style="margin-top:8px">Largest ETH recipients</span>${tb(agg(outs, "to"))}`;
+}
+async function wLook(a, rec, tok) {
+  let fp;
+  try { fp = await wLoad("fp"); } catch (e) { if (tok === wTok) $("wlook").innerHTML = unavailable("Buying fingerprints aren't available on this deploy."); return; }
+  if (tok !== wTok) return;
+  const me = fp.find((r) => r[0] === a), el = $("wlook");
+  if (!me) { el.innerHTML = `<p class="sub">This wallet never bought GME on the DEX, so there is no buying pattern to compare.</p>`; return; }
+  const [, fb, lb, nb, gb, ub, via, so, se, oi] = me, myEnt = rec.ent && rec.ent[0];
+  const span = (r) => Math.max(1, (r[2] - r[1]) / 86400);
+  const lr = (x, y) => Math.abs(Math.log(Math.max(x, 1e-9) / Math.max(y, 1e-9)));
+  const L25 = Math.log(2.5);
+  const hits = [];
+  for (const r of fp) {
+    if (r[0] === a || r[6] !== via) continue;
+    const dG = lr(r[4], gb), dN = lr(r[3], nb);
+    if (dG > L25 || dN > L25) continue;
+    if (Math.abs(r[7] - so) > 0.15 || Math.abs(r[8] - se) > 0.15 || Math.abs(r[9] - oi) > 0.15) continue;
+    const dS = lr(span(r), span(me)), dT = Math.abs(r[1] - fb) / 86400;
+    hits.push({ r, score: dG + dN + 0.5 * dS + (Math.abs(r[7] - so) + Math.abs(r[8] - se) + Math.abs(r[9] - oi)) * 2 + dT / 180, dT: (r[1] - fb) / 86400 });
+  }
+  hits.sort((p, q) => p.score - q.score);
+  const VIA = WI.meta.via || [];
+  const head = `<p class="sub">This wallet: ${fN(nb)} DEX buy${nb === 1 ? "" : "s"} of ${fG(gb)} GME (${fU(ub)}) from ${fday(new Date(fb * 1000))}${lb - fb > 86400 ? " to " + fday(new Date(lb * 1000)) : ""}, ${VIA[via] === "Straight from the pool" ? "mostly straight from the pool" : "mostly via " + esc(VIA[via] || "?")}; sold ${fPct(100 * so, 0)}, sent on ${fPct(100 * se, 0)}, ${fPct(100 * oi, 0)} of its GME came from other wallets. <b>${fN(hits.length)}</b> of ${fN(fp.length)} buying wallets match.</p>`;
+  if (!hits.length) { el.innerHTML = head; return; }
+  el.innerHTML = head + `<div class="tw"><table class="q"><thead><tr><th>Wallet</th><th>First buy</th><th class="n">Days apart</th><th class="n">Buys</th><th class="n">GME bought</th><th class="n">Spent</th><th class="n">Sold</th><th class="n">Holds</th></tr></thead><tbody>` +
+    hits.slice(0, 25).map(({ r, dT }) => { const x = entOf(r[0]), same = x && myEnt && x.id === myEnt;
+      return `<tr><td>${wLink(r[0])}${x ? ` <span class="tag hd"${same ? ' title="same tracked group as this wallet"' : ""}>${nm(x.name)}${same ? " ✓" : ""}</span>` : ""}</td><td class="num">${fday(new Date(r[1] * 1000))}</td><td class="n">${sgn(Math.round(dT), fN)}</td><td class="n">${fN(r[3])}</td><td class="n">${fG(r[4])}</td><td class="n">${fU(r[5])}</td><td class="n">${fPct(100 * r[7], 0)}</td><td class="n">${fG(r[10])}</td></tr>`; }).join("") +
+    `</tbody></table></div>` + (hits.length > 25 ? `<p class="sub" style="margin-top:6px">The 25 closest of ${fN(hits.length)}.</p>` : "");
+}
+
 // ---------- wallet drawer ----------
 let WALLETS = null;
 const KIND = { "dex-buy": ["▲ Bought on DEX", "up"], "dex-sell": ["▼ Sold on DEX", "down"], "cex-in": ["◆ From exchange", "up"], "cex-out": ["▼ To exchange", "down"], "lp-add": ["+ Added liquidity", "flat"],
@@ -2860,12 +3093,12 @@ const KIND = { "dex-buy": ["▲ Bought on DEX", "up"], "dex-sell": ["▼ Sold on
 async function openWallet(a) {
   a = a.toLowerCase();
   $("scrim").classList.add("on"); $("drawer").classList.add("open");
-  $("dh").innerHTML = `<span class="mono" style="font-weight:500">${short(a)}</span><button class="mini" type="button" data-copy="${a}">Copy</button><a class="mini" href="${ETH(a)}" target="_blank" rel="noopener">Etherscan ↗</a><a class="mini" href="https://app.zerion.io/${a}/overview" target="_blank" rel="noopener">Zerion ↗</a><a class="mini" href="#visualizer/${a}">Visualize →</a><button class="x" type="button" aria-label="Close">×</button>`;
+  $("dh").innerHTML = `<span class="mono" style="font-weight:500">${short(a)}</span><button class="mini" type="button" data-copy="${a}">Copy</button><a class="mini" href="${ETH(a)}" target="_blank" rel="noopener">Etherscan ↗</a><a class="mini" href="https://app.zerion.io/${a}/overview" target="_blank" rel="noopener">Zerion ↗</a><a class="mini" href="#visualizer/${a}">Visualize →</a><a class="mini" href="#wallet/${a}">Full analysis →</a><button class="x" type="button" aria-label="Close">×</button>`;
   $("dh").querySelector(".x").onclick = closeWallet;
   $("db").innerHTML = `<p class="sub">Loading…</p>`;
   if (!WALLETS) { try { WALLETS = await (await fetch("/wallets.json", { cache: "no-store" })).json(); } catch (e) { WALLETS = {}; } }
   const w = WALLETS[a];
-  if (!w) { $("db").innerHTML = unavailable("This wallet isn't on the watchlist, so the terminal keeps no history for it. Open it on Etherscan for the raw transfers.") + `<p class="mono" style="word-break:break-all;font-size:12px;color:var(--muted)">${a}</p>`; return; }
+  if (!w) { closeWallet(); location.hash = "#wallet/" + a; return; }   // not watched: the Wallet page has every address
   const ent = S.E && S.E.entities.find((x) => x.members.includes(a));
   if (ent) $("dh").querySelector(".x").insertAdjacentHTML("beforebegin", `<button class="mini" type="button" data-pnl="${ent.id}">${nm(ent.name)}&nbsp;· P&amp;L →</button>`);
   const P = { track: w.pnl || [], marks: w.marks || [], missing: !w.pnl }, now = plNow(P);

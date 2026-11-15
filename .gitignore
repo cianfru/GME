@@ -25,3 +25,5 @@ data/alerts/notify.md
 data/swaps.csv
 data/delta_swaps.csv
 data/trade_px.csv
+data/wallet-index.jsonl.gz
+data/wallet-index.jsonl.gz.tmp

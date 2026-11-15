@@ -2,6 +2,7 @@
 // site.json, a compact summary of data/ holding only what the dashboard shows. Run: node scripts/build-site.mjs
 import { readFileSync, writeFileSync, mkdirSync, rmSync, copyFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -112,6 +113,38 @@ if (existsSync(join(D, "pnl.json"))) copyFileSync(join(D, "pnl.json"), join(OUT,
 // Per-wallet histories: a separate file, fetched only when a wallet is opened.
 if (existsSync(join(D, "wallets.json")))
   writeFileSync(join(OUT, "wallets.json"), relabel(readFileSync(join(D, "wallets.json"), "utf8")));
+await walletIndex();
+
+// The Wallet page's index (wallet_index.py → wallet-index.jsonl.gz, ~24 MB): every address's full GME history, split
+// into dist/w/<3 hex chars>.json shards plus w/_meta.json, w/_labels.json and w/_fp.json, so a lookup fetches ~10 KB.
+// It is not in git: the workflow uploads it to the gme-archive release before the data commit, so the deploy that
+// commit triggers downloads the matching index. A local data/wallet-index.jsonl.gz (CI, or a local build) wins.
+// No index (first deploy, GitHub down): the build still succeeds and the Wallet page says the index is unavailable.
+async function walletIndex() {
+  const local = join(D, "wallet-index.jsonl.gz");
+  let buf = null, src = "";
+  if (existsSync(local)) { buf = readFileSync(local); src = "local file"; }
+  else {
+    // `gh release upload --clobber` deletes the old asset before the new one lands, so a build that starts in those
+    // seconds sees a 404: retry a few times before giving up.
+    for (let i = 1; i <= 4 && !buf; i++) {
+      try {
+        const r = await fetch("https://github.com/cianfru/GME/releases/download/gme-archive/wallet-index.jsonl.gz", { signal: AbortSignal.timeout(120000) });
+        if (r.ok) { buf = Buffer.from(await r.arrayBuffer()); src = "release asset"; } else console.warn(`wallet index: download HTTP ${r.status} (attempt ${i})`);
+      } catch (e) { console.warn(`wallet index: download failed (attempt ${i}): ${e.message}`); }
+      if (!buf && i < 4) await new Promise((res) => setTimeout(res, 10000 * i));
+    }
+  }
+  if (!buf) { console.warn("wallet index: none; the Wallet page will say it is unavailable"); return; }
+  const dir = join(OUT, "w"); mkdirSync(dir, { recursive: true });
+  let n = 0;
+  for (const line of gunzipSync(buf).toString("utf8").split("\n")) {
+    const m = /^\{"k":"([0-9a-f]{3}|_[a-z]+)","d":/.exec(line);
+    if (!m) continue;
+    writeFileSync(join(dir, m[1] + ".json"), line.slice(m[0].length, -1)); n++;
+  }
+  console.log(`wallet index: ${n} files in dist/w/ (${src}, ${(buf.length / 1e6).toFixed(1)} MB)`);
+}
 
 // The study was written as a page fragment (no doctype); give it a full document shell and a way back.
 const study = readFileSync(join(ROOT, "report/gme-study.html"), "utf8")

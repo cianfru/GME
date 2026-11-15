@@ -28,41 +28,11 @@ LEDGER_K = 12                                                     # largest tran
 T = load(); pa = prices(); PX = exact_prices(T, pa); KEYS = load_keys()
 EX = json.load(open(os.path.join(D, "exclude.json"))); CEX = {a for a, v in EX.items() if v["kind"] == "cex"}; infra = set(EX)
 AT = json.load(open(os.path.join(D, "addr-types.json"))) if os.path.exists(os.path.join(D, "addr-types.json")) else {}
-LPS = {"0xc36442b4a4522e871399cd717abdd847ab11fe88"}                # Uniswap V3 positions (liquidity, not trades)
 REG = json.load(open(os.path.join(D, "entities.json"))) if os.path.exists(os.path.join(D, "entities.json")) else {"entities": []}
 
-outs = collections.defaultdict(lambda: collections.defaultdict(float))
-for s, r, ts, v, b in T: outs[s][r] += v
-def pays_into(a):
-    o = outs.get(a)
-    if not o or a in infra: return None
-    tot = sum(o.values()); cx = {k: x for k, x in o.items() if k in CEX}
-    if tot > 0 and sum(cx.values()) / tot >= 0.95: return max(cx, key=cx.get)
-    return None
-deposit = {a: x for a in outs if (x := pays_into(a))}
-
-ROUTERS = {"0x66a9893cc07d91d95644aedd05d03f95e1dba8af": "Uniswap app", "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad": "Uniswap app",
-           "0xef1c6e67703c7bd7107eed8303fbe6ec2554bf6b": "Uniswap app", "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": "Uniswap V2 router",
-           "0xe592427a0aece92de3edee1f18e0157c05861564": "Uniswap V3 router", "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45": "Uniswap V3 router",
-           "0x1111111254eeb25477b68fb85ed929f73a960582": "1inch", "0x111111125421ca6dc452d289314280a0f8842a65": "1inch",
-           "0x9008d19f58aabd9ed0d60971565aa8510560ab41": "CoW Protocol", "0x000000000004444c5dc75cb358380d2e3de08a90": "Uniswap v4"}
-NAMES = {"MainnetSettler": "0x / Matcha", "ZeroExProxy": "0x / Matcha", "TransitSwapRouterV5": "TransitSwap", "DexRouter": "OKX DEX", "RainbowRouter": "Rainbow wallet"}
-def node_of(a):
-    """(key, kind, label): the node an address is drawn as."""
-    if a == NULL: return "v:mint", "mint", "Mint"
-    if a == DEAD: return "v:burn", "burn", "Burn address"
-    if a == TOKEN: return "v:token", "token", "GME token contract"
-    if a == PAIR: return "v:pair", "dex", "Uniswap V2 · GME/WETH"
-    if a == V3POOL: return "v:v3", "dex", "Uniswap V3 · GME/WETH"
-    if a in LPS: return "v:lp", "lp", "Uniswap V3 positions"
-    if a in CEX: n = EX[a].get("name") or "Exchange"; return "x:" + a, "cex", n
-    if a in ROUTERS: n = ROUTERS[a]; return "v:" + n, "dex", n
-    if a in infra:
-        n = EX[a].get("name", "")
-        if n in NAMES: return "v:" + NAMES[n], "dex", NAMES[n]
-        return "v:routers", "dex", "Other routers & bots"
-    if a in deposit: return a, "deposit", (EX.get(deposit[a], {}).get("name") or "Exchange") + " deposit"
-    return a, "contract" if AT.get(a) == "contract" else "wallet", ""
+from venues import deposits, node
+deposit = deposits(T, EX)
+node_of = lambda a: node(a, EX, deposit, AT)
 
 day0 = datetime.date.fromisoformat(T[0][2][:10])
 month = lambda ts: (int(ts[:4]) - day0.year) * 12 + int(ts[5:7]) - day0.month

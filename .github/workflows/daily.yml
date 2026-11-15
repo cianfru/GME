@@ -193,6 +193,20 @@ jobs:
         continue-on-error: true
         run: python3 scripts/terminal.py
 
+      # The Wallet page's index: every address's full GME history (~24 MB, not in git). Uploaded to the release BEFORE the
+      # data commit, because that commit triggers the Vercel deploy whose build downloads it. A failed upload keeps the
+      # previous index (the page shows its as-of time) and never blocks the data commit.
+      - name: Wallet index
+        continue-on-error: true
+        run: |
+          python3 scripts/wallet_index.py
+          for i in 1 2 3; do
+            gh release upload gme-archive data/wallet-index.jsonl.gz --clobber && exit 0
+            echo "upload attempt $i failed; retrying"; sleep $((15 * i))
+          done
+          echo "::warning::wallet index upload failed 3 times; the site keeps the previous index"
+          exit 1
+
       # Data first: the site only needs data/, so a GitHub hiccup on the archive upload can't block it.
       - name: Commit data
         run: |
