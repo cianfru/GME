@@ -1,34 +1,20 @@
 {
  "summary": {
-  "asOf": "2026-11-15T19:37:47Z",
-  "since": "2026-11-15T14:11:23Z",
-  "price": 6.208412934573705e-06,
-  "mcap": 2611817.2374458117,
-  "pool": 41588407480.06722,
+  "asOf": "2026-11-15T22:59:23Z",
+  "since": "2026-11-15T19:37:47Z",
+  "price": 7.307725120318378e-06,
+  "mcap": 3074286.8808667385,
+  "pool": 41609786714.02925,
   "watchedGroups": 21,
-  "alerts": 3,
+  "alerts": 1,
   "high": 0
  },
  "alerts": [
   {
-   "kind": "flow",
-   "severity": "info",
-   "text": "Accumulator 4341: bought on DEX 0.27B GME (~$1,703, 0.07% of supply)",
-   "group": "Accumulator 4341",
-   "what": "bought on DEX",
-   "tokens": 274256537.1057169
-  },
-  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME +0.02B since last run (net selling into the pool); pool now 41.59B, market cap $2.61M",
-   "delta": 18990717.554771423
-  },
-  {
-   "kind": "balance",
-   "severity": "info",
-   "text": "Accumulator 4341: holdings +0.27B since last run, now 1.04B (0.25%)",
-   "group": "Accumulator 4341"
+   "text": "Pool GME +0.02B since last run (net selling into the pool); pool now 41.61B, market cap $3.07M",
+   "delta": 21379233.962028503
   }
  ]
 }
