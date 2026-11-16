@@ -345,7 +345,15 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 .ec details { flex-basis: 100% } .ec details summary { list-style: none; cursor: pointer; width: fit-content } .ec details summary::-webkit-details-marker { display: none }
 
 /* flow map */
-.bubwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px }
+.bubwrap { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px }
+.cgc { display: block; width: 100% }
+.tie { border-top: 1px solid var(--line); padding: 7px 0 3px; display: flex; flex-direction: column; gap: 5px; font-size: 12px }
+.tiev { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 1px 8px; align-items: baseline } .tiev small { grid-column: 2; font: 400 10.5px var(--mono) } .tiev .ev { margin: 0 } .tiev .addr { white-space: nowrap }
+.vzwal { display: flex; flex-direction: column; gap: 7px; flex: none } .vzrec { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 2px 8px; font-size: 11.5px; padding: 4px 0; border-bottom: 1px solid var(--line) } .vzrec b { font: 500 11px var(--mono); text-align: right } .vzrec .num { font: 400 10.5px var(--mono); color: var(--muted) }
+.vzlist button > b.wrapb { white-space: normal; text-align: right; max-width: 55% } .tieh { font-size: 10px; margin-left: 3px }
+.zer { margin-left: 4px; font: 500 10px var(--mono); color: var(--muted); text-decoration: none } .zer:hover { color: var(--accent) }
+i.sw { display: inline-block; width: 8px; height: 8px; margin-right: .4rem }
+.bubinfo .vzaddr .mono { width: 100%; word-break: break-all; font-size: 11px; color: var(--muted) }
 .bubstage { position: relative; border: 1px solid var(--line); background: var(--glass-2); overflow: hidden }
 .bubtools { position: absolute; top: 8px; right: 8px; display: flex; gap: 0; z-index: 2 }
 .bubtools button { width: 34px; height: 34px; background: var(--glass-pop); border: 1px solid var(--line); margin-left: -1px; cursor: pointer; font: 500 14px var(--mono); color: var(--fg-2) }
@@ -1747,8 +1755,8 @@ function entMonitor() {
 }
 function entMap() {
   card({ title: "Flow map", q: "Where is the GME going, between entities, the DEX and exchanges?", wide: true, key: true,
-    body: `<div id="bubctl"></div><div class="sumline" id="bubsum" style="margin:2px 0"></div><div class="bubwrap"><div class="bubstage"><div class="chart" id="bub"></div><div class="bubtools"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="fit" aria-label="Reset view">⤢</button></div><span class="bubhint">drag bubbles · drag background to pan · ${mobile() ? "pinch" : "ctrl + scroll"} to zoom</span></div><aside class="bubinfo" id="bubinfo"></aside></div><div class="legend" id="bub-l"></div><div id="bubflows"></div>`,
-    note: "Entities view: one bubble per entity (sized by holdings, coloured by its status in the window), arrows are the GME that moved between entities, the DEX, exchanges and wallets outside any entity. Buyers are pulled left toward the DEX, sellers right toward the exchanges. One owner's wallets view: bubbles are the owner's wallets, sized by what they hold now. Fill: green = holdings grew in the window, red = sold on the DEX or deposited to an exchange, amber = moved to wallets outside the group, grey = no net change or moved only between its own wallets. Arrows are direct evidence: the GME that moved in the window. Green from the DEX (bought), red to the DEX or an exchange (sold / deposited), blue from an exchange (withdrawn), dashed grey between the owner's own wallets (inferred same owner), solid grey to or from other wallets. Dragged bubbles stay where you put them; ⤢ resets." });
+    body: `<div id="bubctl"></div><div class="sumline" id="bubsum" style="margin:2px 0"></div><div class="bubwrap"><div class="bubstage"><div class="chart" id="bub"></div><div class="bubtools"><button type="button" data-z="in" aria-label="Zoom in">+</button><button type="button" data-z="out" aria-label="Zoom out">−</button><button type="button" data-z="fit" aria-label="Reset view">⤢</button></div><span class="bubhint">${mobile() ? "tap a ring, arrow or tie · pinch to zoom" : "click a ring, arrow or tie · drag nodes · drag the background to pan · ctrl/⌘ + scroll to zoom"}</span></div><aside class="bubinfo" id="bubinfo"></aside></div><div class="legend" id="bub-l"></div><div id="bubflows"></div>`,
+    note: "Drawn like the Visualizer. Entities view: one ring per group of wallets, sized by what it holds, coloured by its status in the window (green accumulating, red selling or sending to exchanges, amber moving coins to wallets outside, grey holding or dormant); fbb4 has the gold dashed halo. Arrows are the GME that moved in the window between groups, the DEX (hexagon), exchanges (square) and wallets outside any group (dashed circle); width = GME moved, the arrow points to the receiver, and the dollar figure shows on the links of the node in focus. Buyers drift left toward the DEX, sellers right toward the exchanges. Dashed lines between two groups are ties, all time: gold = the wallets behind them are linked by the same evidence the grouping rules use (one wallet got its first GME from, or drained into, a wallet of the other group; a first-ETH or gas top-up between them), grey = weaker evidence (a shared exchange deposit address, a larger ETH payment) or only GME moved between them. They stay two groups because their own rules built them (fbb4, the Coinbase group, the watched groups) or a guard kept them apart; the panel lists the two wallets behind every tie. One owner's wallets view: the owner's wallets, sized by what they hold now, coloured the same way; dashed rings are another monitored owner's wallets, dashed grey links moves between the owner's own wallets. ⌘/Ctrl-click a wallet to open it on Zerion. Dragged nodes stay where you put them; ⤢ resets." });
   draws.push(drawBub);
 }
 function entWatch() {
@@ -2029,112 +2037,256 @@ function ecard({ e, x, st }, wl) {
 }
 
 // ---------- entity-level flow map ----------
-let bubMode = "entities", emWin = 2, emEdge = "all", emSel = null, emQ = "";
+// ---------- flow map: drawn the way the Visualizer draws ----------
+// cgraph() renders a node/link model on a canvas with the Visualizer's look: shaped nodes with a glyph (ring = group,
+// hexagon = DEX, square = exchange, dashed circle = wallets outside, diamond = burn/token), curved links whose width is
+// the GME moved, an arrow at the middle pointing to the receiver, the dollar figure on the links of the node in focus,
+// a dot grid, and everything not connected to the focused node dimmed. Inside a card it stays a page citizen: one
+// finger and the wheel scroll the page, ctrl/⌘ + wheel or a pinch zooms, drag the background to pan, drag a node to
+// move it (the position is kept), click to open it in the side panel. Both flow-map modes build a model for it.
+let bubMode = "entities", emWin = 2, emEdge = "all", emSel = null, emQ = "", emTies = true, emTiesLoading = false;
+let CG = null;
+const emPinned = new Map();
+let bubPinned = new Map();   // owner|window → node id → [x, y] the user dragged it to
+const modeSeg = () => segBtns([["Entities", "entities"], ["One owner's wallets", "wallets"]], bubMode, "bm");
+function drawBub() { if (bubMode === "entities") drawEntMap(); else drawWalletMap(); }
+function cgraph(el, M) {
+  el.innerHTML = "";
+  const cv = document.createElement("canvas"); cv.className = "cgc"; cv.style.touchAction = "pan-y"; el.appendChild(cv);
+  const ctx = cv.getContext("2d"); let W = 0, dpr = 1; const H = M.H;
+  const size = () => { dpr = Math.min(2, devicePixelRatio || 1); W = el.clientWidth || 800; cv.style.height = H + "px"; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); };
+  size();
+  const nodes = M.nodes, byId = new Map(nodes.map((n) => [n.id, n]));
+  const edges = M.edges.filter((e) => byId.has(e.s) && byId.has(e.t)).map((e) => Object.assign(e, { source: byId.get(e.s), target: byId.get(e.t) }));
+  const maxW = d3.max(edges.filter((e) => !e.tie), (e) => e.w) || 1;
+  let t = d3.zoomIdentity, hov = null, hovE = null, sel = M.sel != null ? byId.get(M.sel) || null : null, selE = null;
+  const toW = (px, py) => [(px - t.x) / t.k, (py - t.y) / t.k];
+  const ptOf = (ev) => { const b = cv.getBoundingClientRect(); return [ev.clientX - b.left, ev.clientY - b.top]; };
+  const nodeAt = (px, py) => { const [x, y] = toW(px, py); let best = null, bd = Infinity; for (const d of nodes) { const dd = Math.hypot(d.x - x, d.y - y); if (dd < d.r + 5 / t.k && dd < bd) { bd = dd; best = d; } } return best; };
+  const ctrl = (s, g) => { const dx = g.x - s.x, dy = g.y - s.y; return [(s.x + g.x) / 2 - dy * 0.14, (s.y + g.y) / 2 + dx * 0.14]; };
+  const qpt = (s, c, g, u) => [(1 - u) * (1 - u) * s[0] + 2 * (1 - u) * u * c[0] + u * u * g[0], (1 - u) * (1 - u) * s[1] + 2 * (1 - u) * u * c[1] + u * u * g[1]];
+  const edgeAt = (px, py) => { const [x, y] = toW(px, py), tol = 6 / t.k; let best = null, bd = tol;
+    for (const e of edges) { const s = [e.source.x, e.source.y], g = [e.target.x, e.target.y], c = ctrl(e.source, e.target); let p0 = s;
+      for (let q = 1; q <= 14; q++) { const p1 = qpt(s, c, g, q / 14), vx = p1[0] - p0[0], vy = p1[1] - p0[1], L2 = vx * vx + vy * vy || 1, u = Math.max(0, Math.min(1, ((x - p0[0]) * vx + (y - p0[1]) * vy) / L2));
+        const dd = Math.hypot(x - p0[0] - u * vx, y - p0[1] - u * vy); if (dd < bd) { bd = dd; best = e; } p0 = p1; } }
+    return best; };
+  const mono = () => C("--mono") || "monospace", sans = () => C("--sans") || "sans-serif";
+  function shape(n, x, y, R) {
+    ctx.beginPath();
+    if (n.shape === "square") ctx.rect(x - R, y - R, 2 * R, 2 * R);
+    else if (n.shape === "hex") { for (let q = 0; q < 6; q++) { const a = Math.PI / 6 + (q * Math.PI) / 3; ctx[q ? "lineTo" : "moveTo"](x + R * 1.08 * Math.cos(a), y + R * 1.08 * Math.sin(a)); } ctx.closePath(); }
+    else if (n.shape === "diamond") { ctx.moveTo(x, y - R * 1.15); ctx.lineTo(x + R * 1.15, y); ctx.lineTo(x, y + R * 1.15); ctx.lineTo(x - R * 1.15, y); ctx.closePath(); }
+    else ctx.arc(x, y, R, 0, Math.PI * 2);
+  }
+  function draw() {
+    const k = t.k, focus = hov || sel, fid = focus && focus.id;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    if (k > 0.3) { const sp = 40 * k, ox = ((t.x % sp) + sp) % sp, oy = ((t.y % sp) + sp) % sp; ctx.fillStyle = C("--grid");
+      for (let x = ox; x < W; x += sp) for (let y = oy; y < H; y += sp) ctx.fillRect(x - 0.75, y - 0.75, 1.5, 1.5); }
+    const S = (x, y) => [x * k + t.x, y * k + t.y];
+    const near = fid ? new Set(edges.filter((e) => e.s === fid || e.t === fid).flatMap((e) => [e.s, e.t])) : null;
+    for (const e of edges) {
+      const on = (!fid && !selE) || e.s === fid || e.t === fid || e === selE, hot = hovE === e || selE === e;
+      const p0 = S(e.source.x, e.source.y), p1 = S(e.target.x, e.target.y), c0 = ctrl(e.source, e.target), c = S(c0[0], c0[1]);
+      const w = (e.tie ? 1.7 : Math.min(9, 1 + 7 * Math.sqrt(e.w / maxW))) * Math.min(1.4, Math.max(0.6, k));
+      ctx.globalAlpha = hot ? 1 : on ? (fid || selE ? 0.95 : e.tie ? 0.85 : 0.5) : 0.07; ctx.strokeStyle = e.color; ctx.lineWidth = hot ? w + 1.5 : w;
+      ctx.setLineDash(e.dash ? e.dash.map((v) => v * Math.max(0.7, Math.min(1.3, k))) : []);
+      ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(c[0], c[1], p1[0], p1[1]); ctx.stroke(); ctx.setLineDash([]);
+      const m = qpt(p0, c, p1, 0.5);
+      if (!e.tie) { const m2 = qpt(p0, c, p1, 0.53), ang = Math.atan2(m2[1] - m[1], m2[0] - m[0]), ah = 5 + w * 0.9;
+        ctx.fillStyle = e.color; ctx.beginPath(); ctx.moveTo(m[0] + Math.cos(ang) * ah, m[1] + Math.sin(ang) * ah);
+        ctx.lineTo(m[0] + Math.cos(ang + 2.5) * ah, m[1] + Math.sin(ang + 2.5) * ah); ctx.lineTo(m[0] + Math.cos(ang - 2.5) * ah, m[1] + Math.sin(ang - 2.5) * ah); ctx.closePath(); ctx.fill(); }
+      if ((hot || (fid && on)) && e.label && k > 0.45) { ctx.globalAlpha = 1; ctx.font = `500 10.5px ${mono()}`; const tw = ctx.measureText(e.label).width;
+        ctx.fillStyle = C("--th"); ctx.fillRect(m[0] - tw / 2 - 4, m[1] - 18, tw + 8, 14); ctx.fillStyle = e.tie ? e.color : C("--fg"); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(e.label, m[0], m[1] - 11); }
+    }
+    ctx.globalAlpha = 1;
+    const labs = [];
+    for (const n of nodes) {
+      const [x, y] = S(n.x, n.y), R = Math.max(4, n.r * k), dim = (near && !near.has(n.id)) || (selE && n !== selE.source && n !== selE.target && !fid);
+      ctx.globalAlpha = dim ? 0.22 : 1;
+      shape(n, x, y, R); ctx.fillStyle = C("--th"); ctx.fill();
+      if (n.tint) { ctx.globalAlpha = (dim ? 0.22 : 1) * 0.22; ctx.fillStyle = n.color; ctx.fill(); ctx.globalAlpha = dim ? 0.22 : 1; }
+      ctx.strokeStyle = n.color; ctx.lineWidth = n.base ? 2.6 : 1.8; ctx.setLineDash(n.shape === "dashed" ? [3, 2.5] : []); ctx.stroke(); ctx.setLineDash([]);
+      if (n.ring) { ctx.beginPath(); ctx.arc(x, y, R + 3.5, 0, Math.PI * 2); ctx.lineWidth = 1; ctx.stroke(); }
+      if (n.base) { ctx.beginPath(); ctx.arc(x, y, R + (n.ring ? 7.5 : 5), 0, Math.PI * 2); ctx.strokeStyle = C("--accent"); ctx.lineWidth = 1.3; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]); }
+      if (sel === n) { ctx.beginPath(); ctx.arc(x, y, R + (n.ring || n.base ? 11 : 8), 0, Math.PI * 2); ctx.strokeStyle = C("--fg"); ctx.lineWidth = 1.4; ctx.stroke(); }
+      if (n.pinned) { ctx.fillStyle = C("--fg-2"); ctx.beginPath(); ctx.arc(x + R * 0.75, y - R * 0.75, 2.4, 0, 6.29); ctx.fill(); }
+      if (R >= 9 && n.glyph) { ctx.fillStyle = n.base ? C("--accent") : n.color; ctx.font = `600 ${Math.max(8, Math.min(13, R * 0.55))}px ${mono()}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(n.glyph, x, y + 0.5); }
+      if (n.always || k >= (M.labelK || 1.5) || n === focus || (near && near.has(n.id))) labs.push([n, x, y, R, dim]);
+    }
+    // labels last, most important first; one that would overlap a label already drawn waits for a closer zoom
+    const rank = (n) => (n === focus || n === sel ? 0 : n.base || n.cat || n.kind === "c" ? 1 : n.always ? 2 : 3), done = [];
+    labs.sort((p, q) => rank(p[0]) - rank(q[0]) || q[3] - p[3]);
+    for (const [n, x, y, R, dim] of labs) {
+      const max = k >= 1 ? 28 : 20, raw = n.label || "", lb = raw.length > max ? raw.slice(0, max - 1) + "…" : raw, y0 = y + R + (n.ring ? 9 : 6);
+      ctx.font = `500 12px ${sans()}`; ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.font = `400 10.5px ${mono()}`; const ws = n.sub ? ctx.measureText(n.sub).width : 0; ctx.font = `500 12px ${sans()}`;
+      const w = Math.max(ctx.measureText(lb).width, ws) + 6, box = [x - w / 2, y0 - 2, x + w / 2, y0 + (n.sub ? 29 : 15)];
+      if (rank(n) > 1 && done.some((o) => box[0] < o[2] && box[2] > o[0] && box[1] < o[3] && box[3] > o[1])) continue;
+      done.push(box); ctx.globalAlpha = dim ? 0.22 : 1;
+      ctx.strokeStyle = C("--th"); ctx.lineWidth = 3.5; ctx.lineJoin = "round";
+      ctx.strokeText(lb, x, y0); ctx.fillStyle = C("--fg"); ctx.fillText(lb, x, y0);
+      if (n.sub) { ctx.font = `400 10.5px ${mono()}`; ctx.strokeText(n.sub, x, y0 + 15); ctx.fillStyle = C("--muted"); ctx.fillText(n.sub, x, y0 + 15); }
+    }
+    ctx.globalAlpha = 1;
+  }
+  const zoom = d3.zoom().scaleExtent([0.25, 5])
+    .filter((ev) => (ev.type === "wheel" ? ev.ctrlKey || ev.metaKey : ev.type === "touchstart" ? ev.touches.length > 1 : !ev.button && !nodeAt(...ptOf(ev))))
+    .on("zoom", (ev) => { t = ev.transform; draw(); });
+  const zs = d3.select(cv).call(zoom).on("dblclick.zoom", null);
+  let drag = null;
+  cv.addEventListener("pointerdown", (ev) => { if (ev.pointerType === "touch") return; const [px, py] = ptOf(ev), d = nodeAt(px, py); if (!d) return; drag = { d, x0: px, y0: py, moved: false }; cv.setPointerCapture(ev.pointerId); });
+  cv.addEventListener("pointermove", (ev) => {
+    const [px, py] = ptOf(ev);
+    if (drag) { if (Math.hypot(px - drag.x0, py - drag.y0) > 3) drag.moved = true;
+      if (drag.moved) { const [x, y] = toW(px, py); drag.d.x = x; drag.d.y = y; drag.d.pinned = true; draw(); } hideTip(); return; }
+    const d = nodeAt(px, py), e = d ? null : edgeAt(px, py);
+    if (d !== hov || e !== hovE) { hov = d; hovE = e; cv.style.cursor = d ? "pointer" : e ? "help" : "grab"; draw(); }
+    if (d && M.tip) showTip(M.tip(d), ev); else if (e && M.tipE) showTip(M.tipE(e), ev); else hideTip();
+  });
+  // Selection happens on click: d3.zoom swallows the click that ends a pan, and a node drag sets justDragged. On a
+  // phone a tap is a click (nodes are not draggable there, so one finger keeps scrolling the page).
+  let justDragged = false;
+  cv.addEventListener("pointerup", () => { if (!drag) return; const d = drag; drag = null; if (d.moved) { justDragged = true; if (M.onMove) M.onMove(d.d); } });
+  cv.addEventListener("click", (ev) => {
+    if (justDragged) { justDragged = false; return; }
+    const [px, py] = ptOf(ev), d = nodeAt(px, py), e = d ? null : edgeAt(px, py);
+    if (d && (ev.metaKey || ev.ctrlKey) && M.open) { M.open(d); return; }                      // ⌘/Ctrl-click opens it straight away (Zerion for a wallet)
+    if (!d && !e && !sel && !selE) return;
+    sel = d || null; selE = d ? null : e || null; draw(); if (M.onSelect) M.onSelect(sel, selE);
+  });
+  cv.addEventListener("pointerleave", () => { if (!drag) { hov = null; hovE = null; hideTip(); draw(); } });
+  // resizing clears the canvas, so only touch it when the width really changed (the observer also fires once on attach)
+  const ro = new ResizeObserver(() => { if (!el.isConnected) { ro.disconnect(); return; } if (Math.abs((el.clientWidth || 800) - W) > 1) { size(); draw(); } }); ro.observe(el);
+  function fit(animate) {
+    if (!nodes.length) return;
+    const x0 = d3.min(nodes, (d) => d.x - d.r - 10), x1 = d3.max(nodes, (d) => d.x + d.r + 10), y0 = d3.min(nodes, (d) => d.y - d.r - 10), y1 = d3.max(nodes, (d) => d.y + d.r + 34);
+    const k = Math.max(0.3, Math.min(1.25, Math.min((W - 30) / (x1 - x0 || 1), (H - 30) / (y1 - y0 || 1))));
+    const tt = d3.zoomIdentity.translate(W / 2 - k * (x0 + x1) / 2, H / 2 - k * (y0 + y1) / 2).scale(k);
+    (animate ? zs.transition().duration(250) : zs).call(zoom.transform, tt);
+  }
+  fit(false); draw();
+  return { draw, fit, zoomBy: (f) => zs.transition().duration(200).call(zoom.scaleBy, f), select(id) { sel = byId.get(id) || null; selE = null; draw(); if (M.onSelect) M.onSelect(sel, null); },
+    selectEdge(e) { sel = null; selE = e; draw(); if (M.onSelect) M.onSelect(null, e); }, nodes, edges, byId };
+}
+const ZER = (a) => `https://app.zerion.io/${a}/overview`;
+const zerLink = (a, txt = "Zerion ↗") => `<a class="mini" href="${ZER(a)}" target="_blank" rel="noopener">${txt}</a>`;
+// The side panel of the flow map uses the Visualizer's panel parts (vzph, vzkv, vzact, vzlist).
+const cgKv = (kv) => `<dl class="vzkv">${kv.map(([k, v, c]) => `<div><dt>${k}</dt><dd${c ? ` class="${c}"` : ""}>${v}</dd></div>`).join("")}</dl>`;
+const TIEK = { seed: ["first GME", "the first GME this wallet ever received came from the other", 1], drain: ["drain", "sent at least 90% of its balance to the other", 1], ethseed: ["first ETH", "sent the other its very first ETH", 1],
+  gas: ["gas top-up", "topped the other up with ≤0.05 ETH for gas, no GME back", 1], deposit: ["shared deposit", "both paid into the same exchange deposit address (inferred: one exchange account)", 0],
+  eth: ["ETH payment", "sent the other more than 0.05 ETH (could be a payment)", 0], paid: ["paid purchase", "signed a swap that delivered GME to the other (usually a trading bot)", 0], funder: ["shared funder", "both got their first ETH from the same private wallet", 0] };
+const tieStrong = (t) => t.ev.some((x) => (TIEK[x[0]] || [])[2]);
+function tieSummary(t) { const c = {}; t.ev.forEach((x) => { c[x[0]] = (c[x[0]] || 0) + 1; }); const parts = Object.entries(c).map(([k, n]) => `${n} ${(TIEK[k] || [k])[0]}${n > 1 && !/s$/.test((TIEK[k] || [k])[0]) ? "s" : ""}`); return parts.join(" · ") || "GME moved"; }
+function tieHtml(t, nameOf) {
+  const wl = (a) => { const x = entOf(a); return `<a class="addr" href="#wallet/${a}">${short(a)}</a>${x ? `<span class="hd tieh" title="${esc(x.name)}">${x.kind === "focus" ? FNAME : esc(x.tag || "")}</span>` : ""}<a class="zer" href="${ZER(a)}" target="_blank" rel="noopener" title="Open on Zerion">↗</a>`; };
+  const ev = t.ev.map((x) => { const [k, a, b, d, amt, u] = x, K = TIEK[k] || [k, "", 0];
+    const what = k === "deposit" ? `paid into <a class="addr" href="#wallet/${amt === undefined ? d : d}">${short(d)}</a>` : k === "seed" || k === "drain" ? `${fB(amt)} GME${u ? " · " + fU(u) : ""}` : amt != null ? `${amt} ETH` : "";
+    return `<div class="tiev"><span class="ev${K[2] ? "" : " inf"}" data-tip="${esc(K[1])}">${K[0]}</span><span>${wl(a)} → ${wl(b)}</span><small class="flat">${k === "deposit" ? "" : esc(d || "")} ${what}</small></div>`; }).join("");
+  const mv = Object.entries(t.gme || {}).map(([k, g]) => { const [x, y] = k.split(">"); return `<div class="tiev"><span class="ev">GME moved</span><span>${nm(nameOf(x))} → ${nm(nameOf(y))}</span><small class="flat">${fB(g[0])} GME · ${fU(g[1])} · ${g[2]} transfer${g[2] === 1 ? "" : "s"} · ${g[3]}${g[4] !== g[3] ? " → " + g[4] : ""}</small></div>`; }).join("");
+  return ev + mv + (t.n > t.ev.length ? `<p class="sub">…and ${t.n - t.ev.length} more pieces of evidence.</p>` : "");
+}
+
 function drawEntMap() {
   const ctl = $("bubctl"); if (!ctl) return;
   const E = S.E;
-  if (bubSim) { bubSim.stop(); bubSim = null; }
   if (!E || !E.edges) { ctl.innerHTML = modeSeg() + unavailable("The entity map arrives with the next scheduled run."); return; }
-  ctl.innerHTML = `<div class="ctl" style="margin-bottom:8px">${modeSeg()}${segBtns(WIN.map(([l], i) => [l, i]), emWin, "emw")}${segBtns([["All flows", "all"], ["DEX & exchanges", "mkt"], ["Between entities", "ent"]], emEdge, "eme")}<input class="q" id="emq" type="search" placeholder="Find an entity or address" value="${esc(emQ)}" aria-label="Find"></div>`;
-  ctl.onclick = (ev) => { const t = ev.target.closest("[data-bm],[data-emw],[data-eme]"); if (!t) return;
-    if (t.dataset.bm) bubMode = t.dataset.bm; else if (t.dataset.emw != null) emWin = +t.dataset.emw; else emEdge = t.dataset.eme; drawBub(); };
+  ctl.innerHTML = `<div class="ctl" style="margin-bottom:8px">${modeSeg()}${segBtns(WIN.map(([l], i) => [l, i]), emWin, "emw")}${segBtns([["All flows", "all"], ["DEX & exchanges", "mkt"], ["Between entities", "ent"]], emEdge, "eme")}${segBtns([["Ties", "1"], ["No ties", "0"]], emTies ? "1" : "0", "emt")}<input class="q" id="emq" type="search" placeholder="Find an entity or address" value="${esc(emQ)}" aria-label="Find"></div>`;
+  ctl.onclick = (ev) => { const b = ev.target.closest("[data-bm],[data-emw],[data-eme],[data-emt]"); if (!b) return;
+    if (b.dataset.bm) bubMode = b.dataset.bm; else if (b.dataset.emw != null) emWin = +b.dataset.emw; else if (b.dataset.emt != null) emTies = b.dataset.emt === "1"; else emEdge = b.dataset.eme; drawBub(); };
   $("emq").onchange = (ev) => { emQ = ev.target.value; const q = emQ.trim().toLowerCase(); const f = q && E.entities.find((e) => e.name.toLowerCase().includes(q) || e.id.includes(q) || e.members.some((a) => a.includes(q))); emSel = f ? f.id : emSel; drawBub(); };
-  const byId = new Map(E.entities.map((e) => [e.id, e])), wl = WIN[emWin][0];
+  if (emTies && !WI.ties && !emTiesLoading) { emTiesLoading = true; wLoad("ties").catch(() => { WI.ties = []; }).finally(() => { emTiesLoading = false; if ($("bub") && bubMode === "entities") drawBub(); }); }
+  const byId = new Map(E.entities.map((e) => [e.id, e])), wl = WIN[emWin][0], spot = S.E.spot;
   const isCat = (k) => !byId.has(k);
   let L = (E.edges[emWin] || []).map(([s, t, v]) => ({ s, t, v })).filter((l) => !(isCat(l.s) && isCat(l.t)));
   if (emEdge === "mkt") L = L.filter((l) => ["D", "C"].includes(l.s) || ["D", "C"].includes(l.t));
   if (emEdge === "ent") L = L.filter((l) => !isCat(l.s) && !isCat(l.t));
-  const ids = new Set(); L.forEach((l) => { ids.add(l.s); ids.add(l.t); });
+  const TIES = emTies ? (WI.ties || []).filter((x) => byId.has(x.a) && byId.has(x.b)) : [];
+  const ids = new Set(); L.forEach((l) => { ids.add(l.s); ids.add(l.t); }); TIES.forEach((x) => { ids.add(x.a); ids.add(x.b); });
   E.entities.slice(0, 14).forEach((e) => ids.add(e.id));
-  if (emSel) ids.add(emSel);
-  const CATN = { D: "DEX", C: "EXCHANGES", O: "OTHER WALLETS", L: "LIQUIDITY", B: "BURN", T: "TOKEN" };
-  const N2 = [...ids].map((k) => { const e = byId.get(k); return e ? { id: k, e, x0: ewin(e, emWin), st: e.status[emWin], kind: "e" } : { id: k, kind: "c", label: CATN[k] || k }; });
-  const nodes = new Map(N2.map((n) => [n.id, n]));
-  const links = L.filter((l) => nodes.has(l.s) && nodes.has(l.t)).map((l) => ({ source: l.s, target: l.t, v: l.v }));
-  const tot = N2.filter((n) => n.kind === "e").reduce((a, n) => { a.b += n.e.bal; a.in += n.x0.inn; a.out += n.x0.out; return a; }, { b: 0, in: 0, out: 0 });
-  $("bubsum").innerHTML = `<span>${N2.filter((n) => n.kind === "e").length} entities on the map · ${fB(tot.b)} GME</span><span class="flat">Last ${wl}</span><span class="up">in ${fBb(tot.in)}</span><span class="mv-move">out ${fBb(tot.out)}</span><span class="flat">left = buying side · right = selling side</span>`;
-  const el = $("bub"); el.innerHTML = "";
-  const mob = mobile(), W = el.clientWidth || 800, H = mob ? 480 : 640;
-  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H).style("touch-action", "pan-y");
-  const vp = svg.append("g");
-  const zoom = d3.zoom().scaleExtent([0.3, 6]).filter((ev) => (ev.type === "wheel" ? ev.ctrlKey || ev.metaKey : ev.type === "touchstart" ? ev.touches.length > 1 : !ev.button)).on("zoom", (ev) => vp.attr("transform", ev.transform));
-  svg.call(zoom).on("dblclick.zoom", null);
-  document.querySelectorAll("[data-z]").forEach((b) => (b.onclick = () => { const z = b.dataset.z; if (z === "fit") { emPinned.clear(); drawBub(); } else svg.transition().duration(200).call(zoom.scaleBy, z === "in" ? 1.4 : 1 / 1.4); }));
-  const maxB = d3.max(N2, (n) => (n.e ? n.e.bal : 0)) || 1, r = d3.scaleSqrt([0, maxB], [mob ? 5 : 6, mob ? 36 : 54]);
-  const R = (n) => (n.kind === "c" ? 20 : r(n.e.bal));
-  const pin = { D: [0.06, 0.45], C: [0.94, 0.45], O: [0.5, 0.95], L: [0.08, 0.92], B: [0.92, 0.92], T: [0.5, 0.05] };
-  const side = (n) => (n.kind !== "e" ? 0.5 : n.st === "accumulating" ? 0.34 : n.st === "selling" || n.st === "distributing" ? 0.66 : n.st === "moving" ? 0.6 : 0.5);
-  N2.forEach((n) => { if (n.kind === "c" && pin[n.id]) { n.fx = pin[n.id][0] * W; n.fy = pin[n.id][1] * H; } const s = emPinned.get(n.id); if (s) { n.x = n.fx = s[0]; n.y = n.fy = s[1]; } });
-  const sim = d3.forceSimulation(N2).force("link", d3.forceLink(links).id((d) => d.id).distance(150).strength(0.04))
-    .force("charge", d3.forceManyBody().strength(-90)).force("collide", d3.forceCollide((d) => R(d) + 8))
-    .force("x", d3.forceX((d) => side(d) * W).strength(0.12)).force("y", d3.forceY(H / 2).strength(0.06)).stop();
-  for (let i = 0; i < 360; i++) sim.tick();
-  N2.forEach((d) => { if (d.fx == null) { const rr = R(d) + 2; d.x = Math.max(rr, Math.min(W - rr, d.x)); d.y = Math.max(rr, Math.min(H - rr, d.y)); } });
-  const colN = (n) => (n.kind === "c" ? (n.id === "D" ? C("--s7") : n.id === "C" ? C("--s4") : C("--neutral")) : C((STN[n.st] || STN.dormant)[2]));
-  const edgeC = (l) => { const s = l.source.id, t = l.target.id;
+  if (emSel && byId.has(emSel)) ids.add(emSel);
+  const CATN = { D: ["DEX", "hex", "--s7", "DEX"], C: ["Exchanges", "square", "--s4", "CEX"], O: ["Outside wallets", "dashed", "--fg-2", "OUT"], L: ["Liquidity", "hex", "--s7", "LP"], B: ["Burn", "diamond", "--neutral", "✕"], T: ["Token contract", "diamond", "--neutral", "GME"] };
+  const ents = [...ids].filter((k) => byId.has(k)).map((k) => byId.get(k)), maxB = d3.max(ents, (e) => e.bal) || 1;
+  const top8 = new Set(ents.slice().sort((a, b) => b.bal - a.bal).slice(0, mobile() ? 5 : 8).map((e) => e.id));
+  const mob = mobile(), el = $("bub"), H = mob ? 520 : 700, W = (el.clientWidth || 800) * 1.45, VH = H * 1.45;   // laid out wider than the view: fit() zooms out
+  const stc = (st) => C((STN[st] || STN.dormant)[2]);
+  const nodes = [...ids].map((k) => { const e = byId.get(k);
+    if (!e) { const c = CATN[k] || [k, "circle", "--fg-2", k]; return { id: k, cat: k, label: c[0], shape: c[1], color: C(c[2]), glyph: c[3], r: 19, always: true }; }
+    const st = e.status[emWin], x0 = ewin(e, emWin);
+    return { id: k, e, x0, st, label: e.name, sub: `${fB(e.bal)} · ${fPct(e.pct, 2)}`, shape: "circle", ring: true, tint: true, base: e.kind === "focus", color: stc(st),
+      glyph: e.kind === "focus" ? FNAME : e.tag || e.name.slice(-4), r: (mob ? 9 : 11) + (mob ? 20 : 27) * Math.sqrt(e.bal / maxB), always: top8.has(e.id) || e.id === emSel }; });
+  const edgeC = (l) => { const s = l.s, t = l.t;
     if (s === "D") return [C("--up"), "bought on the DEX"]; if (t === "D") return [C("--down"), "sold on the DEX"]; if (t === "C") return [C("--crit"), "sent to an exchange"]; if (s === "C") return [C("--s1"), "withdrawn from an exchange"];
     if (t === "O") return [C("--warn"), "to wallets outside any entity"]; if (s === "O") return [C("--s3"), "from wallets outside any entity"]; return [C("--fg-2"), "between two entities"]; };
-  const wS = d3.scaleSqrt([0, d3.max(links, (l) => l.v) || 1], [0.8, 5]);
-  const defs = svg.append("defs"), marks = new Map();
-  const marker = (c) => { if (marks.has(c)) return marks.get(c); const id = "em" + marks.size; marks.set(c, id);
-    defs.append("marker").attr("id", id).attr("viewBox", "0 -5 10 10").attr("refX", 9).attr("markerUnits", "userSpaceOnUse").attr("markerWidth", 7).attr("markerHeight", 7).attr("orient", "auto").append("path").attr("d", "M0,-4L10,0L0,4").attr("fill", c); return id; };
-  const path = (l) => { const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, d = Math.hypot(dx, dy) || 1, rs = R(l.source) + 2, rt = R(l.target) + 4;
-    const x1 = l.source.x + (dx * rs) / d, y1 = l.source.y + (dy * rs) / d, x2 = l.target.x - (dx * rt) / d, y2 = l.target.y - (dy * rt) / d;
-    return `M${x1},${y1}Q${(x1 + x2) / 2 - dy * 0.1},${(y1 + y2) / 2 + dx * 0.1} ${x2},${y2}`; };
-  const nl = (n) => (n.kind === "c" ? n.label : n.e.name);
-  const lsel = vp.append("g").selectAll("path").data(links).join("path").attr("fill", "none").attr("stroke", (l) => edgeC(l)[0]).attr("stroke-width", (l) => wS(l.v)).attr("stroke-opacity", 0.7)
-    .attr("marker-end", (l) => `url(#${marker(edgeC(l)[0])})`)
-    .on("pointermove", (ev, l) => showTip(`<div class="h">${esc(nl(l.source))} → ${esc(nl(l.target))}</div>` + trow(edgeC(l)[0], edgeC(l)[1], "") + trow("", "GME · " + wl, fBb(l.v)) + trow("", "≈ $ today", fU(l.v * 1e9 * S.E.spot)), ev)).on("pointerleave", hideTip);
-  const gsel = vp.append("g").selectAll("g").data(N2).join("g").attr("class", (d) => (d.kind === "e" ? "nd" : ""));
-  gsel.filter((d) => d.kind === "c").append("rect").attr("x", -20).attr("y", -20).attr("width", 40).attr("height", 40).attr("fill", colN).attr("fill-opacity", 0.9).attr("stroke", C("--line-2"));
-  gsel.filter((d) => d.kind === "c").append("text").attr("class", "plabel").style("fill", C("--fg-2")).attr("text-anchor", "middle").attr("y", (d) => (d.fy > H * 0.6 ? -28 : 36)).text((d) => d.label);
-  gsel.filter((d) => d.kind === "e").append("circle").attr("r", R).attr("fill", colN).attr("fill-opacity", 0.82)
-    .attr("stroke", (d) => (d.e.kind === "focus" ? C("--accent") : d.id === emSel ? C("--fg") : C("--line-2"))).attr("stroke-width", (d) => (d.e.kind === "focus" || d.id === emSel ? 2.5 : 1));
-  gsel.filter((d) => d.kind === "e" && (R(d) > 14 || d.id === emSel)).append("text").attr("class", "lbl").style("font-size", "10.5px").attr("text-anchor", "middle").attr("y", (d) => R(d) + 13)
-    .text((d) => d.e.name.replace("Accumulator ", "acc ").replace("Linked group ", "group ").replace("Holding wallet ", "hold "));
-  gsel.filter((d) => d.kind === "e" && R(d) > 24).append("text").attr("class", "lbl").style("font-family", "var(--mono)").style("fill", "#fff").attr("text-anchor", "middle").attr("y", 4).text((d) => fB(d.e.bal));
-  const pos = () => { gsel.attr("transform", (d) => `translate(${d.x},${d.y})`); lsel.attr("d", path); };
-  pos();
-  const hl = (d) => { if (!d) { lsel.attr("stroke-opacity", 0.7); gsel.attr("opacity", 1); return; }
-    const nb = new Set([d.id]); links.forEach((l) => { if (l.source.id === d.id) nb.add(l.target.id); if (l.target.id === d.id) nb.add(l.source.id); });
-    lsel.attr("stroke-opacity", (l) => (l.source.id === d.id || l.target.id === d.id ? 1 : 0.05)); gsel.attr("opacity", (n) => (nb.has(n.id) ? 1 : 0.15)); };
-  const info = (n) => {
+  const edges = L.map((l) => { const [c, what] = edgeC(l); return { s: l.s, t: l.t, w: l.v, color: c, what, label: fU(l.v * 1e9 * spot), g: l.v }; })
+    .concat(TIES.map((x) => ({ s: x.a, t: x.b, tie: x, w: 0, color: tieStrong(x) ? C("--accent") : C("--fg-2"), dash: tieStrong(x) ? [6, 4] : [2, 4], label: tieSummary(x) })));
+  // layout: categories pinned at the edges, buyers drift toward the DEX on the left, sellers toward exchanges on the right
+  const pin = { D: [0.06, 0.45], C: [0.94, 0.45], O: [0.5, 0.94], L: [0.07, 0.9], B: [0.93, 0.9], T: [0.5, 0.06] };
+  const side = (n) => (!n.e ? 0.5 : n.st === "accumulating" ? 0.36 : n.st === "selling" || n.st === "distributing" ? 0.64 : n.st === "moving" ? 0.58 : 0.5);
+  nodes.forEach((n) => { if (n.cat && pin[n.id]) { n.x = n.fx = pin[n.id][0] * W; n.y = n.fy = pin[n.id][1] * VH; } const s = emPinned.get(n.id); if (s) { n.x = n.fx = s[0]; n.y = n.fy = s[1]; n.pinned = !n.cat; } });
+  const simL = edges.map((e) => ({ source: e.s, target: e.t, tie: !!e.tie }));
+  const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(simL).id((d) => d.id).distance((l) => (l.tie ? 120 : 170)).strength((l) => (l.tie ? 0.25 : 0.035)))
+    .force("charge", d3.forceManyBody().strength(-230)).force("collide", d3.forceCollide((d) => d.r + (d.ring ? 30 : 20)))
+    .force("x", d3.forceX((d) => side(d) * W).strength(0.12)).force("y", d3.forceY(VH / 2).strength(0.07)).stop();
+  for (let i = 0; i < 400; i++) sim.tick();
+  nodes.forEach((n) => { if (n.fx != null && !n.pinned) { delete n.fx; delete n.fy; } });
+  const tot = nodes.filter((n) => n.e).reduce((a, n) => { a.b += n.e.bal; a.in += n.x0.inn; a.out += n.x0.out; return a; }, { b: 0, in: 0, out: 0 });
+  $("bubsum").innerHTML = `<span>${nodes.filter((n) => n.e).length} entities · ${fB(tot.b)} GME</span><span class="flat">Last ${wl}</span><span class="up">in ${fBb(tot.in)}</span><span class="mv-move">out ${fBb(tot.out)}</span>${emTies ? `<span class="hd">${TIES.length} tie${TIES.length === 1 ? "" : "s"} between groups</span>` : ""}<span class="flat">buyers drift left toward the DEX · sellers right toward exchanges</span>`;
+  const nameOf = (id) => (byId.get(id) || {}).name || id;
+  const nl = (n) => (n.e ? n.e.name : n.label);
+  const panel = (n, e) => {
     const box = $("bubinfo"); if (!box) return;
-    if (!n || n.kind === "c") {
-      const fl = n ? links.filter((l) => l.source.id === n.id || l.target.id === n.id).sort((a, b) => b.v - a.v) : [];
-      box.innerHTML = n ? `<h4>${esc(n.label)}</h4><div class="kvl">${fl.slice(0, 24).map((l) => { const o = l.source.id === n.id ? l.target : l.source; return `<div><span>${l.target.id === n.id ? "from" : "to"} ${esc(nl(o))}</span><b>${fBb(l.v)}</b></div>`; }).join("") || "<div><span>No flows</span><b>—</b></div>"}</div>`
-        : `<h4>Entity map · last ${wl}</h4><p class="sub" style="font-size:12.5px">One bubble per entity, sized by what it holds, coloured by what it did: green = accumulating, red = selling or sending to exchanges, amber = moving coins to outside wallets, grey = holding or dormant. Buyers drift left toward the DEX, sellers right toward the exchanges. Click a bubble for its card; open its wallets from there.</p>`;
+    if (e && e.tie) { const x = e.tie;
+      box.innerHTML = `<div class="vzph"><div><span class="eyebrow">Tie between two groups · all time</span><h4>${nm(nameOf(x.a))} ↔ ${nm(nameOf(x.b))}</h4></div></div>
+        <p class="sub">${tieStrong(x) ? "Linked by the same evidence the grouping rules use, but kept as two groups: fbb4, the Coinbase group and the watched groups are built by their own rules, and a guard keeps other groups apart." : "Weaker evidence or GME moved between them: worth a look, not enough to call them one owner."} Each line is the two wallets behind the tie.</p>
+        <div class="tie">${tieHtml(x, nameOf)}</div>
+        <div class="vzact"><button type="button" class="mini" data-cgsel="${x.a}">${nm(nameOf(x.a))}&nbsp;→</button><button type="button" class="mini" data-cgsel="${x.b}">${nm(nameOf(x.b))}&nbsp;→</button></div>`;
       return; }
-    const e = n.e, x = n.x0, oi = ownerIdx(e.id), fl = links.filter((l) => l.source.id === n.id || l.target.id === n.id).sort((a, b) => b.v - a.v);
-    box.innerHTML = `<h4>${nm(e.name)}</h4><span class="ecst ${(STN[n.st] || STN.dormant)[1]}">${(STN[n.st] || STN.dormant)[0]}</span>
-      <div class="kvl">${[["Holds", fB(e.bal) + " · " + fPct(e.pct, 2)], ["Wallets", e.n + (e.attached.length ? ` (+${e.attached.length} joined)` : "")], [wl + " net", sgn(x.net, fBb)], ["In", fBb(x.inn)], ["Out", fBb(x.out)], ["↔ internal", fBb(x.internal)], ["Avg cost, as MC", e.cost?.avg ? fP(e.cost.avg) : "—"], ["Provisional", (e.provisional || []).length]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>
-      <button type="button" class="mini" data-pnl="${e.id}">P&amp;L chart →</button>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Open its wallets →</button>` : ""}
-      <h4 style="margin-top:4px">Flows · ${wl}</h4><div class="kvl">${fl.slice(0, 20).map((l) => { const inn = l.target.id === n.id, o = inn ? l.source : l.target; return `<div><span><i style="display:inline-block;width:8px;height:8px;background:${edgeC(l)[0]};margin-right:.4rem"></i>${inn ? "from" : "to"} ${esc(nl(o))}</span><b>${fBb(l.v)}</b></div>`; }).join("") || "<div><span>No flows in this window</span><b>—</b></div>"}</div>`;
+    if (e) { box.innerHTML = `<div class="vzph"><div><span class="eyebrow">GME moved · last ${wl}</span><h4>${esc(nl(e.source))} → ${esc(nl(e.target))}</h4></div></div>${cgKv([["GME", fBb(e.g)], ["≈ $ today", fU(e.g * 1e9 * spot)], ["What it was", esc(e.what)]])}`; return; }
+    if (!n) {
+      box.innerHTML = `<div class="vzph"><div><span class="eyebrow">Entity map · last ${wl}</span><h4>${nodes.filter((x) => x.e).length} groups on the map</h4></div></div>
+        <p class="sub">One ring per group of wallets, sized by what it holds, coloured by what it did in the window: green accumulating, red selling or sending to exchanges, amber moving coins to wallets outside, grey holding or dormant. Arrows are GME that moved; the gold dashed lines are <b>ties</b>: the wallets behind two groups are linked (first GME, a drain, an ETH seed or gas top-up), grey dashed are weaker ties. Click a ring, an arrow or a tie.</p>
+        ${TIES.length ? `<span class="eyebrow">Ties between groups</span><div class="vzlist">${TIES.slice().sort((a, b) => (tieStrong(b) - tieStrong(a)) || b.n - a.n).map((x) => `<button type="button" data-cgtie="${x.a}|${x.b}"><span>${nm(nameOf(x.a))} ↔ ${nm(nameOf(x.b))}</span><b class="wrapb ${tieStrong(x) ? "hd" : "flat"}">${esc(tieSummary(x))}</b></button>`).join("")}</div>` : ""}`;
+      return; }
+    if (n.cat) { const fl = edges.filter((x) => !x.tie && (x.s === n.id || x.t === n.id)).sort((a, b) => b.w - a.w);
+      box.innerHTML = `<div class="vzph"><div><span class="eyebrow">${esc(n.label)} · last ${wl}</span><h4>${fl.length} flow${fl.length === 1 ? "" : "s"}</h4></div></div><div class="vzlist">${fl.slice(0, 30).map((x) => { const o = x.s === n.id ? x.target : x.source; return `<button type="button" data-cgsel="${esc(o.id)}"><span>${x.t === n.id ? "from" : "to"} ${o.e ? nm(o.e.name) : esc(o.label)}</span><b>${fBb(x.w)}</b></button>`; }).join("") || '<p class="sub">No flows.</p>'}</div>`;
+      return; }
+    const e2 = n.e, x = n.x0, oi = ownerIdx(e2.id), fl = edges.filter((y) => !y.tie && (y.s === n.id || y.t === n.id)).sort((a, b) => b.w - a.w), ties = TIES.filter((y) => y.a === n.id || y.b === n.id), st = STN[n.st] || STN.dormant;
+    box.innerHTML = `<div class="vzph"><div><span class="eyebrow">${esc(KINDE[e2.kind] || e2.kind)} · <span class="${st[1]}">${st[0].replace(/^· /, "")}</span> · ${wl}</span><h4>${nm(e2.name)}</h4></div></div>
+      ${cgKv([["Holds", `${fB(e2.bal)} · ${fPct(e2.pct, 2)}`], ["Wallets", e2.n + (e2.attached.length ? ` <small>+${e2.attached.length} joined</small>` : "")], [wl + " net", sgn(x.net, fBb), cls(x.net)], ["In / out", `${fBb(x.inn)} / ${fBb(x.out)}`], ["Avg cost, as MC", e2.cost?.avg ? fP(e2.cost.avg) : "—"], ["Moved inside", fBb(x.internal)]])}
+      <div class="vzact"><button type="button" class="mini" data-pnl="${e2.id}">P&amp;L chart →</button><a class="mini" href="#visualizer/${e2.id}">Visualize →</a>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Its wallets →</button>` : ""}<a class="mini" href="#wallet/${e2.anchor}">Main wallet →</a></div>
+      ${ties.length ? `<span class="eyebrow">Ties to other groups · all time</span>${ties.map((y) => `<div class="tie"><b>${nm(nameOf(y.a === n.id ? y.b : y.a))}</b> <small class="${tieStrong(y) ? "hd" : "flat"}">${esc(tieSummary(y))}</small>${tieHtml(y, nameOf)}</div>`).join("")}` : `<p class="sub">No ties to another tracked group: none of its wallets got its first GME from, drained into, shared a deposit address with or exchanged ETH with another group's wallets.</p>`}
+      <span class="eyebrow">Flows · last ${wl}</span><div class="vzlist">${fl.slice(0, 24).map((y) => { const inn = y.t === n.id, o = inn ? y.source : y.target; return `<button type="button" data-cgsel="${esc(o.id)}"><span><i class="sw" style="background:${y.color}"></i>${inn ? "from" : "to"} ${o.e ? nm(o.e.name) : esc(o.label)}</span><b>${fBb(y.w)}</b></button>`; }).join("") || '<p class="sub">No GME moved in this window.</p>'}</div>`;
   };
-  gsel.on("pointerenter", (ev, d) => hl(d)).on("pointerleave", () => { hl(emSel ? nodes.get(emSel) : null); hideTip(); })
-    .on("pointermove", (ev, n) => showTip(n.kind === "c" ? `<div class="h">${esc(n.label)}</div>` : `<div class="h">${esc(n.e.name)}</div>` + trow("", "holds", fB(n.e.bal)) + trow("", wl + " net", sgn(n.x0.net, fBb)) + trow("", "status", (STN[n.st] || STN.dormant)[0]) + `<p style="margin-top:.3rem">Click for detail · drag to move</p>`, ev))
-    .on("click", (ev, n) => { if (ev.defaultPrevented) return; emSel = n.id; hl(n); info(n); });
-  gsel.filter((d) => d.kind === "e").call(d3.drag().on("start", (ev, d) => { hideTip(); d.fx = d.x; d.fy = d.y; }).on("drag", (ev, d) => { d.x = d.fx = ev.x; d.y = d.fy = ev.y; pos(); }).on("end", (ev, d) => emPinned.set(d.id, [d.x, d.y])));
-  svg.on("click", (ev) => { if (ev.target === svg.node()) { emSel = null; hl(null); info(null); } });
-  const cur = emSel ? nodes.get(emSel) : null; info(cur); if (cur) hl(cur);
-  bubSim = sim;
-  $("bub-l").innerHTML = Object.values(STN).filter((v, i, a) => a.findIndex((z) => z[2] === v[2]) === i).map(([l, , c]) => `<span><i style="background:${C(c)}"></i>${l.replace(/^[^ ]+ /, "")}</span>`).join("") +
-    `<span><i style="background:${C("--s7")}"></i>DEX</span><span><i style="background:${C("--s4")}"></i>exchanges</span><span><i style="background:${C("--neutral")}"></i>other wallets</span>`;
-  const top = [...links].sort((a, b) => b.v - a.v).slice(0, 25);
-  $("bubflows").innerHTML = top.length ? `<div class="tw" style="margin-top:6px"><table><thead><tr><th>From</th><th>To</th><th class="n">GME</th><th class="n">≈ $ today</th><th>What it was</th></tr></thead><tbody>` +
-    top.map((l) => `<tr><td>${esc(nl(l.source))}</td><td>${esc(nl(l.target))}</td><td class="n">${fBb(l.v)}</td><td class="n">${fU(l.v * 1e9 * S.E.spot)}</td><td style="color:${edgeC(l)[0]}">${edgeC(l)[1]}</td></tr>`).join("") + `</tbody></table></div>`
-    : `<p class="sub">No flows between entities, the DEX and exchanges in the last ${wl}.</p>`;
+  CG = cgraph(el, { nodes, edges, H, sel: emSel,
+    tip: (n) => n.e ? `<div class="h">${esc(n.e.name)}</div>` + trow(n.color, "status " + wl, (STN[n.st] || STN.dormant)[0]) + trow("", "holds", fB(n.e.bal)) + trow("", wl + " net", sgn(n.x0.net, fBb)) + `<p style="margin-top:.3rem">Click for detail · drag to move</p>` : `<div class="h">${esc(n.label)}</div>`,
+    tipE: (e) => e.tie ? `<div class="h">${esc(nameOf(e.s))} ↔ ${esc(nameOf(e.t))}</div>` + trow(e.color, "tie", e.label) + `<p style="margin-top:.3rem">Click to see the wallets behind it</p>` : `<div class="h">${esc(nl(e.source))} → ${esc(nl(e.target))}</div>` + trow(e.color, e.what, "") + trow("", "GME · " + wl, fBb(e.g)) + trow("", "≈ $ today", fU(e.g * 1e9 * spot)),
+    onSelect: (n, e) => { emSel = n ? n.id : null; panel(n, e); },
+    onMove: (n) => emPinned.set(n.id, [n.x, n.y]),
+    open: (n) => { if (n.e) openEntity(n.e.id); } });
+  panel(emSel ? CG.byId.get(emSel) : null, null);
+  $("bubinfo").onclick = (ev) => { const s = ev.target.closest("[data-cgsel]"); if (s) { CG.select(s.dataset.cgsel); return; }
+    const tb = ev.target.closest("[data-cgtie]"); if (tb) { const [a, b] = tb.dataset.cgtie.split("|"); const e = CG.edges.find((x) => x.tie && x.tie.a === a && x.tie.b === b); if (e) CG.selectEdge(e); } };
+  document.querySelectorAll("[data-z]").forEach((b) => (b.onclick = () => { const z = b.dataset.z; if (z === "fit") { emPinned.clear(); drawBub(); } else CG.zoomBy(z === "in" ? 1.35 : 1 / 1.35); }));
+  $("bub-l").innerHTML = cgLegend([["ring", C("--up"), "accumulating"], ["ring", C("--down"), "selling / to exchanges"], ["ring", C("--warn"), "moving out"], ["ring", C("--neutral"), "holding · dormant"], ["base", C("--accent"), "fbb4"],
+    ["hex", C("--s7"), "DEX"], ["square", C("--s4"), "exchanges"], ["dashed", C("--fg-2"), "wallets outside"], ["line", C("--up"), "bought / withdrawn"], ["line", C("--down"), "sold / deposited"], ["tie", C("--accent"), "tie: linked wallets"], ["tie2", C("--fg-2"), "weaker tie"]]);
+  const top = edges.filter((x) => !x.tie).sort((a, b) => b.w - a.w).slice(0, 25);
+  $("bubflows").innerHTML = (top.length ? `<div class="tw" style="margin-top:6px"><table><thead><tr><th>From</th><th>To</th><th class="n">GME</th><th class="n">≈ $ today</th><th>What it was</th></tr></thead><tbody>` +
+    top.map((l) => `<tr><td>${esc(nl(l.source))}</td><td>${esc(nl(l.target))}</td><td class="n">${fBb(l.w)}</td><td class="n">${fU(l.w * 1e9 * spot)}</td><td style="color:${l.color}">${l.what}</td></tr>`).join("") + `</tbody></table></div>`
+    : `<p class="sub">No flows between entities, the DEX and exchanges in the last ${wl}.</p>`);
 }
-const emPinned = new Map();
-const modeSeg = () => segBtns([["Entities", "entities"], ["One owner's wallets", "wallets"]], bubMode, "bm");
-function drawBub() { if (bubMode === "entities") drawEntMap(); else drawWalletMap(); }
+// a legend row drawn with the same marks as the canvas
+function cgLegend(items) {
+  const mk = ([k, c]) => k === "line" ? `<i class="ln" style="background:${c}"></i>` : k === "tie" || k === "tie2" ? `<svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="${c}" stroke-width="1.8" stroke-dasharray="${k === "tie" ? "5 3" : "2 3"}"/></svg>`
+    : `<svg width="16" height="16" viewBox="0 0 16 16">${k === "square" ? `<rect x="3" y="3" width="10" height="10" fill="none" stroke="${c}" stroke-width="1.6"/>` : k === "hex" ? `<polygon points="8,2 13.2,5 13.2,11 8,14 2.8,11 2.8,5" fill="none" stroke="${c}" stroke-width="1.6"/>`
+      : k === "base" ? `<circle cx="8" cy="8" r="4.5" fill="none" stroke="${c}" stroke-width="1.6"/><circle cx="8" cy="8" r="7" fill="none" stroke="${c}" stroke-width="1" stroke-dasharray="1.5 2"/>` : `<circle cx="8" cy="8" r="5" fill="none" stroke="${c}" stroke-width="1.6"${k === "dashed" ? ' stroke-dasharray="2.5 2"' : ""}/>${k === "ring" ? `<circle cx="8" cy="8" r="7.2" fill="none" stroke="${c}" stroke-width=".8"/>` : ""}`}</svg>`;
+  return items.map((it) => `<span>${mk(it)}${esc(it[2])}</span>`).join("");
+}
 
 // ---------- flow map: one owner's wallets ----------
-let bubPinned = new Map();   // owner|window → node id → [x, y] the user dragged it to
 function drawWalletMap() {
   const ctl = $("bubctl"); if (!ctl) return;
   if (!T.mon) { ctl.innerHTML = unavailable("The flow map is not in this build."); return; }
-  if (bubSim) { bubSim.stop(); bubSim = null; }
   const M = T.mon, opts = M.owners.map((o, k) => [k, o]).filter(([k, o]) => o.n >= 2 || k === 0);
   ctl.innerHTML = `<div class="ctl" style="margin-bottom:8px">${modeSeg()}<select class="q" id="bubsel" aria-label="Owner">${opts.map(([k, o]) => `<option value="${k}"${k === bubOwner ? " selected" : ""}>${esc(o.name)} · ${o.n} wallets</option>`).join("")}<option value="-1"${bubOwner === -1 ? " selected" : ""}>All monitored wallets (≥0.1%)</option></select>${segBtns(WIN, bubWin, "bw")}</div>`;
   $("bubsel").onchange = (e) => { bubOwner = +e.target.value; bubSel = null; drawBub(); };
@@ -2155,111 +2307,80 @@ function drawWalletMap() {
     if (k[0] === "x") { const i = +k.slice(1); return extTot.get(i) >= big ? "x" + i : "O"; } return k; };
   const links = new Map();
   agg.forEach((v, k) => { const [a, b] = k.split(">"); const s = nodeKey(a), t = nodeKey(b); if (s === t) return; const kk = s + ">" + t; links.set(kk, (links.get(kk) || 0) + v); });
-  const nodes = new Map();
-  const addNode = (k) => { if (nodes.has(k)) return;
-    if (typeof k === "number") nodes.set(k, { id: k, kind: memSet.has(k) ? "m" : "t", a: M.A[k], bal: M.M[k][0], x0: S2.get(k) });
-    else if (k[0] === "x") { const i = +k.slice(1); nodes.set(k, { id: k, kind: "x", a: M.A[i], bal: 0 }); }
-    else nodes.set(k, { id: k, kind: "c", label: CAT[k] || k }); };
+  const raw = new Map();
+  const addNode = (k) => { if (raw.has(k)) return;
+    if (typeof k === "number") raw.set(k, { id: k, kind: memSet.has(k) ? "m" : "t", a: M.A[k], bal: M.M[k][0], x0: S2.get(k) });
+    else if (k[0] === "x") { const i = +k.slice(1); raw.set(k, { id: k, kind: "x", a: M.A[i], bal: 0 }); }
+    else raw.set(k, { id: k, kind: "c", label: ({ D: "DEX", C: "Exchanges", O: "Outside wallets", L: "Liquidity", B: "Burn", T: "Token contract" })[k] || CAT[k] || k }); };
   members.forEach(addNode);
   links.forEach((v, k) => { const [s, t] = k.split(">"); addNode(/^\d+$/.test(s) ? +s : s); addNode(/^\d+$/.test(t) ? +t : t); });
-  const L = [...links].map(([k, v]) => { const [s, t] = k.split(">"); return { source: /^\d+$/.test(s) ? +s : s, target: /^\d+$/.test(t) ? +t : t, v }; });
+  const Lk = [...links].map(([k, v]) => { const [s, t] = k.split(">"); return { s: /^\d+$/.test(s) ? +s : s, t: /^\d+$/.test(t) ? +t : t, v }; });
   const tot = members.reduce((acc, i) => { const x = S2.get(i); acc.bal += M.M[i][0]; if (x) { acc.net += x.net; acc.dexIn += x.dexIn; acc.dexOut += x.dexOut; acc.cexIn += x.cexIn; acc.cexOut += x.cexOut; acc.int += x.intOut; acc.act += 1; } return acc; },
     { bal: 0, net: 0, dexIn: 0, dexOut: 0, cexIn: 0, cexOut: 0, int: 0, act: 0 });
-  const wl = WIN.find(([, h]) => h === bubWin)[0];
+  const wl = WIN.find(([, h]) => h === bubWin)[0], price = lastVal(col("price")) || 0;
   const ownerName = bubOwner === -1 ? "All monitored wallets" : M.owners[bubOwner]?.name || "Owner";
   $("bubsum").innerHTML = `<span>${members.length} wallets · ${fBb(tot.bal)} GME (${fPct((100 * tot.bal * 1e9) / SUPPLY, 2)})</span><span class="${cls(tot.net)}">${wl} net ${sgn(tot.net, fBb)}</span>` +
     `<span class="up">DEX bought ${fBb(tot.dexIn)}</span><span class="up">from exchanges ${fBb(tot.cexIn)}</span><span class="down">DEX sold ${fBb(tot.dexOut)}</span><span class="down">to exchanges ${fBb(tot.cexOut)}</span>${bubOwner !== -1 ? `<span class="flat">↔ ${fBb(tot.int)} between own wallets</span>` : ""}<span class="flat">${tot.act} active · ${members.length - tot.act} dormant</span>`;
-  const el = $("bub"); el.innerHTML = "";
-  const mob = mobile(), W = el.clientWidth || 800, H = mob ? 460 : 620;
-  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H).style("touch-action", "pan-y");
-  const vp = svg.append("g");
-  const zoom = d3.zoom().scaleExtent([0.3, 6])
-    .filter((ev) => (ev.type === "wheel" ? ev.ctrlKey || ev.metaKey : ev.type === "touchstart" ? ev.touches.length > 1 : !ev.button))
-    .on("zoom", (ev) => vp.attr("transform", ev.transform));
-  svg.call(zoom).on("dblclick.zoom", null);
-  document.querySelectorAll("[data-z]").forEach((b) => (b.onclick = () => { const z = b.dataset.z; if (z === "fit") { bubPinned.delete(pinKey); svg.transition().duration(250).call(zoom.transform, d3.zoomIdentity); drawBub(); } else svg.transition().duration(200).call(zoom.scaleBy, z === "in" ? 1.4 : 1 / 1.4); }));
-  const N2 = [...nodes.values()], maxB = d3.max(N2, (n) => n.bal) || 1;
-  const r = d3.scaleSqrt([0, maxB], [mob ? 5 : 6, mob ? 34 : 48]);
-  const R = (n) => (n.kind === "c" ? 20 : n.kind === "x" ? 6 : r(n.bal));
-  const pin = { D: [0.07, 0.5], C: [0.93, 0.5], O: [0.5, 0.94], L: [0.1, 0.08], B: [0.9, 0.08], T: [0.5, 0.06] };
+  const mob = mobile(), el = $("bub"), H = mob ? 500 : 660, W = (el.clientWidth || 800) * 1.3, VH = H * 1.3;
+  const stC = (n) => { const st = stOf(n.x0, n.bal)[0]; return st === "acc" ? C("--up") : st === "sell" ? C("--down") : st === "move" ? C("--warn") : C("--neutral"); };
+  const CATG = { D: ["hex", "--s7", "DEX"], C: ["square", "--s4", "CEX"], O: ["dashed", "--fg-2", "OUT"], L: ["hex", "--s7", "LP"], B: ["diamond", "--neutral", "✕"], T: ["diamond", "--neutral", "GME"] };
+  const maxB = d3.max([...raw.values()], (n) => n.bal) || 1;
+  const nodes = [...raw.values()].map((n) => {
+    if (n.kind === "c") { const g = CATG[n.id] || ["circle", "--fg-2", n.id]; return { ...n, label: n.label, shape: g[0], color: C(g[1]), glyph: g[2], r: 19, always: true }; }
+    const g = entOf(n.a), base = n.a === FOCUS;
+    return { ...n, shape: n.kind === "t" ? "dashed" : "circle", tint: n.kind === "m", base, color: n.kind === "x" ? C("--muted") : stC(n), glyph: base ? FNAME : n.a.slice(-4),
+      label: base ? "fbb4's main wallet" : short(n.a), sub: n.kind === "x" ? "" : `${fBb(n.bal)} · ${fPct((100 * n.bal * 1e9) / SUPPLY, 2)}`, r: n.kind === "x" ? 7 : (mob ? 8 : 10) + (mob ? 18 : 24) * Math.sqrt(n.bal / maxB),
+      grp: g && n.kind === "t" ? g.name : null, always: base || n.bal / maxB > 0.25 };
+  });
+  const edgeC = (l) => { const s = l.s, t = l.t;
+    if (s === "D") return [C("--up"), null, "bought on the DEX"]; if (t === "D") return [C("--down"), null, "sold on the DEX"]; if (t === "C") return [C("--crit"), null, "deposited to an exchange"]; if (s === "C") return [C("--s1"), null, "withdrawn from an exchange"];
+    if (typeof s === "number" && typeof t === "number" && sameOwner(s, t)) return [C("--muted"), [5, 4], "between own wallets · inferred same owner"]; return [C("--s1"), null, "wallet to wallet"]; };
+  const edges = Lk.map((l) => { const [c, dash, what] = edgeC(l); return { s: l.s, t: l.t, w: l.v, g: l.v, color: c, dash, what, label: fU(l.v * 1e9 * price) }; });
+  const pin = { D: [0.06, 0.5], C: [0.94, 0.5], O: [0.5, 0.94], L: [0.08, 0.08], B: [0.92, 0.08], T: [0.5, 0.06] };
   const pinKey = bubOwner + "|" + bubWin, saved = bubPinned.get(pinKey) || new Map(); bubPinned.set(pinKey, saved);
-  N2.forEach((n) => { if (n.kind === "c" && pin[n.id]) { n.fx = pin[n.id][0] * W; n.fy = pin[n.id][1] * H; } const s = saved.get(String(n.id)); if (s) { n.x = n.fx = s[0]; n.y = n.fy = s[1]; } });
-  const sim = d3.forceSimulation(N2)
-    .force("link", d3.forceLink(L).id((d) => d.id).distance((l) => (l.source.kind === "c" || l.target.kind === "c" ? 180 : 70)).strength(0.12))
-    .force("charge", d3.forceManyBody().strength(bubOwner === -1 ? -40 : -120))
-    .force("collide", d3.forceCollide((d) => R(d) + 6)).force("x", d3.forceX(W / 2).strength(0.05)).force("y", d3.forceY(H / 2).strength(0.07)).stop();
-  for (let i = 0; i < 360; i++) sim.tick();
-  N2.forEach((d) => { if (d.fx == null) { const rr = R(d) + 2; d.x = Math.max(rr, Math.min(W - rr, d.x)); d.y = Math.max(rr, Math.min(H - rr, d.y)); } });
-  const stC = (n) => { if (n.kind === "x") return C("--muted"); const st = stOf(n.x0, n.bal)[0]; return st === "acc" ? C("--up") : st === "sell" ? C("--down") : st === "move" ? C("--warn") : C("--neutral"); };
-  const edgeC = (l) => { const s = l.source.id, t = l.target.id;
-    if (s === "D") return [C("--up"), "", "bought on the DEX"]; if (t === "D") return [C("--down"), "", "sold on the DEX"]; if (t === "C") return [C("--crit"), "", "deposited to an exchange"]; if (s === "C") return [C("--s1"), "", "withdrawn from an exchange"];
-    if (typeof s === "number" && typeof t === "number" && sameOwner(s, t)) return [C("--muted"), "5 4", "between own wallets · inferred same owner"]; return [C("--fg-2"), "", "wallet to wallet"]; };
-  const wS = d3.scaleSqrt([0, d3.max(L, (l) => l.v) || 1], [0.8, 4]);
-  const defs = svg.append("defs"), marks = new Map();
-  const marker = (c) => { if (marks.has(c)) return marks.get(c); const id = "ar" + marks.size; marks.set(c, id);
-    defs.append("marker").attr("id", id).attr("viewBox", "0 -5 10 10").attr("refX", 9).attr("refY", 0).attr("markerUnits", "userSpaceOnUse").attr("markerWidth", 7).attr("markerHeight", 7).attr("orient", "auto")
-      .append("path").attr("d", "M0,-4L10,0L0,4").attr("fill", c); return id; };
-  const path = (l) => { const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, d = Math.hypot(dx, dy) || 1;
-    const rs = R(l.source) + 2, rt = R(l.target) + 4, x1 = l.source.x + (dx * rs) / d, y1 = l.source.y + (dy * rs) / d, x2 = l.target.x - (dx * rt) / d, y2 = l.target.y - (dy * rt) / d;
-    const mx = (x1 + x2) / 2 - dy * 0.12, my = (y1 + y2) / 2 + dx * 0.12; return `M${x1},${y1}Q${mx},${my} ${x2},${y2}`; };
-  const nlabel = (n) => (n.kind === "c" ? n.label : short(n.a) + (n.a === FOCUS ? " (fbb4)" : ""));
-  const lsel = vp.append("g").selectAll("path").data(L).join("path").attr("fill", "none")
-    .attr("stroke", (l) => edgeC(l)[0]).attr("stroke-dasharray", (l) => edgeC(l)[1] || null).attr("stroke-width", (l) => wS(l.v)).attr("stroke-opacity", 0.75)
-    .attr("marker-end", (l) => `url(#${marker(edgeC(l)[0])})`)
-    .on("pointermove", (ev, l) => showTip(`<div class="h">${esc(nlabel(l.source))} → ${esc(nlabel(l.target))}</div>` + trow(edgeC(l)[0], edgeC(l)[2], "") + trow("", "GME", fBb(l.v)) + trow("", "≈ $ today", fU(l.v * 1e9 * (lastVal(col("price")) || 0))), ev)).on("pointerleave", hideTip);
-  const gsel = vp.append("g").selectAll("g").data(N2).join("g").attr("class", (d) => (d.kind === "c" ? "" : "nd"));
-  gsel.filter((d) => d.kind === "c").append("rect").attr("x", -20).attr("y", -20).attr("width", 40).attr("height", 40)
-    .attr("fill", (d) => (d.id === "D" ? C("--s7") : d.id === "C" ? C("--s4") : C("--neutral"))).attr("fill-opacity", 0.9).attr("stroke", C("--line-2"));
-  gsel.filter((d) => d.kind === "c").append("text").attr("class", "plabel").style("fill", C("--fg-2")).attr("text-anchor", "middle").attr("y", (d) => (d.fy > H * 0.6 ? -28 : 36)).text((d) => CATS[d.id] || d.label);
-  gsel.filter((d) => d.kind !== "c").append("circle").attr("r", R).attr("fill", stC).attr("fill-opacity", (d) => (d.kind === "m" ? 0.85 : 0.45))
-    .attr("stroke", (d) => (d.a === FOCUS ? C("--accent") : d.kind === "t" ? C("--fg-2") : C("--line-2"))).attr("stroke-width", (d) => (d.a === FOCUS ? 2.5 : d.kind === "t" ? 1.5 : 1)).attr("stroke-dasharray", (d) => (d.kind === "t" ? "3 2" : null));
-  gsel.filter((d) => d.kind !== "c" && (d.a === FOCUS || R(d) > 15)).append("text").attr("class", "lbl").style("font-family", "var(--mono)").style("font-size", "10px").attr("text-anchor", "middle").attr("y", (d) => R(d) + 13).text((d) => (d.a === FOCUS ? "fbb4" : short(d.a)));
-  gsel.filter((d) => d.kind === "m" && R(d) > 22).append("text").attr("class", "lbl").style("font-family", "var(--mono)").style("fill", "#fff").attr("text-anchor", "middle").attr("y", 4).text((d) => fBb(d.bal));
-  const sel = gsel.filter((d) => bubSel != null && String(d.id) === String(bubSel));
-  const pos = () => { gsel.attr("transform", (d) => `translate(${d.x},${d.y})`); lsel.attr("d", path); };
-  pos();
-  const neigh = (d) => { const s = new Set([d.id]); L.forEach((l) => { if (l.source.id === d.id) s.add(l.target.id); if (l.target.id === d.id) s.add(l.source.id); }); return s; };
-  const hl = (d) => { if (!d) { lsel.attr("stroke-opacity", 0.75); gsel.attr("opacity", 1); return; } const nb = neigh(d); lsel.attr("stroke-opacity", (l) => (l.source.id === d.id || l.target.id === d.id ? 1 : 0.05)); gsel.attr("opacity", (n) => (nb.has(n.id) ? 1 : 0.18)); };
-  gsel.on("pointerenter", (ev, d) => hl(d)).on("pointerleave", () => { hl(bubSel != null ? N2.find((n) => String(n.id) === String(bubSel)) : null); hideTip(); })
-    .on("pointermove", (ev, n) => { if (n.kind === "c") return showTip(`<div class="h">${esc(n.label)}</div>`, ev); const x = n.x0;
-      showTip(`<div class="h">${n.kind === "m" ? (n.a === FOCUS ? "Main wallet · fbb4" : "Owner's wallet") : n.kind === "t" ? "Another monitored owner" : "Other wallet"}</div>` + trow("", short(n.a), "") + (n.kind !== "x" ? trow("", "holds", fBb(n.bal)) + trow("", wl + " change", x ? sgn(x.net, fBb) : "—") + trow("", "status", stOf(x, n.bal)[1]) : "") + `<p style="margin-top:.3rem">Click for detail · drag to move</p>`, ev); })
-    .on("click", (ev, n) => { if (ev.defaultPrevented) return; bubSel = n.id; hl(n); info(n); });
-  gsel.filter((d) => d.kind !== "c").call(d3.drag()
-    .on("start", (ev, d) => { hideTip(); d.fx = d.x; d.fy = d.y; })
-    .on("drag", (ev, d) => { d.x = d.fx = ev.x; d.y = d.fy = ev.y; pos(); })
-    .on("end", (ev, d) => { saved.set(String(d.id), [d.x, d.y]); }));
-  svg.on("click", (ev) => { if (ev.target === svg.node()) { bubSel = null; hl(null); info(null); } });
-  function info(n) {
+  nodes.forEach((n) => { if (n.kind === "c" && pin[n.id]) { n.x = n.fx = pin[n.id][0] * W; n.y = n.fy = pin[n.id][1] * VH; } const s = saved.get(String(n.id)); if (s) { n.x = n.fx = s[0]; n.y = n.fy = s[1]; n.pinned = n.kind !== "c"; } });
+  const sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(edges.map((e) => ({ source: e.s, target: e.t }))).id((d) => d.id).distance((l) => (l.source.kind === "c" || l.target.kind === "c" ? 190 : 90)).strength(0.12))
+    .force("charge", d3.forceManyBody().strength(bubOwner === -1 ? -60 : -170))
+    .force("collide", d3.forceCollide((d) => d.r + 20)).force("x", d3.forceX(W / 2).strength(0.05)).force("y", d3.forceY(VH / 2).strength(0.07)).stop();
+  for (let i = 0; i < 400; i++) sim.tick();
+  nodes.forEach((n) => { if (n.fx != null && !n.pinned) { delete n.fx; delete n.fy; } });
+  const nl = (n) => (n.kind === "c" ? n.label : n.a === FOCUS ? "fbb4's main wallet" : short(n.a));
+  const who = (n) => (n.kind === "m" ? (n.a === FOCUS ? "Main wallet · fbb4" : "Owner's wallet") : n.kind === "t" ? "Another monitored owner" + (n.grp ? " · " + n.grp : "") : "Other wallet");
+  const panel = (n, e) => {
     const box = $("bubinfo"); if (!box) return;
+    if (e) { box.innerHTML = `<div class="vzph"><div><span class="eyebrow">GME moved · last ${wl}</span><h4>${esc(nl(e.source))} → ${esc(nl(e.target))}</h4></div></div>${cgKv([["GME", fBb(e.g)], ["≈ $ today", fU(e.g * 1e9 * price)], ["What it was", esc(e.what)]])}`; return; }
     if (!n) {
-      box.innerHTML = `<h4>${esc(ownerName)}</h4><p class="sub" style="font-size:12.5px">Click a bubble to see what happened inside it: its holdings, how they changed over ${wl}, and every flow in and out. Drag bubbles to untangle the map.</p>
-        <div class="kvl">${[["Wallets", members.length], ["Holds", fBb(tot.bal) + " GME"], [wl + " net", sgn(tot.net, fBb)], ["DEX bought", fBb(tot.dexIn)], ["DEX sold", fBb(tot.dexOut)], ["To exchanges", fBb(tot.cexOut)], ["From exchanges", fBb(tot.cexIn)]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>`;
-      return;
-    }
-    if (n.kind === "c") {
-      const fl = L.filter((l) => l.source.id === n.id || l.target.id === n.id).sort((a, b) => b.v - a.v);
-      box.innerHTML = `<h4>${esc(n.label)}</h4><div class="kvl">${fl.slice(0, 20).map((l) => { const o = l.source.id === n.id ? l.target : l.source, inn = l.target.id === n.id; return `<div><span>${inn ? "from " : "to "}${o.kind === "c" ? esc(o.label) : `<button class="addr" data-addr="${o.a}">${short(o.a)}</button>`}</span><b>${fBb(l.v)}</b></div>`; }).join("") || "<div><span>No flows</span><b>—</b></div>"}</div>`;
-      return;
-    }
-    const x = n.x0, st = stOf(x, n.bal), io = L.filter((l) => l.source.id === n.id || l.target.id === n.id).sort((a, b) => b.v - a.v);
-    box.innerHTML = `<h4>${n.kind === "m" ? (n.a === FOCUS ? "Main wallet · fbb4" : "Owner's wallet") : n.kind === "t" ? "Another monitored owner" : "Other wallet"}</h4>
-      <div class="ctl"><span class="mono" style="font-size:12px">${short(n.a)}</span><button class="mini" type="button" data-copy="${n.a}">Copy</button><button class="mini" type="button" data-addr="${n.a}">History</button></div>
-      <div class="kvl">${[["Holds", n.kind !== "x" ? fBb(n.bal) + " GME" : "—"], ["% supply", n.kind !== "x" ? fPct((100 * n.bal * 1e9) / SUPPLY, 3) : "—"], [wl + " change", x ? sgn(x.net, fBb) : "—"], ["Status " + wl, `<span class="st-${st[0]}">${st[1]}</span>`]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>
+      box.innerHTML = `<div class="vzph"><div><span class="eyebrow">One owner's wallets · last ${wl}</span><h4>${nm(ownerName)}</h4></div></div>
+        ${cgKv([["Wallets", members.length], ["Holds", fBb(tot.bal) + " GME"], [wl + " net", sgn(tot.net, fBb), cls(tot.net)], ["DEX bought", fBb(tot.dexIn), "up"], ["DEX sold", fBb(tot.dexOut), "down"], ["From exchanges", fBb(tot.cexIn)], ["To exchanges", fBb(tot.cexOut)], ["Active", `${tot.act} of ${members.length}`]])}
+        <p class="sub">Click a wallet to see what it did in the window and open it (Wallet page, Zerion, Etherscan); ⌘/Ctrl-click opens it on Zerion straight away. Drag wallets to untangle the map.</p>`;
+      return; }
+    if (n.kind === "c") { const fl = edges.filter((x) => x.s === n.id || x.t === n.id).sort((a, b) => b.w - a.w);
+      box.innerHTML = `<div class="vzph"><div><span class="eyebrow">${esc(n.label)} · last ${wl}</span><h4>${fl.length} flow${fl.length === 1 ? "" : "s"}</h4></div></div><div class="vzlist">${fl.slice(0, 30).map((x) => { const o = x.s === n.id ? x.target : x.source; return `<button type="button" data-cgsel="${esc(String(o.id))}"><span>${x.t === n.id ? "from" : "to"} ${esc(nl(o))}</span><b>${fBb(x.w)}</b></button>`; }).join("") || '<p class="sub">No flows.</p>'}</div>`;
+      return; }
+    const x = n.x0, st = stOf(x, n.bal), io = edges.filter((y) => y.s === n.id || y.t === n.id).sort((a, b) => b.w - a.w);
+    box.innerHTML = `<div class="vzph"><div><span class="eyebrow">${esc(who(n))}</span><h4>${n.a === FOCUS ? "fbb4's main wallet" : short(n.a)}</h4></div></div>
+      <div class="vzaddr"><span class="mono">${n.a}</span><button class="mini" type="button" data-copy="${n.a}">Copy</button>${zerLink(n.a)}<a class="mini" href="${ETH(n.a)}" target="_blank" rel="noopener">Etherscan ↗</a><a class="mini" href="#wallet/${n.a}">Wallet page →</a></div>
+      ${n.kind !== "x" ? cgKv([["Holds", fBb(n.bal) + " GME"], ["% supply", fPct((100 * n.bal * 1e9) / SUPPLY, 3)], [wl + " change", x ? sgn(x.net, fBb) : "—", x ? cls(x.net) : ""], ["Status " + wl, `<span class="st-${st[0]}">${st[1]}</span>`]]) : ""}
       ${x && x.n ? `<div class="how" style="min-width:0">${howChips(x)}</div>` : ""}
-      <h4 style="margin-top:4px">Flows in this window</h4>
-      <div class="kvl">${io.slice(0, 24).map((l) => { const inn = l.target.id === n.id, o = inn ? l.source : l.target, [c, , lab] = edgeC(l);
-        return `<div><span><i style="display:inline-block;width:8px;height:8px;background:${c};margin-right:.4rem"></i>${inn ? "in from" : "out to"} ${o.kind === "c" ? esc(o.label) : `<button class="addr" data-addr="${o.a}">${short(o.a)}</button>`}<br><small class="flat">${lab}</small></span><b>${fBb(l.v)}</b></div>`; }).join("") || "<div><span>No GME moved</span><b>—</b></div>"}</div>`;
-  }
-  const cur = bubSel != null ? N2.find((n) => String(n.id) === String(bubSel)) : null;
-  info(cur || null); if (cur) hl(cur);
-  bubSim = sim;
-  $("bub-l").innerHTML = `<span><i style="background:${C("--up")}"></i>grew</span><span><i style="background:${C("--down")}"></i>sold / deposited</span><span><i style="background:${C("--warn")}"></i>moved to other wallets</span><span><i style="background:${C("--neutral")}"></i>no net change · own-wallet moves</span>` +
-    `<span><i style="background:${C("--s7")}"></i>DEX</span><span><i style="background:${C("--s4")}"></i>exchanges</span><span><i class="dash" style="border-color:${C("--muted")}"></i>own wallets · inferred</span><span><i style="border:1.5px dashed ${C("--fg-2")};background:transparent"></i>another monitored owner</span>`;
-  const top = [...L].sort((a, b) => b.v - a.v).slice(0, 25);
-  const nl = (n) => (n.kind === "c" ? `<span class="flat">${esc(n.label)}</span>` : `<button class="addr" data-addr="${n.a}">${short(n.a)}</button>`);
+      <span class="eyebrow">Flows · last ${wl}</span><div class="vzlist">${io.slice(0, 24).map((l) => { const inn = l.t === n.id, o = inn ? l.source : l.target;
+        return `<button type="button" data-cgsel="${esc(String(o.id))}"><span><i class="sw" style="background:${l.color}"></i>${inn ? "from" : "to"} ${esc(nl(o))}<br><small class="flat">${l.what}</small></span><b>${fBb(l.w)}</b></button>`; }).join("") || '<p class="sub">No GME moved in this window.</p>'}</div>`;
+  };
+  CG = cgraph(el, { nodes, edges, H, sel: bubSel,
+    tip: (n) => n.kind === "c" ? `<div class="h">${esc(n.label)}</div>` : `<div class="h">${esc(who(n))}</div>` + trow("", short(n.a), "") + (n.kind !== "x" ? trow("", "holds", fBb(n.bal)) + trow("", wl + " change", n.x0 ? sgn(n.x0.net, fBb) : "—") + trow("", "status", stOf(n.x0, n.bal)[1]) : "") + `<p style="margin-top:.3rem">Click for detail · ⌘/Ctrl-click opens Zerion · drag to move</p>`,
+    tipE: (e) => `<div class="h">${esc(nl(e.source))} → ${esc(nl(e.target))}</div>` + trow(e.color, e.what, "") + trow("", "GME", fBb(e.g)) + trow("", "≈ $ today", fU(e.g * 1e9 * price)),
+    onSelect: (n, e) => { bubSel = n ? n.id : null; panel(n, e); },
+    onMove: (n) => saved.set(String(n.id), [n.x, n.y]),
+    open: (n) => { if (n.a) window.open(ZER(n.a), "_blank", "noopener"); } });
+  panel(bubSel != null ? CG.byId.get(bubSel) : null, null);
+  $("bubinfo").onclick = (ev) => { const s = ev.target.closest("[data-cgsel]"); if (!s) return; const id = /^\d+$/.test(s.dataset.cgsel) ? +s.dataset.cgsel : s.dataset.cgsel; CG.select(id); };
+  document.querySelectorAll("[data-z]").forEach((b) => (b.onclick = () => { const z = b.dataset.z; if (z === "fit") { bubPinned.delete(pinKey); drawBub(); } else CG.zoomBy(z === "in" ? 1.35 : 1 / 1.35); }));
+  $("bub-l").innerHTML = cgLegend([["ring", C("--up"), "grew"], ["ring", C("--down"), "sold / deposited"], ["ring", C("--warn"), "moved to other wallets"], ["ring", C("--neutral"), "no net change"], ["base", C("--accent"), "fbb4's main wallet"],
+    ["dashed", C("--fg-2"), "another monitored owner"], ["hex", C("--s7"), "DEX"], ["square", C("--s4"), "exchanges"], ["line", C("--s1"), "wallet to wallet"], ["tie2", C("--muted"), "between own wallets · inferred"]]);
+  const top = [...edges].sort((a, b) => b.w - a.w).slice(0, 25);
+  const nh = (n) => (n.kind === "c" ? `<span class="flat">${esc(n.label)}</span>` : `<a class="addr" href="#wallet/${n.a}">${short(n.a)}</a>`);
   $("bubflows").innerHTML = top.length ? `<div class="tw" style="margin-top:6px"><table><thead><tr><th>From</th><th>To</th><th class="n">GME</th><th>What it was</th></tr></thead><tbody>` +
-    top.map((l) => { const s = l.source.id, t = l.target.id, kind = s === "D" ? '<span class="up">bought on the DEX</span>' : t === "D" ? '<span class="down">sold on the DEX</span>' : t === "C" ? '<span class="down">deposited to an exchange</span>' : s === "C" ? '<span class="up">withdrawn from an exchange</span>' : typeof s === "number" && typeof t === "number" && sameOwner(s, t) ? '<span class="flat">between own wallets</span> <span class="ev inf">inferred</span>' : '<span class="mv-move">wallet to wallet</span>';
-      return `<tr><td>${nl(l.source)}</td><td>${nl(l.target)}</td><td class="n">${fBb(l.v)}</td><td>${kind}</td></tr>`; }).join("") + `</tbody></table></div>`
+    top.map((l) => `<tr><td>${nh(l.source)}</td><td>${nh(l.target)}</td><td class="n">${fBb(l.w)}</td><td style="color:${l.color}">${l.what}</td></tr>`).join("") + `</tbody></table></div>`
     : `<p class="sub">No GME moved in or out of these wallets in the last ${wl}.</p>`;
 }
 
@@ -2660,7 +2781,7 @@ function vzStart() {
     if (d !== VZ.hov || e !== VZ.hovE) { VZ.hov = d; VZ.hovE = e; cv.style.cursor = d ? "pointer" : e ? "help" : "grab"; draw(); }
     if (d) showTip(`<div class="h">${esc(d.label)}</div>` + trow(vzColor(d), VZKL[d.kind] || d.kind, d.kind === "wallet" || d.kind === "entity" || d.kind === "contract" ? fBb(d.bal) + " GME" : "")
       + trow(C("--up"), "in, on screen", fU(d.in)) + trow(C("--down"), "out, on screen", fU(d.out))
-      + `<p style="margin-top:.3rem">${VZ.tool === "inspect" ? "Click to inspect · double-click to expand · drag to move"
+      + `<p style="margin-top:.3rem">${VZ.tool === "inspect" ? `Click to inspect · double-click to expand · drag to move${d.addr && d.kind !== "deposit" ? " · ⌘/Ctrl-click opens Zerion" : d.kind === "entity" ? " · ⌘/Ctrl-click opens the group" : ""}`
         : "Click to " + (VZ.tool === "pin" ? (VZ.pinned.has(d.id) ? "unpin" : "pin") : VZ.tool) + " · Esc for Inspect"}</p>`, ev);
     else if (e) showTip(`<div class="h">${esc(e.source.label)} → ${esc(e.target.label)}</div>` + trow(ecol(e), "GME", fBb(e.g)) + trow("", "≈ $", fU(e.u)) + trow("", "transfers", fN(e.n))
       + trow("", "months", VG.months[e.a] === VG.months[e.b] ? VG.months[e.a] : `${VG.months[e.a]} → ${VG.months[e.b]}`), ev);
@@ -2670,6 +2791,10 @@ function vzStart() {
   const up = (ev) => { if (!drag) return; const d = drag.d, moved = drag.moved; drag = null; VZ.sim.alphaTarget(0);
     if (moved) { vzTools(); return; }
     const pick = () => {
+      if (ev.pointerType === "mouse" && (ev.metaKey || ev.ctrlKey)) {          // ⌘/Ctrl-click: open it straight away
+        if (d.addr && (d.kind === "wallet" || d.kind === "contract")) { window.open(ZER(d.addr), "_blank", "noopener"); return; }
+        if (d.kind === "entity") { openEntity(VG.entities[d.ent][0]); return; }
+      }
       // on a phone the panel is a bottom sheet that hides the toolbar, so the Expand tool leaves it closed: the next tap
       // can expand again, and Undo stays in reach
       if (VZ.tool === "expand") { vzMark(); vzExpand(d.id, 12); if (!mobile()) VZ.sel = d.id; restart(0.5); vzTools(); return; }
@@ -2840,17 +2965,55 @@ function vzPanel() {
   const ent = d.kind === "entity" ? VG.entities[d.ent] : d.ent >= 0 ? VG.entities[d.ent] : null;
   const isW = d.kind === "wallet" || d.kind === "contract" || d.kind === "entity";
   p.innerHTML = `<div class="vzph"><div><span class="eyebrow">${esc(VZKL[d.kind] || d.kind)}${d.id === VZ.base ? " · centre" : ""}</span><h4>${nm(d.label)}</h4></div><button type="button" class="x" data-vza="close" aria-label="Close">×</button></div>
-    ${d.addr ? `<div class="vzaddr"><span class="mono">${esc(d.addr)}</span><button class="mini" type="button" data-copy="${d.addr}">Copy</button><a class="mini" href="${ETH(d.addr)}" target="_blank" rel="noopener">Etherscan ↗</a>${d.kind !== "deposit" ? `<button class="mini" type="button" data-addr="${d.addr}">History →</button>` : ""}</div>` : ""}
+    ${d.addr ? `<div class="vzaddr"><span class="mono">${esc(d.addr)}</span><button class="mini" type="button" data-copy="${d.addr}">Copy</button>${d.kind !== "deposit" ? zerLink(d.addr) : ""}<a class="mini" href="${ETH(d.addr)}" target="_blank" rel="noopener">Etherscan ↗</a>${d.kind !== "deposit" ? `<a class="mini" href="#wallet/${d.addr}">Wallet page →</a>` : ""}</div>` : ""}
     ${ent ? `<div class="vzaddr"><span>${d.kind === "entity" ? `${ent[5]} wallets` : "Member of"} ${d.kind === "entity" ? "" : nm(ent[1])}</span><button class="mini" type="button" data-pnl="${ent[0]}">P&amp;L chart →</button></div>` : ""}
     <dl class="vzkv">${isW ? `<div><dt>Holds</dt><dd>${fBb(d.bal)} · ${fPct((100 * d.bal * 1e9) / SUPPLY, 2)}</dd></div>` : ""}
       <div><dt>Received · ${esc(rng)}</dt><dd class="up">${fU(tin)} <small>${fBb(gin)}</small></dd></div><div><dt>Sent · ${esc(rng)}</dt><dd class="down">${fU(tout)} <small>${fBb(gout)}</small></dd></div>
       <div><dt>Counterparties</dt><dd>${fN(cps.length)}</dd></div></dl>
     <div class="vzact"><button type="button" class="mini" data-vza="expand" data-id="${esc(d.id)}">Expand +12</button>${/^0x[0-9a-f]{40}$/.test(d.id) ? `<a class="mini" href="#wallet/${d.id}">Analyse →</a>` : ""}${d.id !== VZ.base ? `<button type="button" class="mini" data-vza="center" data-id="${esc(d.id)}">Centre here</button><button type="button" class="mini" data-vza="pin" data-id="${esc(d.id)}">${VZ.pinned.has(d.id) ? "Unpin" : "Pin"}</button><button type="button" class="mini" data-vza="hide" data-id="${esc(d.id)}">Hide</button>` : ""}</div>
+    ${d.addr && d.kind !== "deposit" ? `<div id="vzwal" class="vzwal"><p class="sub">Loading what it has been doing…</p></div>` : ""}${d.kind === "entity" ? `<div id="vzties" class="vzwal"></div>` : ""}
     <span class="eyebrow">Counterparties · ${esc(rng)}${VZ.minUsd ? " · ≥ " + fU(VZ.minUsd) : ""}</span>
     <div class="vzlist">${cps.slice(0, 40).map((c) => { const L = vzLook(c.id), dir = c.inU && c.outU ? "⇄" : c.inU ? "←" : "→";
       return `<button type="button" data-vza="${shown.has(c.id) ? "sel" : "add"}" data-id="${esc(c.id)}" class="${shown.has(c.id) ? "" : "off"}"><span><b class="${c.inU && !c.outU ? "up" : c.outU && !c.inU ? "down" : "flat"}">${dir}</b> ${nm(L.label)}</span><b>${fU(c.u)}</b></button>`; }).join("") || '<p class="sub">None in this range.</p>'}</div>
     <p class="sub">← received from · → sent to · ⇄ both. Grey rows are not on screen yet: click to add them.</p>
     ${vzLedger(d)}`;
+  if (d.addr && d.kind !== "deposit") vzWalFill(d);
+  if (d.kind === "entity") vzTiesFill(d);
+}
+// What a wallet has been doing, from the Wallet page's index (w/<shard>.json): its type and group, the last 30 days by
+// kind, P&L, its five latest transfers and what links it to other wallets. Loaded when the node is opened.
+async function vzWalFill(d) {
+  const id = d.id; let rec = null;
+  try { await wLoad("labels"); rec = await wRec(d.addr); } catch (e) {}
+  const el = $("vzwal"); if (!el || VZ.sel !== id) return;
+  if (!rec) { el.innerHTML = `<p class="sub">No record in the wallet index for this address.</p>`; return; }
+  const P = { track: rec.pl.track, marks: rec.pl.marks }, now = plNow(P), t30 = Date.now() / 1000 - 30 * 86400;
+  const sum = (ks) => rec.t.filter((r) => ks.includes(r[3]) && r[0] >= t30).reduce((a, r) => { a.g += Math.abs(r[1]); a.u += r[2]; a.n++; return a; }, { g: 0, u: 0, n: 0 });
+  const x = { b: sum(["b"]), s: sum(["s"]), ci: sum(["ci"]), co: sum(["co"]), i: sum(["i", "lr"]), o: sum(["o", "la", "x"]) };
+  const v = (y) => (y.n ? `${fB(y.g)} · ${fU(y.u)}` : "—");
+  const ent = rec.ent && S.E && S.E.entities.find((z) => z.id === rec.ent[0]);
+  const ty = rec.dep ? "an exchange deposit address" : rec.ty === "7702" ? "a smart account (EIP-7702), so a person's wallet" : rec.ty === "contract" ? "a contract" : "a wallet";
+  const links = [];
+  if (rec.seed) { const L = wLabel(rec.seed[0]); links.push(`First GME ${rec.seed[1].slice(0, 10)} from ${L && L[0] !== "deposit" ? esc(L[1]) : cpHtml(rec.seed[0])}`); }
+  (rec.ethl || []).slice(0, 4).forEach(([o, k, dt, dir]) => links.push(`${k === "ethseed" ? (dir === "o" ? "Gave its first ETH to" : "First ETH from") : dir === "o" ? "Paid gas to" : "Gas from"} ${cpHtml(o)} · ${dt}`));
+  Object.entries(rec.shared || {}).slice(0, 2).forEach(([dep, users]) => links.push(`Shared deposit ${short(dep)} with ${users.slice(0, 3).map(cpHtml).join(" ")}`));
+  (rec.seeded || []).slice(0, 3).forEach((z) => links.push(`Seeded ${cpHtml(z[0])} · ${z[1].slice(0, 10)} · ${fB(z[2])} GME`));
+  el.innerHTML = `<span class="eyebrow">What it has been doing</span>
+    <p class="sub">It is ${ty}${ent ? `, in ${entTag(ent)}` : rec.grp ? `, in an <button type="button" class="tag" data-grp="${rec.grp.gid}">untracked linked group of ${rec.grp.n} wallets&nbsp;→</button>` : ""}. First GME ${rec.f.slice(0, 10)}, last active ${rec.l.slice(0, 10)}, ${fN(rec.t.length)} transfers.</p>
+    ${cgKv([...(Object.values(x).some((y) => y.n) ? [["Bought · 30d", v(x.b), x.b.n ? "up" : ""], ["Sold · 30d", v(x.s), x.s.n ? "down" : ""], ["From exchanges · 30d", v(x.ci)], ["To exchanges · 30d", v(x.co)], ["Received · 30d", v(x.i)], ["Sent · 30d", v(x.o)]] : [["Last 30 days", "no GME moved"], ["Holds", fB(rec.b) + " GME"]]),
+      ...(now ? [["Realized P/L", sgn(now.rz, fU), cls(now.rz)], ["Unrealized P/L", sgn(now.un, fU), cls(now.un)]] : [])])}
+    <div>${rec.t.slice(-5).reverse().map(([ts, g, u, k, cp]) => { const [l, c] = WK[k] || [k, "flat"]; return `<div class="vzrec"><span class="num">${fday(new Date(ts * 1000))}</span><span><span class="${c}">${l}</span> · ${cpHtml(cp)}</span><b>${fB(Math.abs(g))}</b></div>`; }).join("")}</div>
+    ${links.length ? `<span class="eyebrow">Links to other wallets</span><div class="tie">${links.map((z) => `<div>${z}</div>`).join("")}</div>` : ""}
+    <div class="vzact"><a class="mini" href="#wallet/${d.addr}">Full analysis →</a>${zerLink(d.addr)}</div>`;
+}
+// A group's ties to other tracked groups (wallet_index.py _ties), with the two wallets behind each piece of evidence.
+async function vzTiesFill(d) {
+  const id = d.id, eid = VG.entities[d.ent][0]; let all = [];
+  try { all = await wLoad("ties"); } catch (e) {}
+  const el = $("vzties"); if (!el || VZ.sel !== id) return;
+  const mine = all.filter((y) => y.a === eid || y.b === eid), nameOf = (x) => ((S.E && S.E.entities.find((z) => z.id === x)) || {}).name || x;
+  el.innerHTML = mine.length ? `<span class="eyebrow">Ties to other groups · all time</span>${mine.map((y) => `<div class="tie"><b>${nm(nameOf(y.a === eid ? y.b : y.a))}</b> <small class="${tieStrong(y) ? "hd" : "flat"}">${esc(tieSummary(y))}</small>${tieHtml(y, nameOf)}</div>`).join("")}`
+    : `<p class="sub">No ties to another tracked group: none of its wallets got its first GME from, drained into, shared a deposit address with or exchanged ETH with another group's wallets.</p>`;
 }
 // The ledger: the transfers the aggregate is made of. graph.json says 4.2B moved to an exchange in a month; this says
 // which transfers those were, so the number can be checked against the chain.

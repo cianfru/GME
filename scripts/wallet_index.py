@@ -42,12 +42,14 @@ def kind(other, out, infra, CEX, DEP):
 def build(T, PX, KEYS, TX, TP, infra, CEX, DEP):
     """One pass over the transfers. Returns per-address rows [ts, signed GME, $, kind, counterparty, tx, log index,
     exact price?], each wallet's first GME (seed), the wallets each address seeded, the users of each exchange deposit
-    address, and balances. Infrastructure gets no rows."""
+    address, balances, and drains (a wallet sending ≥90% of its balance, worth ≥$2k, to another wallet: the linking
+    rule). Infrastructure gets no rows."""
     rows = collections.defaultdict(list)
     seed, seeded, dep_users = {}, collections.defaultdict(list), collections.defaultdict(set)
-    bal = collections.Counter()
+    bal = collections.Counter(); drains = []
     for j, (s, r, ts, v, b) in enumerate(T):
         if s == r or v <= 0: continue                            # zero-value transfers are address-poisoning spam
+        if s not in infra and r not in infra and bal[s] > 0 and v >= 0.9 * bal[s] and v * PX[j] >= SEED_USD: drains.append((s, r, ts, v, v * PX[j]))
         bal[s] -= v; bal[r] += v
         ex = int(KEYS[j] in TP)
         for me, other, out in ((s, r, True), (r, s, False)):
@@ -57,7 +59,7 @@ def build(T, PX, KEYS, TX, TP, infra, CEX, DEP):
             seed[r] = (s, ts, v, v * PX[j])
             if s not in infra: seeded[s].append((r, ts, v, v * PX[j]))
         if r in DEP and s not in infra: dep_users[r].add(s)
-    return rows, seed, seeded, dep_users, bal
+    return rows, seed, seeded, dep_users, bal, drains
 
 
 def group_books(T, PX, gof, infra, CEX, DEP, day0):
@@ -76,6 +78,55 @@ def group_books(T, PX, gof, infra, CEX, DEP, day0):
             k = kind(r, True, infra, CEX, DEP)
             books.setdefault(gs, Book(day0)).outflow(ts, v, PX[j], "D" if k == "s" else "C" if k == "co" else None)
     return {g: bk.finish() for g, bk in books.items()}
+
+
+TIE_ORDER = ("seed", "drain", "ethseed", "gas", "deposit", "eth", "paid", "funder")
+
+
+def group_ties(T, PX, ent_of, seed, drains, dep_users, eth_links, weak, cap=30):
+    """What ties two tracked groups together, with the two wallets each time, so the page can show where a connection
+    is: a first-GME seed ≥$2k or a drain (the GME linking rules), a shared exchange deposit address (2–10 users),
+    a first-ETH or gas top-up link (eth_links.json), weaker ETH evidence (ethside.json candidates: a larger ETH
+    payment, a paid purchase, a shared first funder), and all the GME ever moved between them. Groups stay separate
+    when their own scripts built them (fbb4, the Coinbase group, watched groups) or a guard kept them apart, so these
+    ties are exactly the "connected, but not merged" relationships. ent_of: wallet → tracked entity id."""
+    P = {}
+    def pair(ea, eb):
+        k = (ea, eb) if ea < eb else (eb, ea)
+        if k not in P: P[k] = dict(a=k[0], b=k[1], ev=[], gme={})
+        return P[k]
+    def tie(kind, wa, wb, *rest):
+        ea, eb = ent_of.get(wa), ent_of.get(wb)
+        if ea and eb and ea != eb: pair(ea, eb)["ev"].append([kind, wa, wb, *rest])
+    for r, (s, ts, v, u) in seed.items():
+        if u >= SEED_USD: tie("seed", s, r, ts[:10], gme(v), usd(u))
+    for s, r, ts, v, u in drains: tie("drain", s, r, ts[:10], gme(v), usd(u))
+    for d, users in dep_users.items():
+        if not 2 <= len(users) <= 10: continue
+        by = collections.defaultdict(list)
+        for w in sorted(users):
+            if ent_of.get(w): by[ent_of[w]].append(w)
+        es = sorted(by)
+        for i in range(len(es)):
+            for k in range(i + 1, len(es)): tie("deposit", by[es[i]][0], by[es[k]][0], d)
+    for a, b, k, d in eth_links: tie(k, a, b, d)
+    for c in weak:
+        for x in c.get("ev", []):
+            if x.get("kind") in ("eth", "paid", "funder"): tie(x["kind"], x["a"], x["b"], x.get("first"), x.get("eth"))
+    for j, (s, r, ts, v, b) in enumerate(T):
+        es, er = ent_of.get(s), ent_of.get(r)
+        if not es or not er or es == er or v <= 0: continue
+        g = pair(es, er)["gme"].setdefault(es + ">" + er, [0.0, 0.0, 0, ts[:10], ts[:10]])
+        g[0] += v; g[1] += v * PX[j]; g[2] += 1; g[4] = ts[:10]
+    out = []
+    for p in P.values():
+        p["ev"].sort(key=lambda x: TIE_ORDER.index(x[0]) if x[0] in TIE_ORDER else 99)
+        moved = sum(g[1] for g in p["gme"].values())
+        if not p["ev"] and moved < 1000: continue                # a few dollars of GME between two groups is no tie
+        p["n"] = len(p["ev"]); p["ev"] = p["ev"][:cap]
+        p["gme"] = {k: [gme(g[0]), usd(g[1]), g[2], g[3], g[4]] for k, g in p["gme"].items()}
+        out.append(p)
+    return out
 
 
 def seeded_lists(sd, DEP, cap=60):
@@ -133,7 +184,7 @@ def main():
     AT = ld("addr-types.json", {})
     DEP = deposits(T, EX)                                        # exchange deposit address → the exchange wallet it pays
     via = lambda a: "Straight from the pool" if a in (PAIR, V3POOL) else node(a, EX, DEP, AT)[2] or "Other"   # as the group profile
-    rows, seed, seeded, dep_users, bal = build(T, PX, KEYS, TX, TP, infra, CEX, DEP)
+    rows, seed, seeded, dep_users, bal, drains = build(T, PX, KEYS, TX, TP, infra, CEX, DEP)
     day0 = T[0][2][:10]
     # tracked entities (entities.json) and every linked group (entities_all.json, flagged webs included)
     REG = ld("entities.json", {"entities": []})
@@ -156,6 +207,8 @@ def main():
                                via=g.get("via", {}), name=("Flagged web" if kind_ == "web" else "Linked group") + " " + mem[0][0][-4:],
                                ents=sorted({ent[a][0] for a, _ in mem if a in ent}), members=[[a, gme(b_)] for a, b_ in mem[:300]])
             for a in ws: grp[a] = dict(n=g["n"], held=round(g["held"]), flagged=kind_ == "web" or g.get("flagged", False), via=g.get("via", {}), web=kind_ == "web", gid=gid)
+    ent_of = {a: v[0] for a, v in ent.items()}
+    TIES = group_ties(T, PX, ent_of, seed, drains, dep_users, ld("eth_links.json", {"links": []})["links"], ld("ethside.json", {}).get("candidates", []))
     # one owner's P&L per group (not for webs: a flagged web is not trusted as one owner)
     for gid, pl in group_books(T, PX, {a: g for a, g in gof.items() if g[0] == "g"}, infra, CEX, DEP, day0).items(): GROUPS[gid]["pl"] = pl
     # watch tags
@@ -232,10 +285,11 @@ def main():
         f.write(json.dumps(dict(k="_labels", d=labels), separators=(",", ":")) + "\n")
         f.write(json.dumps(dict(k="_fp", d=fp), separators=(",", ":")) + "\n")
         f.write(json.dumps(dict(k="_groups", d=GROUPS), separators=(",", ":")) + "\n")
+        f.write(json.dumps(dict(k="_ties", d=TIES), separators=(",", ":")) + "\n")
         for k in sorted(shards): f.write(json.dumps(dict(k=k, d=shards[k]), separators=(",", ":")) + "\n")
     os.replace(out + ".tmp", out)
     print(f"wallet-index: {len(rows):,} wallets in {len(shards)} shards · {meta['rows']:,} transfer rows · {len(fp):,} buying fingerprints · "
-          f"{len(labels):,} labels · {len(GROUPS):,} linked groups · {len(ETH):,} with an ETH side · {os.path.getsize(out) / 1e6:.1f} MB")
+          f"{len(labels):,} labels · {len(GROUPS):,} linked groups · {len(TIES)} ties between tracked groups · {len(ETH):,} with an ETH side · {os.path.getsize(out) / 1e6:.1f} MB")
 
 
 if __name__ == "__main__":

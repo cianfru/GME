@@ -60,7 +60,7 @@ class Build(unittest.TestCase):
              tr(C, B, "2025-01-03T00:00:00Z", 0),                 # zero-value spam: skipped, and not B's seed
              tr(B, DEPADDR, "2025-01-04T00:00:00Z", 100), tr(A, DEPADDR, "2025-01-05T00:00:00Z", 50)]
         PX = [2.0] * len(T); KEYS = [(1, i) for i in range(len(T))]; TX = ["0xt%d" % i for i in range(len(T))]
-        rows, seed, seeded, dep_users, bal = W.build(T, PX, KEYS, TX, {(1, 0): 2.0}, infra, CEX, {DEPADDR: MEXC})
+        rows, seed, seeded, dep_users, bal, drains = W.build(T, PX, KEYS, TX, {(1, 0): 2.0}, infra, CEX, {DEPADDR: MEXC})
         self.assertNotIn(ROUTER, rows)                           # infrastructure gets no record
         self.assertEqual([r[3] for r in rows[A]], ["b", "o", "co"])
         self.assertEqual(rows[A][0][7], 1)                       # the buy has an exact price, the others don't
@@ -90,6 +90,27 @@ class Groups(unittest.TestCase):
         self.assertEqual(last[1], round(500 / 1e9, 4))
         self.assertEqual(last[2:], [500, 800, 1000, 1200])        # cost of the 500 held, realized (3-1)×400, bought, sold
         self.assertEqual(sorted(m[1] for m in pl["marks"]), [])   # marks need ≥1e6 GME: none at this scale
+
+
+class Ties(unittest.TestCase):
+    def test_ties_name_the_two_wallets_and_skip_same_group(self):
+        D2 = "0x" + "e" * 40
+        T = [tr(A, B, "2025-01-01T00:00:00Z", 5000), tr(C, A, "2025-01-02T00:00:00Z", 10)]
+        PX = [1.0, 1.0]
+        seed = {B: (A, "2025-01-01T00:00:00Z", 5000.0, 5000.0)}           # A gave B its first GME, $5k
+        drains = [(C, A, "2025-01-02T00:00:00Z", 10.0, 10.0)]               # below nothing: drains are already filtered by build()
+        dep = {DEPADDR: {A, C}, D2: {A, B}}                                  # A and C share a deposit; A and B too, but same group
+        ent_of = {A: "g1", B: "g2", C: "g3"}
+        out = {(t["a"], t["b"]): t for t in W.group_ties(T, PX, ent_of, seed, drains, dep, [[B, C, "gas", "2025-02-01"]], [])}
+        self.assertEqual([x[0] for x in out[("g1", "g2")]["ev"]], ["seed", "deposit"])
+        self.assertEqual(out[("g1", "g2")]["ev"][0][1:3], [A, B])
+        self.assertEqual(out[("g1", "g2")]["gme"]["g1>g2"][:3], [5000, 5000, 1])
+        self.assertEqual([x[0] for x in out[("g1", "g3")]["ev"]], ["drain", "deposit"])
+        self.assertEqual([x[0] for x in out[("g2", "g3")]["ev"]], ["gas"])
+
+    def test_a_little_gme_alone_is_no_tie(self):
+        T = [tr(A, B, "2025-01-01T00:00:00Z", 100)]
+        self.assertEqual(W.group_ties(T, [1.0], {A: "g1", B: "g2"}, {}, [], {}, [], []), [])
 
 
 if __name__ == "__main__":
