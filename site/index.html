@@ -263,6 +263,8 @@ input.q { width: 15rem; max-width: 100% } select.q { max-width: 100% }
 .wtags button.ev { cursor: pointer; background: none } .wlinks td { white-space: normal; vertical-align: top } .wlinks .addr, .wlinks .tag { margin-right: .3rem }
 .wchk { display: inline-flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--fg-2); cursor: pointer } .wchk input { accent-color: var(--accent); width: 16px; height: 16px }
 .wex { color: var(--accent); font-style: normal; font-size: 9px }
+.wbel { display: flex; flex-wrap: wrap; gap: 6px; align-items: center } .wbel .eyebrow { margin-right: 4px } .wbel .mini { height: 30px; font-size: 10.5px } .wbel .mini .hd { letter-spacing: .04em }
+button.tag { background: none; cursor: pointer } button.tag:hover, .wtags button.ev:hover, .wtags a.ev:hover { border-color: var(--accent); color: var(--fg) } .wtags a.ev { text-decoration: none }
 @media (max-width: 760px) { .wq { flex-direction: column } .wq input.q { flex: none; width: 100% } .wq .mini { justify-content: center } .wkv { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 .evleg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 14px }
 .evleg > div { padding: 14px 18px; display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 3px 12px; align-items: start }
@@ -621,6 +623,8 @@ function onClick(e) {
   if (e.target.closest('a[href^="#visualizer"], a[href^="#wallet"]')) closeWallet();
   const pl = e.target.closest("[data-pnl]");
   if (pl) { e.preventDefault(); openEntity(pl.dataset.pnl); return; }
+  const gr = e.target.closest("[data-grp]");
+  if (gr) { e.preventDefault(); openGroup(gr.dataset.grp); return; }
   const o = e.target.closest("[data-owner]");
   if (o) { e.preventDefault(); bubOwner = +o.dataset.owner; bubSel = null; bubMode = "wallets"; if (location.hash === "#entities/map") render(); else location.hash = "#entities/map"; return; }
   const em = e.target.closest("[data-emap]");
@@ -2894,11 +2898,12 @@ const entOf = (a) => { if (!ENTOF) { ENTOF = new Map(); for (const e of (S.E && 
 const wLabel = (a) => (WI.labels && WI.labels[a]) || null;
 const isInfra = (a) => { const L = wLabel(a); return !!L && L[0] !== "deposit"; };
 const wLink = (a) => `<a class="addr" href="#wallet/${a}">${short(a)}</a>`;
+const entTag = (e, extra = "") => `<button type="button" class="tag hd" data-pnl="${e.id}" title="Open ${esc(e.name)}">${nm(e.name)}${extra}</button>`;   // opens the group drawer
 function cpHtml(a) {
   const L = wLabel(a);
   if (L && L[0] !== "deposit") return `<span class="flat" title="${a}">${esc(L[1])}</span>`;
   const e = entOf(a);
-  return wLink(a) + (L ? ` <span class="tag">${esc(L[1])}</span>` : e ? ` <span class="tag hd">${nm(e.name)}</span>` : "");
+  return wLink(a) + (L ? ` <span class="tag">${esc(L[1])}</span>` : e ? ` ${entTag(e)}` : "");
 }
 const wcard = (title, q, body, o = {}) => `<section class="panel card${o.wide ? " wide" : ""}${o.key ? " key" : ""}"${o.id ? ` id="${o.id}"` : ""}><header class="ph"><div><h3>${esc(title)}</h3>${q ? `<p class="q">${q}</p>` : ""}</div>${o.val ? `<div class="pv">${o.val}</div>` : ""}</header>${body}${o.note ? `<details class="about"><summary>Method</summary><p>${o.note}</p></details>` : ""}</section>`;
 const wtime = (s) => fdt(new Date(s * 1000)).replace(" UTC", "");
@@ -2955,18 +2960,24 @@ async function wReport(a) {
   const K = (k) => by[k] || { n: 0, g: 0, u: 0 };
   const e = rec.ent && S.E && S.E.entities.find((x) => x.id === rec.ent[0]);
   const ty = rec.dep ? `Exchange deposit address → ${esc((wLabel(rec.dep) || [, "an exchange"])[1])}` : rec.ty === "7702" ? "Smart account (EIP-7702): a person's wallet" : rec.ty === "contract" ? "Contract" : "Wallet";
-  const tags = [];
-  if (e) tags.push(`<button type="button" class="ev hd" data-pnl="${e.id}" data-tip="Tracked owner group (${esc(KINDE[e.kind] || e.kind)}): ${e.n} wallets holding ${fBb(e.bal / 1e9)} GME. ${rec.ent[1] === "j" ? `This wallet joined on ${rec.ent[4]} (${rec.ent[2]} from ${short(rec.ent[3])}).` : ""} Open the group's P&L.">${nm(e.name)}</button>`);
-  else if (rec.grp) tags.push(`<span class="ev inf" data-tip="${rec.grp.web ? "Part of a large linked web that is flagged and not trusted as one owner." : `Linked by the grouping rules to ${rec.grp.n - 1} other wallet${rec.grp.n === 2 ? "" : "s"} holding ${fG(rec.grp.held)} GME in all; below the 0.05%-of-supply bar for a tracked group.`}">${rec.grp.web ? `flagged web · ${rec.grp.n} wallets` : `linked group · ${rec.grp.n} wallets`}</span>`);
-  const tg = rec.tags || {};
+  // What it belongs to, each one opens its group: a tracked entity (the group drawer: P&L, buying waves, accumulation,
+  // wallets) or an untracked linked group (openGroup, from _groups). Accumulators and holding wallets are tracked groups.
+  const tg = rec.tags || {}, own = [], tags = [];
+  const entBtn = (x, label, tip) => `<button type="button" class="mini wown" data-pnl="${x.id}" data-tip="${esc(tip)}">${label}&nbsp;→</button>`;
+  if (e) own.push(entBtn(e, nm(e.name), `${KINDE[e.kind] || e.kind}: ${e.n} wallets holding ${fBb(e.bal / 1e9)} GME. ${rec.ent[1] === "j" ? `This wallet joined it on ${rec.ent[4]} (${rec.ent[2]} from ${short(rec.ent[3])}). ` : ""}Opens the group: its P&L, buying waves, accumulation and wallets.`));
+  else if (rec.grp) own.push(`<button type="button" class="mini wown" data-grp="${rec.grp.gid}" data-tip="${esc(rec.grp.web ? "Part of a large linked web that is flagged and not trusted as one owner. Opens its wallets and the evidence." : `Linked by the grouping rules to ${rec.grp.n - 1} other wallet${rec.grp.n === 2 ? "" : "s"} holding ${fG(rec.grp.held)} GME in all; below the 0.05%-of-supply bar for a tracked group. Opens its wallets, the evidence and its P&L as one owner.`)}">${rec.grp.web ? `Flagged web · ${rec.grp.n} wallets` : `Linked group · ${rec.grp.n} wallets`}&nbsp;→</button>`);
+  const accE = tg.acc ? e || entOf(tg.acc.owner) : null;
+  if (accE && accE !== e) own.push(entBtn(accE, nm(accE.name), "The quiet accumulator this wallet belongs to."));
   if (tg.watch && !e) tags.push(`<span class="ev">${esc(tg.watch)}</span>`);
-  if (tg.acc) tags.push(`<span class="ev up" data-tip="A quiet accumulator owner (90 days): ${tg.acc.n} wallet${tg.acc.n === 1 ? "" : "s"}, net ${sgn(tg.acc.net, fG)} GME, last buy ${tg.acc.lastBuy || "—"}.">quiet accumulator</span>`);
-  if (tg.vault) tags.push(`<span class="ev" data-tip="A fresh wallet fed by ${tg.vault.feeders} buy-and-forward wallet${tg.vault.feeders === 1 ? "" : "s"} since ${tg.vault.first} that kept what it received.">holding wallet</span>`);
+  const accTip = tg.acc ? `A quiet accumulator (90 days): ${tg.acc.n} wallet${tg.acc.n === 1 ? "" : "s"}, net ${sgn(tg.acc.net, fG)} GME, last buy ${tg.acc.lastBuy || "—"}.` : "";
+  if (tg.acc) tags.push(accE ? `<button type="button" class="ev up" data-pnl="${accE.id}" data-tip="${esc(accTip + " Opens the accumulator.")}">quiet accumulator →</button>` : `<span class="ev up" data-tip="${esc(accTip)}">quiet accumulator</span>`);
+  const vTip = tg.vault ? `A fresh wallet fed by ${tg.vault.feeders} buy-and-forward wallet${tg.vault.feeders === 1 ? "" : "s"} since ${tg.vault.first} that kept what it received.` : "";
+  if (tg.vault) tags.push(e ? `<button type="button" class="ev" data-pnl="${e.id}" data-tip="${esc(vTip + " Opens its group.")}">holding wallet →</button>` : `<span class="ev" data-tip="${esc(vTip)}">holding wallet</span>`);
   if (tg.relay) tags.push(`<span class="ev mv-move" data-tip="Received coins through buy-and-forward wallets, then sold or passed them on: a relay, not a holder.">relay</span>`);
-  if (tg.smart) tags.push(`<span class="ev up" data-tip="Smart money (hindsight): realized ${fU(tg.smart.realized)}, ${fPct(100 * tg.smart.roi, 0)} on cost.">smart money</span>`);
+  if (tg.smart) tags.push(`<a class="ev up" href="#crowd" data-tip="${esc(`Smart money (hindsight): realized ${fU(tg.smart.realized)}, ${fPct(100 * tg.smart.roi, 0)} on cost. Opens the Crowd page, where the smart money table is.`)}">smart money →</a>`);
   const kv = [["Holds", fG(rec.b) + " GME"], ["% of supply", fPct((100 * rec.b) / SUPPLY, 3)], ["Worth now", fU(rec.b * price)], ["First GME", rec.f.slice(0, 10)], ["Last active", rec.l.slice(0, 10)], ["Transfers", fN(t.length)], ...plKv(now)];
   let html = `<div class="grid"><section class="panel card wide key"><div class="whead"><span class="mono wa">${a}</span>${links}</div>
-    <div class="wtags"><span class="ev">${ty}</span>${tags.join("")}</div><div class="kv wkv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div></section></div>`;
+    <div class="wtags"><span class="ev">${ty}</span>${tags.join("")}</div>${own.length ? `<div class="wbel"><span class="eyebrow">Belongs to</span>${own.join("")}</div>` : ""}<div class="kv wkv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div></section></div>`;
   // ---- how it traded ----
   html += `<div class="grid">` + wcard("How it traded", "Its trades on the price chart, holdings, and profit and loss.", `<div id="wpl">${plBox("w:" + a)}</div>`, { wide: true, note: PLNOTE + " This is the wallet on its own: coins from its group's other wallets count as transfers. Open the group's P&L chart to see the owner as a whole." }) + `</div>`;
   // ---- flows by kind ----
@@ -3082,7 +3093,7 @@ async function wLook(a, rec, tok) {
   if (!hits.length) { el.innerHTML = head; return; }
   el.innerHTML = head + `<div class="tw"><table class="q"><thead><tr><th>Wallet</th><th>First buy</th><th class="n">Days apart</th><th class="n">Buys</th><th class="n">GME bought</th><th class="n">Spent</th><th class="n">Sold</th><th class="n">Holds</th></tr></thead><tbody>` +
     hits.slice(0, 25).map(({ r, dT }) => { const x = entOf(r[0]), same = x && myEnt && x.id === myEnt;
-      return `<tr><td>${wLink(r[0])}${x ? ` <span class="tag hd"${same ? ' title="same tracked group as this wallet"' : ""}>${nm(x.name)}${same ? " ✓" : ""}</span>` : ""}</td><td class="num">${fday(new Date(r[1] * 1000))}</td><td class="n">${sgn(Math.round(dT), fN)}</td><td class="n">${fN(r[3])}</td><td class="n">${fG(r[4])}</td><td class="n">${fU(r[5])}</td><td class="n">${fPct(100 * r[7], 0)}</td><td class="n">${fG(r[10])}</td></tr>`; }).join("") +
+      return `<tr><td>${wLink(r[0])}${x ? " " + entTag(x, same ? " ✓" : "") : ""}</td><td class="num">${fday(new Date(r[1] * 1000))}</td><td class="n">${sgn(Math.round(dT), fN)}</td><td class="n">${fN(r[3])}</td><td class="n">${fG(r[4])}</td><td class="n">${fU(r[5])}</td><td class="n">${fPct(100 * r[7], 0)}</td><td class="n">${fG(r[10])}</td></tr>`; }).join("") +
     `</tbody></table></div>` + (hits.length > 25 ? `<p class="sub" style="margin-top:6px">The 25 closest of ${fN(hits.length)}.</p>` : "");
 }
 
@@ -3224,6 +3235,50 @@ function profileHtml(pr) {
       pr.sweeps.map((x) => `<tr><td class="num">${x.d}</td><td><button class="addr" data-addr="${x.into}">${short(x.into)}</button></td><td class="n">${x.n} wallet${x.n === 1 ? "" : "s"}</td><td class="n">${fBb(x.tok / 1e9)}</td></tr>`).join("") +
       `</tbody></table></div><p class="sub" style="margin-top:6px">Days when one of the group's wallets received GME from 3 or more of its other wallets, or at least 0.1% of supply in total. Internal: not buying or selling.</p></div>` : "");
 }
+// Quiet accumulation (stealth.py, 90 days) and buy-and-hide holding wallets (vaults90.py) of a group, from site.json:
+// shown in the group drawer, so opening an accumulator from anywhere gives its own numbers, not just its P&L.
+function accHtml(e) {
+  const mem = new Set(e.members);
+  const acc = (S.accumulators || []).filter((r) => mem.has(r.owner) || (r.wallets || []).some((w) => mem.has(w)));
+  const vs = (S.vaults || []).filter((v) => mem.has(v.a));
+  if (!acc.length && !vs.length) return "";
+  const kvh = (kv) => `<div class="kv" style="margin-top:6px">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>`;
+  return acc.map((r) => `<div><span class="eyebrow">Quiet accumulation · last 90 days${r.active ? "" : " · no buy lately"}</span>` +
+      kvh([["Net added", sgn(r.net, fB) + " GME"], ["% of supply", fPct(r.netPct, 2)], ["Spent", fU(r.usd)], ["DEX buys", `${fN(r.buys)} on ${fN(r.buyDays)} days`], ["Avg buy", fU(r.avgBuyUsd)],
+        ["From exchanges", fB(r.cexin) + " GME"], ["Sold", fB(r.sold) + " GME"], ["Last buy", r.lastBuy || "—"], ["Holds", fB(r.held) + " GME"], ["Active since", r.first || "—"]]) +
+      (r.tags && r.tags.length ? `<div class="chips">${r.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : "") +
+      `<p class="sub" style="margin-top:6px">A quiet accumulator: an owner adding GME over the last 90 days without selling, through small or spread-out buys. Net added = GME in minus GME out over the window.</p></div>`).join("") +
+    (vs.length ? `<div><span class="eyebrow">Buy-and-hide holding wallets</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Holding wallet</th><th class="n">Received</th><th class="n">Holds</th><th class="n">Feeders</th><th>Since</th></tr></thead><tbody>` +
+      vs.map((v) => `<tr><td><a class="addr" href="#wallet/${v.a}">${short(v.a)}</a></td><td class="n">${fB(v.tok)}</td><td class="n">${v.bal == null ? "—" : fB(v.bal)}</td><td class="n">${v.feeders.length}</td><td class="num">${(v.first || "").slice(0, 10)}</td></tr>`).join("") +
+      `</tbody></table></div><p class="sub" style="margin-top:6px">Fresh wallets fed by wallets that bought on the DEX and forwarded the coins, and that kept what they received.</p></div>` : "");
+}
+// An untracked linked group (cluster_all.py found it, but it holds under 0.05% of supply, or it is a flagged web): its
+// wallets, the evidence that links them and, for a group, its P&L as one owner (wallet_index.py _groups).
+const GVIA = { seed: "first-GME seeds", drain: "drains", deposit: "shared deposit addresses", gas: "gas top-ups", ethseed: "first-ETH links", ethfund: "ETH funding" };
+async function openGroup(gid) {
+  $("scrim").classList.add("on"); $("drawer").classList.add("open");
+  $("dh").innerHTML = `<span>Loading…</span><button class="x" type="button" aria-label="Close">×</button>`; $("dh").querySelector(".x").onclick = closeWallet;
+  $("db").innerHTML = "";
+  let G = null; try { G = (await wLoad("groups"))[gid]; } catch (er) {}
+  if (!G) { $("db").innerHTML = unavailable("This group isn't in the wallet index on this deploy."); return; }
+  const web = G.kind === "web", lead = G.members[0][0];
+  $("dh").innerHTML = `<span style="font-weight:600">${nm(G.name)}</span><span class="ev inf">${web ? "flagged web" : "linked group · untracked"}</span><a class="mini" href="#visualizer/${lead}">Visualize →</a><button class="x" type="button" aria-label="Close">×</button>`;
+  $("dh").querySelector(".x").onclick = closeWallet;
+  const P = G.pl ? { track: G.pl.track, marks: G.pl.marks } : null, now = P && plNow(P);
+  const via = Object.entries(G.via || {}).sort((p, q) => q[1] - p[1]).map(([k, n]) => `${n} ${GVIA[k] || k}`).join(" · ");
+  const ents = (G.ents || []).map((id) => S.E && S.E.entities.find((x) => x.id === id)).filter(Boolean);
+  const kv = [["Holds", fB(G.held) + " GME"], ["% of supply", fPct((100 * G.held) / SUPPLY, 3)], ["Wallets", fN(G.n)], ...plKv(now)];
+  const big = ((P && P.marks) || []).slice().sort((x, y) => y[3] - x[3]).slice(0, 12), off = d0off();
+  $("db").innerHTML = `<div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
+    <p class="sub">${web ? "A large web of wallets the grouping rules joined, flagged because it grew past 60 wallets: it is <b>not trusted as one owner</b>, so it has no combined P&amp;L. Parts of it are tracked as groups of their own." : "Wallets the grouping rules link as one owner, holding less than the 0.05% of supply that makes a group tracked by the daily watch."} Linked by: ${via || "—"}. Links are evidence of shared control, not proof of ownership.</p>
+    ${ents.length ? `<div class="wbel"><span class="eyebrow">Tracked groups among its wallets</span>${ents.map((x) => `<button type="button" class="mini wown" data-pnl="${x.id}">${nm(x.name)}&nbsp;→</button>`).join("")}</div>` : ""}
+    ${P ? `<div><span class="eyebrow">How it traded · the group as one owner</span><div style="margin-top:6px">${plBox("g:" + gid)}</div><p class="sub" style="margin-top:6px">${PLNOTE} Moves between the group's own wallets are internal: neither buys nor sales.</p></div>` : ""}
+    ${big.length ? `<div><span class="eyebrow">Largest trades</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">At MC</th></tr></thead><tbody>` +
+      big.map(([d, k, b, u]) => `<tr><td class="num">${fday(DD[d + off] || DD[N - 1])}</td><td class="${PLK[k][1] === "--up" ? "up" : "down"}">${PLK[k][0]}</td><td class="n">${fBb(b)}</td><td class="n">${fU(u)}</td><td class="n">${PLK[k][2] ? fP(u / (b * 1e9)) : "—"}</td></tr>`).join("") + `</tbody></table></div></div>` : ""}
+    <div><span class="eyebrow">Wallets (${fN(G.n)}${G.members.length < G.n ? `, the ${G.members.length} largest` : ""})</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Wallet</th><th class="n">Holds</th><th></th></tr></thead><tbody>` +
+      G.members.map(([w, b]) => { const x = entOf(w); return `<tr><td><a class="addr" href="#wallet/${w}">${short(w)}</a>${x ? " " + entTag(x) : ""}</td><td class="n">${fB(b)}</td><td class="n">${fPct((100 * b) / SUPPLY, 3)}</td></tr>`; }).join("") + `</tbody></table></div></div>`;
+  if (P) wirePl($("db"), P);
+}
 async function openEntity(id) {
   const e = S.E && S.E.entities.find((x) => x.id === id); if (!e) return;
   $("scrim").classList.add("on"); $("drawer").classList.add("open");
@@ -3236,6 +3291,7 @@ async function openEntity(id) {
   const big = ((P && P.marks) || []).slice().sort((a, b) => b[3] - a[3]).slice(0, 12), off = d0off();
   $("db").innerHTML = `<div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
     <div><span class="eyebrow">How it traded · the whole group as one owner</span><div style="margin-top:6px">${plBox("e:" + id)}</div><p class="sub" style="margin-top:6px">${PLNOTE} Moves between the group's own wallets are internal: neither buys nor sales.</p></div>
+    ${accHtml(e)}
     ${profileHtml(P && P.profile)}
     ${big.length ? `<div><span class="eyebrow">Largest trades</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">At MC</th></tr></thead><tbody>` +
       big.map(([d, k, b, u]) => `<tr><td class="num">${fday(DD[d + off] || DD[N - 1])}</td><td class="${PLK[k][1] === "--up" ? "up" : "down"}">${PLK[k][0]}</td><td class="n">${fBb(b)}</td><td class="n">${fU(u)}</td><td class="n">${PLK[k][2] ? fP(u / (b * 1e9)) : "—"}</td></tr>`).join("") + `</tbody></table></div></div>` : ""}

@@ -60,6 +60,24 @@ def build(T, PX, KEYS, TX, TP, infra, CEX, DEP):
     return rows, seed, seeded, dep_users, bal
 
 
+def group_books(T, PX, gof, infra, CEX, DEP, day0):
+    """Profit and loss of each linked group as ONE owner (pnl.Book, as entities.py does for tracked groups): a transfer
+    between two of the group's own wallets is internal and skipped; every other transfer touching a member is the
+    group buying, selling, receiving or sending. gof: wallet → group id. Returns {group id: {track, marks}}."""
+    books = {}
+    for j, (s, r, ts, v, b) in enumerate(T):
+        if s == r or v <= 0: continue
+        gs, gr = gof.get(s), gof.get(r)
+        if gs is not None and gs == gr: continue
+        if gr is not None:
+            k = kind(s, False, infra, CEX, DEP)
+            books.setdefault(gr, Book(day0)).inflow(ts, v, PX[j], "D" if k == "b" else "C" if k == "ci" else "W")
+        if gs is not None:
+            k = kind(r, True, infra, CEX, DEP)
+            books.setdefault(gs, Book(day0)).outflow(ts, v, PX[j], "D" if k == "s" else "C" if k == "co" else None)
+    return {g: bk.finish() for g, bk in books.items()}
+
+
 def seeded_lists(sd, DEP, cap=60):
     """Wallets whose first GME came from this one, at the linking rule's $2k bar; exchange deposit addresses are its
     exchange account (shown under exchanges), and smaller first sends (often airdrop spam) are only counted.
@@ -124,11 +142,22 @@ def main():
         for a in e["members"]: ent[a] = [e["id"], "m"]
         for x in e.get("attached", []): ent[x["a"]] = [e["id"], "j", x.get("how"), x.get("frm"), x.get("d")]
     ALL = ld("entities_all.json", {"entities": [], "webs": []})
-    grp = {}
-    for i, g in enumerate(ALL.get("entities", [])):
-        for a in g["wallets"]: grp[a] = dict(n=g["n"], held=round(g["held"]), flagged=g.get("flagged", False), via=g.get("via", {}), lead=g["wallets"][0])
-    for w in ALL.get("webs", []):
-        for a in w["wallets"]: grp.setdefault(a, dict(n=w["n"], held=round(w["held"]), flagged=True, via=w.get("via", {}), web=True, lead=w["wallets"][0]))
+    # every linked group the grouping rules found (cluster_all.py), tracked or not, plus the flagged webs: the Wallet
+    # page opens a tracked one as its entity and any other one from _groups (members, evidence, P&L as one owner)
+    grp, gof, GROUPS = {}, {}, {}
+    for kind_, src in (("group", ALL.get("entities", [])), ("web", ALL.get("webs", []))):
+        for g in src:
+            ws = [a for a in g["wallets"] if a not in gof]                # a wallet in a group AND a web belongs to the group
+            if not ws: continue
+            gid = ("w" if kind_ == "web" else "g") + min(g["wallets"])[2:12]
+            for a in ws: gof[a] = gid
+            mem = sorted(((a, bal[a]) for a in g["wallets"]), key=lambda x: -x[1])
+            GROUPS[gid] = dict(kind=kind_, n=g["n"], held=gme(sum(max(b_, 0) for _, b_ in mem)), flagged=kind_ == "web" or g.get("flagged", False),
+                               via=g.get("via", {}), name=("Flagged web" if kind_ == "web" else "Linked group") + " " + mem[0][0][-4:],
+                               ents=sorted({ent[a][0] for a, _ in mem if a in ent}), members=[[a, gme(b_)] for a, b_ in mem[:300]])
+            for a in ws: grp[a] = dict(n=g["n"], held=round(g["held"]), flagged=kind_ == "web" or g.get("flagged", False), via=g.get("via", {}), web=kind_ == "web", gid=gid)
+    # one owner's P&L per group (not for webs: a flagged web is not trusted as one owner)
+    for gid, pl in group_books(T, PX, {a: g for a, g in gof.items() if g[0] == "g"}, infra, CEX, DEP, day0).items(): GROUPS[gid]["pl"] = pl
     # watch tags
     tags = collections.defaultdict(dict)
     for row in ld("stealth.json", {"rows": []})["rows"]:
@@ -202,10 +231,11 @@ def main():
         f.write(json.dumps(dict(k="_meta", d=meta), separators=(",", ":")) + "\n")
         f.write(json.dumps(dict(k="_labels", d=labels), separators=(",", ":")) + "\n")
         f.write(json.dumps(dict(k="_fp", d=fp), separators=(",", ":")) + "\n")
+        f.write(json.dumps(dict(k="_groups", d=GROUPS), separators=(",", ":")) + "\n")
         for k in sorted(shards): f.write(json.dumps(dict(k=k, d=shards[k]), separators=(",", ":")) + "\n")
     os.replace(out + ".tmp", out)
     print(f"wallet-index: {len(rows):,} wallets in {len(shards)} shards · {meta['rows']:,} transfer rows · {len(fp):,} buying fingerprints · "
-          f"{len(labels):,} labels · {len(ETH):,} with an ETH side · {os.path.getsize(out) / 1e6:.1f} MB")
+          f"{len(labels):,} labels · {len(GROUPS):,} linked groups · {len(ETH):,} with an ETH side · {os.path.getsize(out) / 1e6:.1f} MB")
 
 
 if __name__ == "__main__":

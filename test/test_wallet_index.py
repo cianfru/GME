@@ -78,5 +78,19 @@ class Build(unittest.TestCase):
         self.assertEqual(more, [0, 1])                           # nothing beyond the cap, one small first send
 
 
+class Groups(unittest.TestCase):
+    def test_group_pnl_skips_moves_between_its_own_wallets(self):
+        T = [tr(ROUTER, A, "2025-01-01T00:00:00Z", 1000),        # the group buys 1000 at $1
+             tr(A, B, "2025-01-02T00:00:00Z", 1000),              # internal: A → B, same owner
+             tr(B, PAIR, "2025-01-03T00:00:00Z", 400),            # the group sells 400 at $3
+             tr(B, C, "2025-01-04T00:00:00Z", 100)]               # sent to an outsider: leaves at cost, no P/L
+        PX = [1.0, 2.0, 3.0, 4.0]
+        pl = W.group_books(T, PX, {A: "g1", B: "g1"}, infra, CEX, {}, "2025-01-01")["g1"]
+        last = pl["track"][-1]                                    # [day, holdB, cost, realized, bought, sold]
+        self.assertEqual(last[1], round(500 / 1e9, 4))
+        self.assertEqual(last[2:], [500, 800, 1000, 1200])        # cost of the 500 held, realized (3-1)×400, bought, sold
+        self.assertEqual(sorted(m[1] for m in pl["marks"]), [])   # marks need ≥1e6 GME: none at this scale
+
+
 if __name__ == "__main__":
     unittest.main()
