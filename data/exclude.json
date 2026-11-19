@@ -4894,5 +4894,29 @@
 "0xe41c726421007e133a59365432fe886a73b45126": {
 "name": "contract",
 "kind": "mm"
+},
+"0xba412d8b36bfd7d65dff5cc0df7b3c29a7eae687": {
+"name": "contract",
+"kind": "mm"
+},
+"0xcba49142a75da64a679f32a159f4316f11a7e0cc": {
+"name": "contract",
+"kind": "mm"
+},
+"0xd7dc1daba1cd54fad3b3badf4dabcf86d01e94fc": {
+"name": "contract",
+"kind": "mm"
+},
+"0xe88d1148550016868167c04b03fcf49d342b8d13": {
+"name": "contract",
+"kind": "mm"
+},
+"0xfd02f3cdbadc137aa77166c5d168db9ecc96783d": {
+"name": "contract",
+"kind": "mm"
+},
+"0xfe4a23bbe27be16955f4d8599c73bac88ef647d1": {
+"name": "contract",
+"kind": "mm"
 }
 }
