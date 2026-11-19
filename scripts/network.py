@@ -94,6 +94,55 @@ def evidence(T, PX, TX, gof, labels, deplike, cexw, eth_rows, names):
     return dict(pairs=pairs, shared=shared, deposits=deps)
 
 
+MAPW = (24, 168, 720, 2160)
+
+
+def netmap(T, PX, gof, names, web, pieces, shared, bal, first, last, is_dex, is_cex, deplike, infra, eth_rows, now_dt):
+    """The network map: every wallet of the network, the rest of its original linked web and the wallets it paid into
+    together, with what each holds now and its flows over 1/7/30/90 days, plus the links among them (GME transfers,
+    ETH transfers, shared exchange deposit addresses). Flow columns per window, GME B:
+    [bought on DEX, sold on DEX, from exchanges, to exchanges, from network wallets, to network wallets, from other wallets, to other wallets]."""
+    net = set(gof)
+    M = net | set(web) | set(shared)
+    grp = {}
+    for a in M:
+        if a in gof: grp[a] = (gof[a], names.get(gof[a], gof[a]), "net")
+        elif a in pieces: grp[a] = pieces[a]
+        elif a in web: grp[a] = ("loose", "Lone web wallets", "lone")
+        else: grp[a] = ("shared", "Paid by the network", "shared")
+    order = sorted(M, key=lambda a: (-max(bal[a], 0), a)); idx = {a: i for i, a in enumerate(order)}
+    keys = []; kidx = {}
+    for a in order:
+        k = grp[a]
+        if k[0] not in kidx: kidx[k[0]] = len(keys); keys.append(dict(k=k[0], name=k[1], kind=k[2]))
+    F = [[[0.0] * 8 for _ in MAPW] for _ in order]; ever = [[0.0] * 4 for _ in order]
+    E = collections.defaultdict(lambda: [0.0, 0.0, 0, ""])
+    dep = collections.defaultdict(set)
+    t90 = (now_dt - datetime.timedelta(hours=MAPW[-1])).strftime("%Y-%m-%dT%H:%M:%SZ")
+    for j, (s, r, ts, v, b) in enumerate(T):
+        if v <= 0 or s == r or (s not in M and r not in M): continue
+        u = v * PX[j]
+        if s in M and r in M:
+            x = E[(idx[s], idx[r])]; x[0] += v; x[1] += u; x[2] += 1; x[3] = ts[:10]
+        if s in M and r in deplike: dep[r].add(idx[s])
+        for me, o, out in ((s, r, True), (r, s, False)):
+            if me not in M: continue
+            c = (1 if is_dex(o) else 3 if is_cex(o) else 5 if o in net else 7) if out else (0 if is_dex(o) else 2 if is_cex(o) else 4 if o in net else 6)
+            if c < 4: ever[idx[me]][c] += u
+            if ts <= t90: continue
+            age = (now_dt - parse(ts)).total_seconds() / 3600
+            for wi, h in enumerate(MAPW):
+                if age < h: F[idx[me]][wi][c] += v
+    wallets = [[a, kidx[grp[a][0]], 1 if a in net else 0, round(max(bal[a], 0) / 1e9, 4), (first.get(a) or "")[:10], (last.get(a) or "")[:10],
+                [[round(x / 1e9, 5) for x in F[i][wi]] for wi in range(len(MAPW))], [round(x) for x in ever[i]]] for i, a in enumerate(order)]
+    edges = [[i, k, round(x[0] / 1e9, 5), round(x[1]), x[2], x[3]] for (i, k), x in E.items() if x[1] >= 100]
+    eth = []
+    for r in eth_rows:
+        if r["f"] in idx and r["t"] in idx and r["f"] != r["t"]: eth.append([idx[r["f"]], idx[r["t"]], round(float(r["eth"]), 4), int(r["n"])])
+    deps = [[d, sorted(us)] for d, us in dep.items() if len(us) >= 2]
+    return dict(windows=list(MAPW), cols=["b", "s", "ci", "co", "iN", "oN", "iX", "oX"], groups=keys, wallets=wallets, edges=edges, eth=eth, deps=deps)
+
+
 def main():
     conf = ld("networks.json", {"networks": []})
     REG = ld("entities.json", None)
@@ -161,6 +210,20 @@ def main():
                    firstSeen=min((first[a] for a in mine if a in first), default=NOW)[:10], lastActive=max((last[a] for a in mine if a in last), default="")[:10],
                    members=members, attached=[], provisional=[], via=None, near=None, forming=None, flagged=False, capped=False, direct=None,
                    evidence=ev)
+        # the map: the network, the rest of the linked web it came from, and the wallets it paid into together
+        AL = ld("entities_all.json", {"entities": [], "webs": []})
+        webs = [w for w in AL.get("webs", []) if set(w["wallets"]) & mine]
+        web = set().union(*[set(w["wallets"]) for w in webs]) if webs else set()
+        pieces = {}
+        for g in AL.get("entities", []):
+            if g.get("splitFrom") and set(g["wallets"]) & web:
+                key = ("g" + min(g["wallets"])[2:12], "Linked group " + max(g["wallets"], key=lambda w: bal[w])[-4:], "piece")
+                for a in g["wallets"]: pieces.setdefault(a, key)
+        shared = [x["a"] for x in ev["shared"] if x["a"] not in mine]
+        rec["map"] = netmap(T, PX, gof, names, web - mine, pieces, shared, bal, first, last, is_dex, is_cex, deplike, infra, eth_rows, now_dt)
+        rec["map"]["main"] = (lead or {}).get("anchor")
+        rec["web"] = dict(n=len(web), inNetwork=len(web & mine), outside=len(web - mine), holding=sum(1 for a in web - mine if bal[a] > 1e6),
+                          held=round(sum(max(bal[a], 0) for a in web - mine)), notInWeb=len(mine - web))
         out.append(rec)
         if PNL is not None: PNL["ents"][net["id"]] = bk.finish()
     json.dump(dict(asOf=NOW, spot=spot, windows=list(WIN), channels=CH, networks=out), open(os.path.join(D, "network.json"), "w"), separators=(",", ":"))

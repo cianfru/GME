@@ -365,6 +365,27 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 .netline { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; margin: 10px 0 2px; padding: 8px 10px; border: 1px solid var(--line); border-left: 2px solid var(--accent); font: 400 12px var(--sans) } .netline b { font: 500 12px var(--mono) } .netline .mini { margin-left: auto }
 .netev-tag { color: var(--accent); border-color: var(--accent); cursor: pointer; background: none }
 @media (max-width: 900px) { .netgrid { grid-template-columns: minmax(0, 1fr) } }
+.nmind { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 12px; margin-top: 4px }
+.nmbig { border: 1px solid var(--line); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px } .nmbig > b { font: 500 34px var(--mono); letter-spacing: -.03em; line-height: 1.1 } .nmbig > span { font: 400 11.5px var(--mono); color: var(--fg-2) } .nmbig > b.up, .nmbig > b.down, .nmbig > b.flat { font: 500 15px var(--mono); margin-top: 4px }
+.nmwins { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line) }
+.nmw { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; box-shadow: 1px 0 0 var(--line) } .nmw > span { font: 500 9.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted) }
+.nmw > b { font: 500 22px var(--mono); letter-spacing: -.02em } .nmw small { font: 400 11px var(--mono) } .nmw small i { font-style: normal } .nmw.isup { box-shadow: 1px 0 0 var(--line), inset 0 3px 0 var(--up) } .nmw.isdown { box-shadow: 1px 0 0 var(--line), inset 0 3px 0 var(--down) }
+.nmsplit { margin-top: 12px; border: 1px solid var(--line) }
+.nmrow { display: grid; grid-template-columns: minmax(0, 2.4fr) 1fr repeat(3, 1fr) 1.3fr; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line) } .nmrow:last-child { border-bottom: 0 }
+.nml { display: flex; align-items: center; gap: .6rem; min-width: 0 } .nml span { display: flex; flex-direction: column; min-width: 0 } .nml b { font: 600 13px var(--sans) } .nml small { font: 400 10.5px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.nmdot { flex: none; width: 12px; height: 12px; border-radius: 50%; border: 1.6px solid var(--accent); box-shadow: 0 0 0 2px var(--th), 0 0 0 3.5px var(--accent) } .nmdot.o { border-color: var(--fg-2); box-shadow: none }
+.nmh { font: 500 15px var(--mono) } .nmc { display: flex; flex-direction: column } .nmc small { font: 500 9px var(--mono); letter-spacing: .12em; color: var(--muted) } .nmc b { font: 500 12.5px var(--mono) }
+.nms { font: 500 12.5px var(--mono); text-align: right; display: flex; flex-direction: column } .nms small { font: 400 9.5px var(--mono); color: var(--muted) }
+.nmread { margin: 10px 0 0; font: 500 13px var(--sans); color: var(--fg) }
+.nmcells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); margin: 8px 0 } .nmcells span { padding: 6px 8px; display: flex; flex-direction: column; box-shadow: 1px 0 0 var(--line) } .nmcells small { font: 500 9px var(--mono); letter-spacing: .12em; color: var(--muted) } .nmcells b { font: 500 12.5px var(--mono) }
+.nmkeyw { display: flex; align-items: center; gap: 12px } .nmkeyw.row { flex-wrap: wrap } .nmkeyt { display: flex; flex-direction: column; gap: 4px; font: 400 11.5px var(--sans); color: var(--fg-2) } .nmrl b { color: var(--fg); font-weight: 600 }
+.nmkeyc { display: flex; flex-wrap: wrap; gap: 3px 12px } .nmkeyc span { display: inline-flex; align-items: center; gap: .35rem } .nmkeyc i { width: 12px; height: 4px; display: inline-block } .nmkeyc i.o { height: 10px; width: 10px; border-radius: 50%; border: 1.4px dashed var(--muted) } .nmkeyc i.gold { height: 10px; width: 10px; border-radius: 50%; border: 1.4px dashed var(--accent) }
+.nmweb { display: flex; height: 34px; border: 1px solid var(--line); margin: 6px 0 8px; overflow: hidden } .nmweb i { display: flex; align-items: center; gap: .4rem; padding: 0 10px; font: 400 11.5px var(--sans); font-style: normal; white-space: nowrap; overflow: hidden; min-width: 0 } .nmweb b { font: 600 13px var(--mono) }
+.nmweb i.a { background: var(--accent-2); box-shadow: inset 0 -2px 0 var(--accent) } .nmweb i.b { background: var(--glass-2); box-shadow: inset 0 -2px 0 var(--fg-2) } .nmweb i.c { color: var(--muted) }
+.nmev summary { list-style: none; cursor: pointer; width: fit-content } .nmev summary::-webkit-details-marker { display: none }
+@media (max-width: 900px) { .nmind { grid-template-columns: minmax(0, 1fr) } .nmrow { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 6px } .nmrow .nml { grid-column: span 3 } .nmrow .nmh { text-align: right } .nmrow .nms { text-align: right } .nmweb { flex-direction: column; height: auto } .nmweb i { padding: 6px 10px; flex: none !important } }
+@media (max-width: 760px) { .nmleg { display: none } }
+@media (max-width: 520px) { .nmwins { grid-template-columns: minmax(0, 1fr) } .nmw { box-shadow: 0 1px 0 var(--line) } .nmw > b { font-size: 19px } }
 .mvkv { margin: .7rem 0 .2rem }
 .mvleg { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin-top: .8rem; font: 400 11px var(--sans); color: var(--fg-2) } .mvleg span { display: inline-flex; align-items: center; gap: .35rem }
 .mvleg i { display: inline-block; width: 9px; height: 9px } .mvleg i.ln { height: 2px; width: 14px; background: var(--accent) } .mvkv b small { font-size: 10.5px; margin-left: .3rem }
@@ -600,7 +621,7 @@ const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crow
 // efdb", "Linked group 847d"). fbb4's group is just "fbb4" (the owner's X name, the end of 0xe147…fbb4).
 const nm = (s) => esc(s).replace(/(^|\s)([0-9a-f]{4,6})$/, (m, sp, h) => (sp ? "&nbsp;" : "") + `<span class="hd">${h}</span>`);   // nbsp: flex buttons drop a plain trailing space
 const FTAG = ' <span class="tag hd">fbb4</span>';
-const SUBS = [["cards", "Entities"], ["cluster", "fbb4"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["eth", "ETH side"], ["watchlist", "Watchlist"]];
+const SUBS = [["cards", "Entities"], ["network", "fbb4 network"], ["cluster", "fbb4"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["eth", "ETH side"], ["watchlist", "Watchlist"]];
 const LEGACY = { wallets: "entities/monitor", bubbles: "entities/map", insiders: "entities/cluster", watchlist: "entities/watchlist", valuation: "holders", flows: "transfers" };
 let page = "overview", sub = "cluster", lastPage = null;
 const draws = [];
@@ -1709,8 +1730,9 @@ function movesCard() {
 
 // ---------- ENTITIES ----------
 function entities() {
-  const titles = { eth: "The ETH side", cards: "Entities", cluster: "fbb4: the main wallet and its linked wallets", monitor: "Wallet monitor", map: "Flow map", watchlist: "Watchlist" };
+  const titles = { network: "fbb4 network", eth: "The ETH side", cards: "Entities", cluster: "fbb4: the main wallet and its linked wallets", monitor: "Wallet monitor", map: "Flow map", watchlist: "Watchlist" };
   const desc = { eth: "What the ETH trail adds: who funded each wallet, who paid for whose purchases, money in and out of exchanges, and the other tokens these owners trade.",
+    network: "Every wallet of fbb4's network on one map: how many coins each holds today and what it did in the last 7, 30 and 90 days.",
     cards: "Every group of linked wallets as one card: how big it is, whether it is growing or shrinking, and through which channel. Followed automatically as coins move into fresh wallets.",
     cluster: "The largest group of linked wallets: what it holds, what it did, and the evidence tying each wallet to it.",
     monitor: "Every wallet holding at least 0.1% of supply, now or at any point in 90 days, and what it did over 1, 7, 30 and 90 days.",
@@ -1723,7 +1745,7 @@ function entities() {
     <div><svg width="38" height="10" aria-hidden="true"><line x1="0" y1="5" x2="38" y2="5" stroke="var(--fg-2)" stroke-width="2" stroke-dasharray="5 4"/></svg><b>Inferred relationship</b><p>Derived by a rule, not seen as a transfer between the two: a shared exchange deposit address, or membership of the same owner group. Dashed lines, marked “inferred”.</p></div>
     <p class="disc">Wallet links are evidence of shared control, not proof of ownership. Groups are a floor: linking errs toward not merging.</p></section>`);
   grid();
-  ({ cards: entCards, cluster: entCluster, monitor: entMonitor, map: entMap, eth: entEth, watchlist: entWatch })[sub]();
+  ({ cards: entCards, network: entNetwork, cluster: entCluster, monitor: entMonitor, map: entMap, eth: entEth, watchlist: entWatch })[sub]();
 }
 function entCluster() {
   insiderCard(false); chCluster(false);
@@ -2258,7 +2280,7 @@ function netLine() {
   const n = NETS()[0]; if (!n) return "";
   const y = ewin(n, 2), s2 = STN[n.status[2]] || STN.dormant;
   return `<div class="netline"><span>The whole <button type="button" class="tag hd" data-pnl="${n.id}">${esc(n.name)}</button> (${n.groups.length} groups, ${n.n} wallets) holds <b>${fBb(n.bal / 1e9)}</b> · ${fPct(n.pct, 2)} of supply</span>
-    <span class="${s2[1]}">30D ${s2[0].replace(/^. /, "")} ${Math.abs(y.net) < 1e-3 ? "±0" : sgn(y.net, fBb)}</span><a class="mini" href="#entities/cards">The network →</a></div>`;
+    <span class="${s2[1]}">30D ${s2[0].replace(/^. /, "")} ${Math.abs(y.net) < 1e-3 ? "±0" : sgn(y.net, fBb)}</span><a class="mini" href="#entities/network">The network map →</a></div>`;
 }
 function netSide(n, wi) {
   const tot = n.bal || 1, wl = WIN[wi][0];
@@ -2286,18 +2308,142 @@ function netEv(n) {
 }
 function netCard() {
   for (const n of NETS())
-    card({ title: n.name, q: `${n.groups.length} groups the grouping rules keep apart, counted as one bloc after review: ${fPct(n.pct, 2)} of supply in ${n.n} wallets.`, wide: true, key: true,
-      body: `<div class="netbox" data-net="${n.id}"></div>`,
+    card({ title: n.name, q: `${n.groups.length} groups counted as one owner after review: what it holds, what it bought and sold.`, wide: true, key: true,
+      body: `${netInd(n)}<div class="vzact" style="margin-top:10px"><a class="mini" href="#entities/network">Open the network map →</a><button type="button" class="mini" data-pnl="${n.id}">P&amp;L chart →</button></div>`,
       note: "The grouping rules merge wallets only on the strongest evidence (a first GME, a drain, first ETH or a gas top-up), so these five stay separate groups underneath; the network is an owner-reviewed view on top of them. Flows, holdings and P&L are the network as one owner: GME moving between its groups is internal, neither a buy nor a sale. The evidence list is recomputed from the chain every run. Whether it is one person or a few acting together, the chain cannot tell." });
-  draws.push(drawNets);
 }
-function drawNets() {
-  for (const box of document.querySelectorAll(".netbox")) {
-    const n = NETS().find((x) => x.id === box.dataset.net); if (!n) continue;
-    box.innerHTML = `<div class="netgrid"><div class="ecgrid1">${ecard({ e: n, x: ewin(n, ecWin), st: n.status[ecWin] }, WIN[ecWin][0])}</div><div class="netside">${netSide(n, ecWin)}</div></div>`;
-    ecHover(box);
-    box.onclick = (ev) => { const t = ev.target.closest("[data-ew]"); if (!t) return; ecWin = +t.dataset.ew; drawNets(); drawCards(); };
-  }
+
+// ---------- NETWORK MAP (#entities/network): every wallet of a network as a bubble, rings for 7 / 30 / 90 days ----------
+// network.py → n.map: wallets [address, group, in network, GME B now, first, last, flows per window, all-time $],
+// flows per window = [bought DEX, sold DEX, from exch., to exch., from network wallets, to network wallets, from
+// other wallets, to other wallets] for 1D / 7D / 30D / 90D. A ring is green when the wallet grew, red when it shrank
+// mostly by selling (DEX or exchange), blue when it shrank by moving coins to the network's own wallets, amber when
+// they went to other wallets, grey when coins moved but in and out cancel; a faint track when nothing moved.
+let nmShow = "active", nmSel = null, NCG = null;
+const nmPinned = new Map();
+const fsum = (f) => ({ inn: f[0] + f[2] + f[4] + f[6], out: f[1] + f[3] + f[5] + f[7], buy: f[0] + f[2], sell: f[1] + f[3], fromOwn: f[4], toOwn: f[5], fromOth: f[6], toOth: f[7] });
+function ringOf(f, bal) {
+  const x = fsum(f), net = x.inn - x.out, thr = Math.max(0.001, 0.01 * Math.max(bal, bal - net));
+  if (x.inn + x.out < 1e-6) return null;
+  if (net > thr) return "--up";
+  if (net < -thr) return x.sell >= 0.5 * x.out ? "--down" : x.toOwn >= 0.5 * x.out ? "--s1" : "--warn";
+  return "--neutral";
+}
+const RINGN = { "--up": "grew", "--down": "sold", "--s1": "moved to its own wallets", "--warn": "sent to other wallets", "--neutral": "in and out cancel" };
+const nmAgg = (list, wi) => list.reduce((a, w) => { w[6][wi].forEach((v, i) => (a[i] += v)); return a; }, [0, 0, 0, 0, 0, 0, 0, 0]);
+const nmNet = (f) => { const x = fsum(f); return x.inn - x.out; };
+const nmCell = (v, tiny) => `<b class="${Math.abs(v) < 0.001 ? "flat" : v > 0 ? "up" : "down"}">${Math.abs(v) < 0.001 ? "±0" : (v > 0 ? "▲ +" : "▼ −") + fBb(Math.abs(v))}</b>`;
+// The one-second read: what the network holds, what it bought and sold, and the main wallet against everything else.
+function netInd(n) {
+  const M = n.map; if (!M) return "";
+  const W = M.wallets, net = W.filter((w) => w[2]), main = net.find((w) => w[0] === M.main), rest = net.filter((w) => w !== main);
+  const holding = net.filter((w) => w[3] > 0.001).length, today = nmNet(nmAgg(net, 0));
+  const win = [["7 days", 1], ["30 days", 2], ["90 days", 3]];
+  const tiles = win.map(([l, wi]) => { const f = nmAgg(net, wi), x = fsum(f), v = x.inn - x.out;
+    return `<div class="nmw ${Math.abs(v) < 0.001 ? "" : v > 0 ? "isup" : "isdown"}"><span>${l}</span>${nmCell(v)}<small><i class="up">bought ${x.buy > 0.0005 ? fBb(x.buy) : "0"}</i> · <i class="down">sold ${x.sell > 0.0005 ? fBb(x.sell) : "0"}</i></small></div>`; }).join("");
+  const row = (label, sub, list, gold) => { const bal = d3.sum(list, (w) => w[3]), s90 = fsum(nmAgg(list, 3)).sell;
+    return `<div class="nmrow"><span class="nml">${gold ? '<i class="nmdot"></i>' : '<i class="nmdot o"></i>'}<span><b>${label}</b><small>${sub}</small></span></span><span class="nmh">${fBb(bal)}</span>${win.map(([l, wi]) => `<span class="nmc"><small>${l.replace(" days", "D")}</small>${nmCell(nmNet(nmAgg(list, wi)))}</span>`).join("")}<span class="nms ${s90 > 0.0005 ? "down" : "flat"}">${s90 > 0.0005 ? "sold " + fBb(s90) : "sold nothing"}<small>in 90 days</small></span></div>`; };
+  const m90 = main ? fsum(nmAgg([main], 3)) : null, r90 = fsum(nmAgg(rest, 3));
+  const read = main ? `In 90 days fbb4's main wallet ${m90.sell > 0.0005 ? "sold " + fBb(m90.sell) : "sold nothing"} and ${nmNet(nmAgg([main], 3)) >= 0 ? "grew " + fBb(Math.max(0, nmNet(nmAgg([main], 3)))) : "shrank " + fBb(-nmNet(nmAgg([main], 3)))}; the other wallets ${r90.sell > 0.0005 ? "sold " + fBb(r90.sell) : "sold nothing"}.` : "";
+  return `<div class="nmind"><div class="nmbig"><span class="eyebrow">Holds today</span><b>${fBb(n.bal / 1e9)}</b><span>${fPct(n.pct, 2)} of supply · ${holding} of ${net.length} wallets hold GME</span>${nmCell(today)}<small class="flat">last 24 h</small></div><div class="nmwins">${tiles}</div></div>
+    <div class="nmsplit">${main ? row("fbb4's main wallet", short(M.main) + " · the one everyone watches", [main], true) : ""}${row(`Its other ${rest.length} wallets`, `${rest.filter((w) => w[3] > 0.001).length} hold GME · 5 groups`, rest, false)}</div>
+    ${read ? `<p class="nmread">${read}</p>` : ""}`;
+}
+function entNetwork() {
+  const n = NETS()[0];
+  if (!n || !n.map) { card({ title: "fbb4 network", wide: true, body: unavailable("The network map arrives with the next scheduled run.") }); return; }
+  card({ title: n.name, q: `${n.groups.length} groups counted as one owner after review. What it holds, and what it bought and sold.`, wide: true, key: true, body: `<div id="nmind">${netInd(n)}</div>`,
+    note: "Bought = DEX buys + exchange withdrawals; sold = DEX sales + exchange deposits. Net also counts GME received from or sent to wallets outside the network; moves between its own wallets cancel. The main wallet's own net counts what it moved to the network's other wallets." });
+  card({ title: "Network map", q: "Each bubble is a wallet: its size is the GME it holds today, its three rings are what it did in the last 7, 30 and 90 days.", wide: true,
+    body: `<div id="nmctl"></div><div class="bubwrap"><div class="bubstage"><div class="chart" id="nmap"></div><div class="bubtools"><button type="button" data-nz="in" aria-label="Zoom in">+</button><button type="button" data-nz="out" aria-label="Zoom out">−</button><button type="button" data-nz="fit" aria-label="Reset view">⤢</button></div><span class="bubhint">${mobile() ? "tap a bubble · pinch to zoom" : "click a bubble · drag to move · ctrl/⌘ + scroll to zoom"}</span></div><aside class="bubinfo" id="nminfo"></aside></div><div class="legend nmleg" id="nmleg"></div>`,
+    note: "Lines are GME sent between these wallets, all time (thicker = more dollars); dashed lines are ETH, shown for the wallet you point at. Shared exchange deposit addresses are in the evidence below. Grey bubbles with a dashed edge hold no GME today. Wallets outside the network are the rest of the linked web fbb4 grew from, and wallets the network's groups both paid." });
+  const W = n.web || {};
+  if (W.n) card({ title: `Where the original ${W.n}-wallet web went`, wide: true,
+    body: `<div class="nmweb"><i style="flex:${W.inNetwork}" class="a"><b>${W.inNetwork}</b> in the network</i><i style="flex:${W.holding}" class="b"><b>${W.holding}</b> outside, still hold ${fBb(W.held / 1e9)}</i><i style="flex:${W.outside - W.holding}" class="c"><b>${W.outside - W.holding}</b> outside, empty now</i></div>
+      <p class="sub">${W.notInWeb} network wallets were never in that web (later joins and 5b69). The ${W.outside} outside wallets are on the map under “Everything”: most sold or passed on their coins long ago.</p>` });
+  card({ title: "Why these groups are one bloc", wide: true, body: `<details class="nmev"><summary class="mini">Show the groups and the evidence</summary><div class="netside" style="margin-top:10px">${netSide(n, 2)}</div></details>` });
+  draws.push(() => drawNetMap(n));
+}
+function drawNetMap(n) {
+  const el = $("nmap"); if (!el) return;
+  const M = n.map, mob = mobile(), H = mob ? 520 : 720;
+  const act90 = (w) => fsum(w[6][3]).inn + fsum(w[6][3]).out > 0.0005;
+  const vis = M.wallets.filter((w) => nmShow === "all" || w[3] > 0.001 || (nmShow === "active" && act90(w)));
+  const cnt = { hold: M.wallets.filter((w) => w[3] > 0.001).length, active: M.wallets.filter((w) => w[3] > 0.001 || act90(w)).length, all: M.wallets.length };
+  $("nmctl").innerHTML = `<div class="ctl" style="margin-bottom:8px">${segBtns([[`Holding today · ${cnt.hold}`, "hold"], [`+ active in 90 days · ${cnt.active}`, "active"], [`Everything · ${cnt.all}`, "all"]], nmShow, "nms")}</div>`;
+  $("nmctl").onclick = (ev) => { const b = ev.target.closest("[data-nms]"); if (!b) return; nmShow = b.dataset.nms; drawNetMap(n); };
+  const G = M.groups, maxB = d3.max(vis, (w) => w[3]) || 1, top = new Set(vis.slice().sort((a, b) => b[3] - a[3]).slice(0, mob ? 4 : 7).map((w) => w[0]));
+  const gtag = (g) => (g.kind === "net" ? (entById(g.k) || {}).tag || g.name.slice(-4) : g.kind === "piece" ? g.name.slice(-4) : g.kind === "lone" ? "web" : "pay");
+  const nodes = vis.map((w) => { const [a, gi, isNet, bal, , , F] = w, g = G[gi], hold = bal > 0.001;
+    return { id: a, w, g, label: hold ? fBb(bal) : "empty", sub: a === M.main ? "main wallet" : "", shape: hold ? "circle" : "dashed", tint: hold && !!isNet,
+      color: isNet ? C("--fg-2") : g.kind === "shared" ? C("--s3") : C("--muted"), base: a === M.main, glyph: gtag(g),
+      r: hold ? (mob ? 5 : 6) + (mob ? 24 : 32) * Math.sqrt(bal / maxB) : 4, rings: [1, 2, 3].map((wi) => { const c = ringOf(F[wi], bal); return c ? C(c) : null; }),
+      always: top.has(a) || a === nmSel }; });
+  const byA = new Map(nodes.map((d) => [d.id, d])), idx = M.wallets.map((w) => w[0]);
+  const edges = M.edges.filter(([i, k]) => byA.has(idx[i]) && byA.has(idx[k])).map(([i, k, g, u, c, l]) => ({ s: idx[i], t: idx[k], w: u, g, n: c, last: l, kind: "gme", color: C("--fg-2"), label: fU(u) + " then" }))
+    .concat(M.eth.filter(([i, k]) => byA.has(idx[i]) && byA.has(idx[k])).map(([i, k, e, c]) => ({ s: idx[i], t: idx[k], w: 0, tie: true, focusOnly: true, kind: "eth", eth: e, n: c, color: C("--s3"), dash: [5, 4], label: e.toLocaleString("en-US", { maximumFractionDigits: 3 }) + " ETH" })));
+  // layout: one cluster per group; the network's groups in the middle (fbb4 at the centre), the rest of the web around them
+  const gs = [...new Set(nodes.filter((d) => d.g).map((d) => d.g.k))].map((k) => ({ k, g: nodes.find((d) => d.g && d.g.k === k).g, bal: d3.sum(nodes.filter((d) => d.g && d.g.k === k), (d) => d.w[3]) }));
+  const inner = gs.filter((x) => x.g.kind === "net").sort((a, b) => b.bal - a.bal), outer = gs.filter((x) => x.g.kind !== "net").sort((a, b) => b.bal - a.bal), anchor = new Map();
+  const [sx, sy] = mob ? [0.42, 1.15] : [1, 1];   // a phone is tall and narrow: stack the clusters vertically
+  inner.forEach((x, i) => anchor.set(x.k, i === 0 ? [0, 0] : [Math.cos((2 * Math.PI * i) / Math.max(1, inner.length - 1) - Math.PI / 2) * 330 * sx, Math.sin((2 * Math.PI * i) / Math.max(1, inner.length - 1) - Math.PI / 2) * 250 * sy]));
+  outer.forEach((x, i) => anchor.set(x.k, [Math.cos((2 * Math.PI * i) / Math.max(1, outer.length) + 0.4) * 620 * sx, Math.sin((2 * Math.PI * i) / Math.max(1, outer.length) + 0.4) * 430 * sy]));
+  nodes.forEach((d) => { const s = nmPinned.get(d.id); if (s) { d.x = d.fx = s[0]; d.y = d.fy = s[1]; d.pinned = true; } else { const a = d.g ? anchor.get(d.g.k) : [0, 0]; d.x = a[0] + (Math.random() - 0.5) * 40; d.y = a[1] + (Math.random() - 0.5) * 40; } });
+  const simL = edges.filter((e) => e.kind !== "eth").map((e) => ({ source: e.s, target: e.t, dep: e.kind === "dep" }));
+  const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(simL).id((d) => d.id).distance((l) => (l.dep ? 40 : 80)).strength((l) => (l.dep ? 0.15 : 0.02)))
+    .force("charge", d3.forceManyBody().strength(-26)).force("collide", d3.forceCollide((d) => d.r + (d.rings ? 18 : 8)))
+    .force("x", d3.forceX((d) => (d.g ? anchor.get(d.g.k)[0] : 0)).strength((d) => (d.dep ? 0.01 : 0.16))).force("y", d3.forceY((d) => (d.g ? anchor.get(d.g.k)[1] : 0)).strength((d) => (d.dep ? 0.01 : 0.16))).stop();
+  for (let i = 0; i < 360; i++) sim.tick();
+  nodes.forEach((d) => { if (d.fx != null && !nmPinned.has(d.id)) { delete d.fx; delete d.fy; } });
+  const annot = gs.map((x) => { const ns = nodes.filter((d) => d.g && d.g.k === x.k), big = ns.reduce((p, q) => (q.r > p.r ? q : p), ns[0]), cx = big.x, ty = big.y - big.r - (big.rings ? 22 : 10);
+    const full = x.g.kind === "net" ? (entById(x.g.k) || x.g).name : x.g.name, brief = x.g.kind === "lone" ? "lone web" : x.g.kind === "shared" ? "paid by it" : full.replace(/^Linked group /, "");
+    return { x: cx, y: ty, size: mob ? 10.5 : 12.5, nosub: mob, text: mob ? brief : full, sub: `${ns.length} wallet${ns.length === 1 ? "" : "s"} · ${fBb(x.bal)}${x.g.kind === "net" ? "" : x.g.kind === "shared" ? " · not in any group" : " · outside the network"}`, color: x.g.kind === "net" ? C("--fg") : C("--muted") }; });
+  const wl = (wi) => ["1D", "7D", "30D", "90D"][wi];
+  const tip = (d) => { if (d.dep) return `<div class="h">Exchange deposit address</div><p>Two or more of these wallets paid into it: one exchange account.</p>`;
+    const [a, , isNet, bal, , , F] = d.w;
+    return `<div class="h">${esc(short(a))} · ${esc(d.g.kind === "net" ? (entById(d.g.k) || d.g).name : d.g.name)}</div>` + trow(null, "Holds today", bal > 0.001 ? fBb(bal) + " GME" : "nothing") +
+      [1, 2, 3].map((wi) => { const x = fsum(F[wi]), v = x.inn - x.out, c = ringOf(F[wi], bal); return trow(c ? C(c) : "var(--line)", `${wl(wi)} ${c ? RINGN[c] : "no move"}`, Math.abs(v) < 0.001 ? "±0" : sgn(v, fBb)); }).join("") +
+      `<p class="tiphint">${isNet ? "In the network" : "Outside the network"} · click for detail</p>`; };
+  const tipE = (e) => e.kind === "gme" ? `<div class="h">${esc(short(e.s))} → ${esc(short(e.t))}</div>` + trow(null, "GME, all time", fBb(e.g)) + trow(null, "Worth then", fU(e.w)) + trow(null, "Transfers", fN(e.n)) + trow(null, "Last", e.last)
+    : `<div class="h">ETH · ${esc(short(e.s))} → ${esc(short(e.t))}</div>` + trow(null, "ETH", e.label) + trow(null, "Transfers", fN(e.n));
+  const panel = (d, e) => {
+    const box = $("nminfo"); if (!box) return;
+    if (e) { box.innerHTML = `<div class="vzph"><div><span class="eyebrow">${e.kind === "gme" ? "GME sent · all time" : e.kind === "eth" ? "ETH sent · study data" : "Shared exchange deposit"}</span><h4>${short(e.s)} → ${short(e.t)}</h4></div></div>
+      ${e.kind === "gme" ? cgKv([["GME", fBb(e.g)], ["Worth then", fU(e.w)], ["Transfers", fN(e.n)], ["Last", e.last]]) : e.kind === "eth" ? cgKv([["ETH", e.label], ["Transfers", fN(e.n)]]) : `<p class="sub">Both paid into ${wLink(e.t)}: inferred to be one exchange account.</p>`}
+      <div class="vzact"><button type="button" class="mini" data-cgsel="${e.s}">${short(e.s)}&nbsp;→</button><button type="button" class="mini" data-cgsel="${e.t}">${short(e.t)}&nbsp;→</button></div>`; return; }
+    if (!d || d.dep) {
+      const mv = vis.map((w) => [w, nmNet(w[6][2])]).filter(([, v]) => Math.abs(v) >= 0.001).sort((p, q) => Math.abs(q[1]) - Math.abs(p[1])).slice(0, 10);
+      box.innerHTML = `<div class="vzph"><div><span class="eyebrow">Network map</span><h4>${vis.filter((w) => w[2]).length} network wallets on the map</h4></div></div>
+        <div class="nmkey">${nmRingKey()}</div>
+        <span class="eyebrow">Biggest moves · 30 days</span><div class="vzlist">${mv.map(([w, v]) => `<button type="button" data-cgsel="${w[0]}"><span>${short(w[0])} <small class="flat">${esc(w[2] ? (entById(G[w[1]].k) || G[w[1]]).name : G[w[1]].name)}</small></span><b class="${v > 0 ? "up" : "down"}">${sgn(v, fBb)}</b></button>`).join("") || '<p class="sub">Nothing moved in 30 days.</p>'}</div>`;
+      return; }
+    const [a, gi, isNet, bal, first, last, F, ever] = d.w, g = G[gi], x90 = fsum(F[3]);
+    const gb = g.kind === "net" ? `<button type="button" class="mini wown" data-pnl="${g.k}">${nm((entById(g.k) || g).name)}&nbsp;→</button>` : g.kind === "piece" ? `<button type="button" class="mini wown" data-grp="${g.k}">${nm(g.name)}&nbsp;→</button>` : "";
+    const cps = edges.filter((x) => x.kind === "gme" && (x.s === a || x.t === a)).sort((p, q) => q.w - p.w).slice(0, 8);
+    box.innerHTML = `<div class="vzph"><div><span class="eyebrow">${esc(g.kind === "net" ? (entById(g.k) || g).name + " · in the network" : g.kind === "shared" ? "paid by the network, in no group" : g.name + " · outside the network")}</span><h4>${short(a)}${a === M.main ? " · main wallet" : ""}</h4></div></div>
+      <div class="vzaddr"><span class="mono">${a}</span><button class="mini" type="button" data-copy="${a}">Copy</button>${zerLink(a)}<a class="mini" href="${ETH(a)}" target="_blank" rel="noopener">Etherscan ↗</a></div>
+      <div class="nmcells"><span><small>Holds</small><b>${bal > 0.001 ? fBb(bal) : "0"}</b></span>${[1, 2, 3].map((wi) => { const c = ringOf(F[wi], bal); return `<span style="box-shadow:inset 0 -2px 0 ${c ? C(c) : "var(--line)"}"><small>${wl(wi)}</small>${nmCell(nmNet(F[wi]))}</span>`; }).join("")}</div>
+      ${cgKv([["Bought · 90D", x90.buy > 0.0005 ? fBb(x90.buy) : "—", x90.buy > 0.0005 ? "up" : ""], ["Sold · 90D", x90.sell > 0.0005 ? fBb(x90.sell) : "—", x90.sell > 0.0005 ? "down" : ""], ["To its own wallets · 90D", x90.toOwn > 0.0005 ? fBb(x90.toOwn) : "—"], ["To other wallets · 90D", x90.toOth > 0.0005 ? fBb(x90.toOth) : "—"],
+        ["Bought · all time", fU(ever[0] + ever[2])], ["Sold · all time", fU(ever[1] + ever[3]), ever[1] + ever[3] > 0 ? "down" : ""], ["First GME", first], ["Last active", last]])}
+      <div class="vzact"><a class="mini" href="#wallet/${a}">Wallet page →</a>${gb}</div>
+      ${cps.length ? `<span class="eyebrow">GME with other wallets on the map · all time</span><div class="vzlist">${cps.map((x) => { const o = x.s === a ? x.t : x.s; return `<button type="button" data-cgsel="${o}"><span>${x.s === a ? "→" : "←"} ${short(o)}</span><b>${fBb(x.g)} <small class="flat">${fU(x.w)}</small></b></button>`; }).join("")}</div>` : ""}
+      <div id="nmpf"></div>`;
+    pfMini($("nmpf"), a, () => nmSel === a);
+  };
+  NCG = cgraph(el, { nodes, edges, H, sel: nmSel, annot, labelK: 1.3, tip, tipE,
+    onSelect: (d, e) => { nmSel = d && !d.dep ? d.id : null; panel(d, e); }, onMove: (d) => nmPinned.set(d.id, [d.x, d.y]),
+    open: (d) => { if (!d.dep) window.open(ZER(d.id), "_blank", "noopener"); } });
+  panel(nmSel ? NCG.byId.get(nmSel) : null, null);
+  $("nminfo").onclick = (ev) => { const s = ev.target.closest("[data-cgsel]"); if (s) NCG.select(s.dataset.cgsel); };
+  document.querySelectorAll("[data-nz]").forEach((b) => (b.onclick = () => { const z = b.dataset.nz; if (z === "fit") { nmPinned.clear(); drawNetMap(n); } else NCG.zoomBy(z === "in" ? 1.35 : 1 / 1.35); }));
+  $("nmleg").innerHTML = nmRingKey(true);
+}
+// The ring legend, drawn: three rings, inner 7 days, outer 90; and what each colour means.
+function nmRingKey(row) {
+  const ring = `<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="11" fill="var(--glass-2)" stroke="var(--fg-2)" stroke-width="1.6"/><circle cx="32" cy="32" r="15.5" fill="none" stroke="var(--up)" stroke-width="2.6"/><circle cx="32" cy="32" r="19.5" fill="none" stroke="var(--down)" stroke-width="2.6"/><circle cx="32" cy="32" r="23.5" fill="none" stroke="var(--up)" stroke-width="2.6"/></svg>`;
+  const lab = `<span class="nmrl"><b>Bubble</b> = GME held today</span><span class="nmrl"><b>Rings</b> 7D (inner) · 30D · 90D (outer)</span>`;
+  const keys = [["--up", "grew"], ["--down", "sold (DEX or exchange)"], ["--s1", "moved to its own wallets"], ["--warn", "sent to other wallets"], ["--neutral", "in and out cancel"]].map(([c, l]) => `<span><i style="background:var(${c})"></i>${l}</span>`).join("");
+  return `<div class="nmkeyw${row ? " row" : ""}">${ring}<div class="nmkeyt">${lab}<div class="nmkeyc">${keys}<span><i class="o"></i>empty now</span><span><i class="gold"></i>main wallet</span></div></div></div>`;
 }
 
 // The card's 90-day line: index i is the end of day (registry date − (90 − i)); hover shows that day's holdings.
@@ -2413,8 +2559,13 @@ function cgraph(el, M) {
     if (k > 0.3) { const sp = 40 * k, ox = ((t.x % sp) + sp) % sp, oy = ((t.y % sp) + sp) % sp; ctx.fillStyle = C("--grid");
       for (let x = ox; x < W; x += sp) for (let y = oy; y < H; y += sp) ctx.fillRect(x - 0.75, y - 0.75, 1.5, 1.5); }
     const S = (x, y) => [x * k + t.x, y * k + t.y];
+    for (const an of M.annot || []) { const [ax, ay] = S(an.x, an.y); ctx.globalAlpha = fid ? 0.35 : 1; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      const sub = an.nosub ? "" : an.sub; ctx.font = `600 ${an.size || 12.5}px ${sans()}`; ctx.fillStyle = an.color || C("--fg-2"); ctx.fillText(an.text, ax, ay - (sub ? 13 : 0));
+      if (sub) { ctx.font = `400 10.5px ${mono()}`; ctx.fillStyle = C("--muted"); ctx.fillText(an.sub, ax, ay); } }
+    ctx.globalAlpha = 1;
     const near = fid ? new Set(edges.filter((e) => e.s === fid || e.t === fid).flatMap((e) => [e.s, e.t])) : null;
     for (const e of edges) {
+      if (e.focusOnly && !(fid && (e.s === fid || e.t === fid)) && selE !== e) continue;
       const on = (!fid && !selE) || e.s === fid || e.t === fid || e === selE, hot = hovE === e || selE === e;
       const p0 = S(e.source.x, e.source.y), p1 = S(e.target.x, e.target.y), c0 = ctrl(e.source, e.target), c = S(c0[0], c0[1]);
       const w = (e.tie ? 1.7 : Math.min(9, 1 + 7 * Math.sqrt(e.w / maxW))) * Math.min(1.4, Math.max(0.6, k));
@@ -2437,8 +2588,12 @@ function cgraph(el, M) {
       if (n.tint) { ctx.globalAlpha = (dim ? 0.22 : 1) * 0.22; ctx.fillStyle = n.color; ctx.fill(); ctx.globalAlpha = dim ? 0.22 : 1; }
       ctx.strokeStyle = n.color; ctx.lineWidth = n.base ? 2.6 : 1.8; ctx.setLineDash(n.shape === "dashed" ? [3, 2.5] : []); ctx.stroke(); ctx.setLineDash([]);
       if (n.ring) { ctx.beginPath(); ctx.arc(x, y, R + 3.5, 0, Math.PI * 2); ctx.lineWidth = 1; ctx.stroke(); }
-      if (n.base) { ctx.beginPath(); ctx.arc(x, y, R + (n.ring ? 7.5 : 5), 0, Math.PI * 2); ctx.strokeStyle = C("--accent"); ctx.lineWidth = 1.3; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]); }
-      if (sel === n) { ctx.beginPath(); ctx.arc(x, y, R + (n.ring || n.base ? 11 : 8), 0, Math.PI * 2); ctx.strokeStyle = C("--fg"); ctx.lineWidth = 1.4; ctx.stroke(); }
+      // three activity rings (network map): inner 7 days, middle 30, outer 90; a faint track where nothing moved
+      if (n.rings && n.rings.some(Boolean)) { const gp = Math.max(2.4, Math.min(4, 4 * Math.sqrt(k))), lw = Math.max(1.6, Math.min(2.6, 2.6 * Math.sqrt(k)));
+        for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.arc(x, y, R + gp + 0.5 + q * gp, 0, Math.PI * 2); ctx.lineWidth = lw; ctx.strokeStyle = n.rings[q] || C("--line");
+          ctx.globalAlpha = (dim ? 0.22 : 1) * (n.rings[q] ? 1 : 0.7); ctx.stroke(); } ctx.globalAlpha = dim ? 0.22 : 1; }
+      if (n.base) { ctx.beginPath(); ctx.arc(x, y, R + (n.rings ? 19 : n.ring ? 7.5 : 5), 0, Math.PI * 2); ctx.strokeStyle = C("--accent"); ctx.lineWidth = 1.3; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]); }
+      if (sel === n) { ctx.beginPath(); ctx.arc(x, y, R + (n.rings ? (n.base ? 23 : 19) : n.ring || n.base ? 11 : 8), 0, Math.PI * 2); ctx.strokeStyle = C("--fg"); ctx.lineWidth = 1.4; ctx.stroke(); }
       if (n.pinned) { ctx.fillStyle = C("--fg-2"); ctx.beginPath(); ctx.arc(x + R * 0.75, y - R * 0.75, 2.4, 0, 6.29); ctx.fill(); }
       if (R >= 9 && n.glyph) { ctx.fillStyle = n.base ? C("--accent") : n.color; ctx.font = `600 ${Math.max(8, Math.min(13, R * 0.55))}px ${mono()}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(n.glyph, x, y + 0.5); }
       if (n.always || k >= (M.labelK || 1.5) || n === focus || (near && near.has(n.id))) labs.push([n, x, y, R, dim]);
@@ -2447,7 +2602,7 @@ function cgraph(el, M) {
     const rank = (n) => (n === focus || n === sel ? 0 : n.base || n.cat || n.kind === "c" ? 1 : n.always ? 2 : 3), done = [];
     labs.sort((p, q) => rank(p[0]) - rank(q[0]) || q[3] - p[3]);
     for (const [n, x, y, R, dim] of labs) {
-      const max = k >= 1 ? 28 : 20, raw = n.label || "", lb = raw.length > max ? raw.slice(0, max - 1) + "…" : raw, y0 = y + R + (n.ring ? 9 : 6);
+      const max = k >= 1 ? 28 : 20, raw = n.label || "", lb = raw.length > max ? raw.slice(0, max - 1) + "…" : raw, y0 = y + R + (n.rings ? 17 : n.ring ? 9 : 6);
       ctx.font = `500 12px ${sans()}`; ctx.textAlign = "center"; ctx.textBaseline = "top";
       ctx.font = `400 10.5px ${mono()}`; const ws = n.sub ? ctx.measureText(n.sub).width : 0; ctx.font = `500 12px ${sans()}`;
       const w = Math.max(ctx.measureText(lb).width, ws) + 6, box = [x - w / 2, y0 - 2, x + w / 2, y0 + (n.sub ? 29 : 15)];
