@@ -332,7 +332,43 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 .ecst { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap }
 .ecv { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .7rem }
 .ecv b { font: 500 19px var(--mono); letter-spacing: -.02em } .ecv span { font: 400 11.5px var(--mono); color: var(--muted) } .ecv small { font-size: 10.5px; color: var(--muted) }
-.ecsp { width: 100%; height: 40px; display: block }
+.ecsp { width: 100%; height: 56px; display: block }
+.ecspw { position: relative; cursor: crosshair; touch-action: pan-y }
+.ecspw .ecx { position: absolute; top: 0; height: 56px; width: 1px; background: var(--fg-2); opacity: 0; pointer-events: none }
+.ecspw .ecdot { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px var(--th); opacity: 0; pointer-events: none }
+.ecspw.on .ecx, .ecspw.on .ecdot { opacity: 1 }
+.ecax { display: flex; justify-content: space-between; font: 400 9.5px var(--mono); color: var(--muted); margin-top: 3px } .ecax span:nth-child(2) { opacity: .75 }
+.ecwins { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line) }
+.ecwins button { all: unset; cursor: pointer; padding: 5px 6px; display: flex; flex-direction: column; gap: 1px; box-shadow: 1px 0 0 var(--line) }
+.ecwins button span { font: 500 9px var(--mono); letter-spacing: .12em; color: var(--muted) } .ecwins button b { font: 500 11.5px var(--mono) }
+.ecwins button.on { background: var(--accent-2); box-shadow: inset 0 -2px 0 var(--accent) } .ecwins button:focus-visible { outline: 1px solid var(--accent) }
+.ecwho { display: flex; flex-direction: column; gap: 3px } .ecwho .eyebrow { margin: 0 0 1px }
+.ecwho div { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; font: 400 11px var(--mono) } .ecwho div b { font: 500 11.5px var(--mono) } .ecwho small { color: var(--muted); font-size: 10.5px }
+.pfhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 10px }
+.pfnw { display: block; font: 500 30px var(--mono); letter-spacing: -.03em; margin: 2px 0 } .pfchg { font: 500 12px var(--mono) }
+.pfside { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font: 400 11.5px var(--mono); color: var(--fg-2) } .pfside b { color: var(--accent) }
+.pfalloc { display: flex; height: 8px; background: var(--grid); margin: 4px 0 6px } .pfalloc i { display: block; height: 100% }
+.pfkey { display: flex; flex-wrap: wrap; gap: .25rem .9rem; font: 400 11px var(--mono); color: var(--fg-2); margin-bottom: 10px } .pfkey i { display: inline-block; width: 8px; height: 8px; margin-right: .35rem }
+.pft td { vertical-align: middle } .pft .pfa { display: flex; align-items: center; gap: .6rem; color: var(--fg); text-decoration: none } .pft .pfa span { display: flex; flex-direction: column; min-width: 0 }
+.pft .pfa b { font: 600 12.5px var(--sans) } .pft .pfa small { font: 400 10.5px var(--sans); color: var(--muted); max-width: 18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.pft tr.pfg td { background: var(--accent-2) } .pft td.n small { display: block; font-size: 10.5px }
+.pfi { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--glass-2); font: 600 11px var(--mono); font-style: normal; color: var(--fg-2) }
+.pfi.gme { border-color: var(--accent); color: var(--accent) } .pfi.eth { color: var(--fg) }
+.pfbar { display: inline-block; vertical-align: middle; width: 42px; height: 4px; background: var(--grid); margin-right: 6px } .pfbar i { display: block; height: 100%; background: var(--accent) }
+.pfrest { margin-top: 10px } .pfrest summary { list-style: none; cursor: pointer; width: fit-content } .pfrest summary::-webkit-details-marker { display: none } .pfrest .tw { margin-top: 8px; opacity: .8 }
+.pfmini { display: flex; align-items: baseline; gap: .6rem; margin: 2px 0 4px } .pfmini b { font: 500 18px var(--mono) }
+@media (max-width: 760px) { .pft .pfp { display: none } .pfside { align-items: flex-start } .pft .pfa small { max-width: 9rem } }
+.mvkv { margin: .7rem 0 .2rem }
+.mvleg { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin-top: .8rem; font: 400 11px var(--sans); color: var(--fg-2) } .mvleg span { display: inline-flex; align-items: center; gap: .35rem }
+.mvleg i { display: inline-block; width: 9px; height: 9px } .mvleg i.ln { height: 2px; width: 14px; background: var(--accent) } .mvkv b small { font-size: 10.5px; margin-left: .3rem }
+.mvchart { margin: .6rem 0 .2rem; min-height: 120px } .mvchart svg { display: block; overflow: visible }
+.mvchart .gl { stroke: var(--grid) } .mvchart .gl.z { stroke: var(--line-2) } .mvchart .ax { font: 400 10px var(--mono); fill: var(--muted) }
+.mvchart .mvx { stroke: var(--fg-2); stroke-width: 1 } .mvchart .mvhit { cursor: crosshair; touch-action: pan-y }
+.mvo { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap } .mvws { display: flex; flex-direction: column; gap: 2px }
+.mvw { white-space: nowrap; font: 400 11px var(--mono) } .mvw i { font-style: normal; font-weight: 500 } .mvw small { color: var(--muted); font-size: 10px }
+.mvmini { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: .8rem }
+.mvmini ul { list-style: none; margin: 0; padding: 0 } .mvmini li { display: flex; justify-content: space-between; align-items: center; gap: .6rem; padding: 5px 0; border-bottom: 1px solid var(--line) } .mvmini li b { font: 500 12px var(--mono) }
+@media (max-width: 760px) { .mvmini { grid-template-columns: minmax(0, 1fr) } }
 .ecflow { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) 4.2rem; gap: 4px 8px; align-items: center; font: 400 10.5px var(--mono); color: var(--muted) }
 .ecflow b { font: 500 11.5px var(--mono); color: var(--fg-2); text-align: right }
 .ecbar { display: flex; height: 8px; background: var(--grid) } .ecbar i { display: block; height: 100% }
@@ -1020,7 +1056,7 @@ function closeChart() {
 function overview() {
   hero(); metrics(); grid(); primary();
   sect("Signals", "fbb4's wallets, the latest run, and what changed.");
-  insiderCard(false); alertsCard(false); changesCard(true);
+  insiderCard(false); alertsCard(false); moversMini(); changesCard(true);
   sect("Market structure", "Where holders stand against their own cost, and the pool that sets the price.", true);
   const mv = col("mvrv"); let id = card({ title: "MVRV", val: valDelta(lastVal(mv), ago(mv, 30), (v) => v.toFixed(3) + "×", (v) => v.toFixed(3)), sub: "Price ÷ realized price. Below 1× the average holder is underwater." });
   ts(id, { h: [150, 140], fmt: (v) => v.toFixed(2) + "×", log: true, ref: [{ y: 1, label: "break-even" }], series: [{ label: "MVRV", color: "--s1", v: mv, type: "line" }] });
@@ -1944,6 +1980,208 @@ function drawMon() {
   const qi = $("monq"); qi.oninput = () => { monQ = qi.value; const pos = qi.selectionStart; drawMon(); const nq = $("monq"); nq.focus(); nq.setSelectionRange(pos, pos); };
 }
 
+// ---------- TOKEN PORTFOLIO (Zerion-style): every token a wallet holds, live from Ethplorer ----------
+// getAddressInfo on Ethplorer's free key, called from the viewer's browser (CORS is open): ETH plus up to 100 ERC-20
+// balances with Ethplorer's prices (CoinGecko-based) and 24-hour change. A token counts toward the total only with a
+// real market price: a rate, a market cap or ≥$100 of daily volume, and ≥50 holders. The rest (airdropped spam, dead
+// copies) is listed apart, never added. One call at a time, ~1 per second (the free key's limit), cached per session.
+const TOKEN_ADDR = "0xc56c7a0eaa804f854b536a5f3d5f49d2ec4b12b8";
+const PF = new Map();
+let pfQ = Promise.resolve();
+const pfSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function pfNorm(j) {
+  const toks = (j.tokens || []).map((t) => {
+    const ti = t.tokenInfo || {}, dec = +ti.decimals || 0, bal = Number(t.rawBalance ?? t.balance) / 10 ** dec, pr = ti.price && ti.price.rate > 0 ? ti.price : null;
+    const ok = !!pr && ((pr.marketCapUsd || 0) > 0 || (pr.volume24h || 0) >= 100) && (ti.holdersCount || 0) >= 50;
+    return { a: (ti.address || "").toLowerCase(), name: ti.name || "Unnamed token", sym: (ti.symbol || "?").slice(0, 14), bal, rate: pr ? pr.rate : null, diff: pr ? pr.diff ?? null : null,
+      mcap: pr ? pr.marketCapUsd : null, holders: ti.holdersCount || 0, value: pr ? bal * pr.rate : 0, ok };
+  }).filter((t) => t.bal > 0 && isFinite(t.bal));
+  const E = j.ETH || {}, er = E.price && E.price.rate;
+  return { eth: { a: "eth", name: "Ether", sym: "ETH", bal: +E.balance || 0, rate: er || null, diff: E.price ? E.price.diff : null, value: (+E.balance || 0) * (er || 0), ok: true, isEth: true },
+    toks, capped: (j.tokens || []).length >= 100, at: Date.now() };
+}
+function pfFetch(a) {
+  a = a.toLowerCase();
+  if (PF.has(a)) return PF.get(a);
+  const run = async () => {
+    for (let k = 0; k < 4; k++) {
+      try { const r = await fetch(`https://api.ethplorer.io/getAddressInfo/${a}?apiKey=freekey`), j = await r.json();
+        if (j && j.address) return pfNorm(j);
+        if (j && j.error && j.error.code !== 429 && r.status !== 429) throw new Error(j.error.message || "Ethplorer error"); }
+      catch (e) { if (k === 3) throw e; }
+      await pfSleep(1500 * (k + 1));
+    }
+    throw new Error("Ethplorer is rate-limiting");
+  };
+  const p = pfQ.then(run); pfQ = p.catch(() => {}).then(() => pfSleep(1100));
+  PF.set(a, p); p.catch(() => PF.delete(a));
+  return p;
+}
+const pfMono = (t) => `<i class="pfi${t.a === TOKEN_ADDR ? " gme" : t.isEth ? " eth" : ""}">${esc((t.sym.replace(/[^A-Za-z0-9]/g, "") || "?")[0].toUpperCase())}</i>`;
+const pfAmt = (v) => (v >= 1e9 ? (v / 1e9).toFixed(2) + "B" : v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? (v / 1e3).toFixed(1) + "k" : v >= 1 ? v.toFixed(2) : v.toPrecision(3));
+const pfPrice = (r) => (r == null ? "—" : r >= 1 ? "$" + r.toLocaleString("en-US", { maximumFractionDigits: 2 }) : r >= 0.01 ? "$" + r.toFixed(4) : "$" + r.toPrecision(3));
+const pfDiff = (d) => (d == null || !isFinite(d) ? "" : `<small class="${d >= 0 ? "up" : "down"}">${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(2)}%</small>`);
+// One table for a wallet (assets with .bal) or a group (assets with .n wallets holding it and .top = the largest holder).
+function pfTable(assets, total, owner, group) {
+  return `<div class="tw"><table class="pft"><thead><tr><th>Asset</th><th class="n pfp">Price · 24h</th><th class="n">Amount</th><th class="n">Value</th><th class="n">Share</th>${group ? '<th class="n">Wallets</th>' : ""}</tr></thead><tbody>` +
+    assets.map((t) => `<tr class="${t.a === TOKEN_ADDR ? "pfg" : ""}"><td><a class="pfa" href="${t.isEth ? ETH(owner || "") : `https://etherscan.io/token/${t.a}${owner ? "?a=" + owner : ""}`}" target="_blank" rel="noopener">${pfMono(t)}<span><b>${esc(t.sym)}</b><small>${esc(t.name)}</small></span></a></td>` +
+      `<td class="n pfp">${t.ok ? pfPrice(t.rate) + " " + pfDiff(t.diff) : '<span class="flat">no reliable price</span>'}</td><td class="n">${pfAmt(t.bal)}</td><td class="n">${t.ok ? fU(t.value) : "—"}</td>` +
+      `<td class="n">${t.ok && total > 0 ? `<span class="pfbar"><i style="width:${Math.min(100, (100 * t.value) / total)}%"></i></span>${fPct((100 * t.value) / total, 1)}` : ""}</td>` +
+      (group ? `<td class="n">${t.n}${t.top ? ` <small class="flat">max ${short(t.top)}</small>` : ""}</td>` : "") + `</tr>`).join("") + `</tbody></table></div>`;
+}
+// The Zerion-style block: net worth, 24-hour change, an allocation bar and the token table; unpriced tokens folded away.
+function pfBlock(assets, owner, o = {}) {
+  const priced = assets.filter((t) => t.ok && t.value > 0).sort((p, q) => q.value - p.value), rest = assets.filter((t) => !(t.ok && t.value > 0) && !(t.isEth && t.bal === 0));
+  const good = priced.filter((t) => t.value >= 10 || t.a === TOKEN_ADDR || t.isEth), small = priced.filter((t) => !good.includes(t));
+  const total = d3.sum(priced, (t) => t.value), chg = d3.sum(priced, (t) => (t.diff == null ? 0 : t.value - t.value / (1 + t.diff / 100))), chgPct = total - chg > 0 ? (100 * chg) / (total - chg) : 0;
+  const top = good.filter((t) => total > 0 && t.value / total >= 0.01).slice(0, 6), other = total - d3.sum(top, (t) => t.value), gme = priced.find((t) => t.a === TOKEN_ADDR);
+  const shades = ["--accent", "--s1", "--s3", "--up", "--s2", "--warn"];
+  return `<div class="pfhead"><div><span class="eyebrow">${o.label || "Net worth"}</span><b class="pfnw">${fU(total)}</b><span class="${chg >= 0 ? "up" : "down"} pfchg">${sgn(chg, fU)} (${sgn(chgPct, (v) => v.toFixed(2) + "%")}) · 24h</span></div>
+      <div class="pfside">${gme ? `<span>GME is <b>${fPct((100 * gme.value) / total, 1)}</b> of it</span>` : `<span class="flat">Holds no GME right now</span>`}<span>${priced.length} priced token${priced.length === 1 ? "" : "s"}${rest.length ? ` · ${rest.length} without a reliable price` : ""}</span>${o.extra || ""}</div></div>
+    ${total > 0 ? `<div class="pfalloc">${top.map((t, i) => `<i style="width:${(100 * t.value) / total}%;background:var(${t.a === TOKEN_ADDR ? "--accent" : shades[(i + 1) % shades.length]})" title="${esc(t.sym)} ${fPct((100 * t.value) / total, 1)}"></i>`).join("")}${other > 0 ? `<i style="width:${(100 * other) / total}%;background:var(--neutral)" title="Other"></i>` : ""}</div>
+      <div class="pfkey">${top.map((t, i) => `<span><i style="background:var(${t.a === TOKEN_ADDR ? "--accent" : shades[(i + 1) % shades.length]})"></i>${esc(t.sym)} ${fPct((100 * t.value) / total, 0)}</span>`).join("")}${other > 0.005 * total ? `<span><i style="background:var(--neutral)"></i>Other ${fPct((100 * other) / total, 0)}</span>` : ""}</div>` : ""}
+    ${good.length ? pfTable(good, total, owner, o.group) : `<p class="sub">No token with a market price.</p>`}
+    ${small.length ? `<details class="pfrest"><summary class="mini">${small.length} small balance${small.length === 1 ? "" : "s"} under $10 (${fU(d3.sum(small, (t) => t.value))} together)</summary>${pfTable(small, total, owner, o.group)}</details>` : ""}
+    ${rest.length ? `<details class="pfrest"><summary class="mini">${rest.length} token${rest.length === 1 ? "" : "s"} without a reliable price (often airdropped spam), not counted</summary>${pfTable(rest, 0, owner, o.group)}</details>` : ""}`;
+}
+const PFNOTE = "Live from Ethplorer's free API, called from your browser: ETH and up to 100 tokens per wallet, priced by Ethplorer (CoinGecko-based). A token counts only with a real market price (a market cap or daily volume, and at least 50 holders); the rest is listed apart and never added. Tokens on other chains and DeFi positions are not included; Zerion shows those.";
+async function pfWallet(el, a) {
+  if (!el) return;
+  el.innerHTML = `<p class="sub">Loading tokens from Ethplorer…</p>`;
+  try { const P = await pfFetch(a); if (!el.isConnected) return;
+    el.innerHTML = pfBlock([P.eth, ...P.toks], a, { extra: P.capped ? `<span class="flat">Ethplorer lists the first 100 tokens only</span>` : "" }) + `<p class="sub" style="margin-top:8px">Updated ${fdt(new Date(P.at))}. <a href="https://app.zerion.io/${a}/overview" target="_blank" rel="noopener">Open on Zerion ↗</a></p>`; }
+  catch (e) { if (el.isConnected) el.innerHTML = `<p class="sub">Ethplorer didn't answer (its free API is rate-limited; try again in a minute). <a href="https://app.zerion.io/${a}/overview" target="_blank" rel="noopener">Open on Zerion ↗</a></p>`; }
+}
+// A group: every wallet's tokens added up, the largest GME holders first. 12 wallets load on their own; the rest on request.
+async function pfGroup(el, wallets, first = 12) {
+  if (!el) return;
+  const agg = new Map(), state = { done: 0, fail: 0, upto: Math.min(first, wallets.length), run: false };
+  const add = (a, t) => { const k = t.a; let x = agg.get(k); if (!x) agg.set(k, (x = { ...t, bal: 0, value: 0, n: 0, top: null, topv: -1 }));
+    x.bal += t.bal; x.value += t.value; x.n++; if (t.value > x.topv) { x.topv = t.value; x.top = a; } if (t.ok) x.ok = true; };
+  const draw = () => { if (!el.isConnected) return;
+    const more = wallets.length - state.upto, busy = state.done + state.fail < state.upto;
+    el.innerHTML = pfBlock([...agg.values()], null, { group: true, label: `Across ${state.done} of ${wallets.length} wallets`,
+      extra: `<span class="flat">${busy ? `Loading ${state.done + state.fail + 1} of ${state.upto}…` : state.fail ? `${state.fail} wallet(s) didn't load` : "Loaded"}</span>` }) +
+      (!busy && more > 0 ? `<button type="button" class="mini" data-pfmore style="margin-top:10px">Load the other ${more} wallets (about ${Math.ceil(more * 1.3)} s)</button>` : "");
+    const b = el.querySelector("[data-pfmore]"); if (b) b.onclick = () => { state.upto = wallets.length; go(); }; };
+  const go = async () => { if (state.run) return; state.run = true; draw();
+    for (let i = state.done + state.fail; i < state.upto; i++) { if (!el.isConnected) return;
+      try { const P = await pfFetch(wallets[i]); [P.eth, ...P.toks].forEach((t) => add(wallets[i], t)); state.done++; } catch (e) { state.fail++; }
+      draw(); }
+    state.run = false; draw(); };
+  go();
+}
+const monBal = (a) => { const i = T.mon ? T.mon.A.indexOf(a) : -1; return i >= 0 && T.mon.M[i] ? T.mon.M[i][0] : 0; };
+
+// The Visualizer's wallet panel: net worth and the five largest tokens.
+async function pfMini(el, a, still) {
+  if (!el) return; el.innerHTML = `<span class="eyebrow">Tokens it holds · live</span><p class="sub">Loading from Ethplorer…</p>`;
+  try { const P = await pfFetch(a); if (!el.isConnected || !still()) return;
+    const good = [P.eth, ...P.toks].filter((t) => t.ok && t.value > 0).sort((p, q) => q.value - p.value), total = d3.sum(good, (t) => t.value);
+    el.innerHTML = `<span class="eyebrow">Tokens it holds · live</span><div class="pfmini"><b>${fU(total)}</b><span class="flat">${good.length} priced token${good.length === 1 ? "" : "s"}</span></div>` +
+      good.slice(0, 5).map((t) => `<div class="vzrec"><span>${pfMono(t)}</span><span>${esc(t.sym)} <small class="flat">${pfAmt(t.bal)}</small></span><b>${fU(t.value)}</b></div>`).join("") +
+      `<div class="vzact"><a class="mini" href="#wallet/${a}">All tokens →</a></div>`; }
+  catch (e) { if (el.isConnected) el.innerHTML = `<span class="eyebrow">Tokens it holds</span><p class="sub">Ethplorer didn't answer; try again in a minute.</p>`; }
+}
+
+// ---------- WHO'S MOVING (movers.py → S.MV): every holder's activity over 24 h / 7 d / 30 d, by owner ----------
+// Owner = a tracked entity, else an unflagged linked group, else the wallet; moves between one owner's own wallets are
+// left out. The board, the cards' "who moved" and the Overview panel all read the same feed.
+let mvWin = "24h", mvF = "all", mvAll = false, mvTrAll = false;
+const MVW = [["24H", "24h"], ["7D", "7d"], ["30D", "30d"]];
+const MVK = { b: "bought", s: "sold", ci: "from exchange", co: "to exchange", i: "received", o: "sent out", la: "liquidity", lr: "liquidity", x: "burned" };
+const MVC = { b: "up", s: "down", ci: "up", co: "down", i: "up", o: "mv-move" };
+const mvEnt = (k) => S.E && S.E.entities.find((e) => e.id === k);
+const mvOwner = (o) => o.kind === "entity" ? (mvEnt(o.k) ? entTag(mvEnt(o.k)) : nm(o.name))
+  : o.kind === "group" ? `<button type="button" class="tag" data-grp="${o.k}" title="Open this linked group">${nm(o.name)}</button>` : wLink(o.k);
+const mvKindTag = (o) => (o.kind === "entity" && mvEnt(o.k) && mvEnt(o.k).kind !== "linked" ? `<span class="ev inf">${(KINDE[mvEnt(o.k).kind] || "group").toLowerCase()}</span>` : "");
+const mvWho = (top, max = 3) => top.slice(0, max).map(([a, g, u, k]) => `<span class="mvw">${wLink(a)} <i class="${Math.abs(g) < 1e-4 ? "flat" : g > 0 ? "up" : "down"}">${Math.abs(g) < 1e-4 ? "±0" : sgn(g, fBb)}</i> <small>${MVK[k] || k}</small></span>`).join("");
+const mvAge = (M) => agoTxt((Date.now() - Date.parse(M.asOf)) / 36e5);
+const mvPx = (W) => { const p = W.bars.map((b) => b[4]).filter((v) => v != null); return p.length ? [p[0], p[p.length - 1], d3.min(W.bars, (b) => b[5] ?? b[4]), d3.max(W.bars, (b) => b[6] ?? b[4])] : null; };
+function moversCard() {
+  if (!S.MV) { card({ title: "Who's moving", wide: true, key: true, body: unavailable("This board arrives with the next scheduled run.") }); return; }
+  card({ title: "Who's moving", q: "Who bought, who sold, who moved GME to or from exchanges, and how much: by owner, not by wallet.", wide: true, key: true, body: `<div id="mvbox"></div>`,
+    note: "Every holder, not only the tracked groups. An owner is a tracked group, else a linked group, else the wallet itself; GME moving between one owner's own wallets is left out. $ is the exact execution price for DEX trades matched to a pool swap, otherwise that day's close. Transfers under $1 are ignored. A wallet that bought and sold in the same window shows both (often a quick flip). Updated with every run of the terminal (about every 4 hours)." });
+  draws.push(drawMovers);
+}
+function drawMovers() {
+  const box = $("mvbox"); if (!box) return;
+  const M = S.MV, W = M.windows[mvWin], t = W.tot, px = mvPx(W);
+  const all = W.owners, F = [["all", "All", all.length], ["buy", "▲ Net buyers", all.filter((o) => o.net > 0).length], ["sell", "▼ Net sellers", all.filter((o) => o.net < 0).length],
+    ["new", "◆ New owners", all.filter((o) => o.new).length], ["grp", "Groups", all.filter((o) => o.kind !== "wallet").length], ["cex", "Exchanges", all.filter((o) => o.ci[1] + o.co[1] > 0).length]];
+  const keep = { all: () => true, buy: (o) => o.net > 0, sell: (o) => o.net < 0, new: (o) => o.new, grp: (o) => o.kind !== "wallet", cex: (o) => o.ci[1] + o.co[1] > 0 }[mvF];
+  const vis = all.filter(keep), shown = mvAll ? vis : vis.slice(0, 25), wl = MVW.find((w) => w[1] === mvWin)[0];
+  const tiles = [[fU(t.buy), `Bought · ${fN(t.buyers)} owners`, "up"], [fU(t.sell), `Sold · ${fN(t.sellers)} owners`, "down"],
+    [sgn(t.buy - t.sell, fU), "Net DEX buying", t.buy >= t.sell ? "up" : "down"], [`${fU(t.cexIn)} / ${fU(t.cexOut)}`, "Exchanges in / out", ""],
+    [fN(t.newOwners), "New owners holding", ""], [px ? `${fP(px[1])} <small class="${px[1] >= px[0] ? "up" : "down"}">${sgn(100 * (px[1] / px[0] - 1), (v) => v.toFixed(1) + "%")}</small>` : "—", px ? `Market cap · ${fP(px[2])}–${fP(px[3])}` : "Market cap", ""]];
+  const net = (o) => `<td class="n ${Math.abs(o.net) < 1e-4 ? "flat" : o.net > 0 ? "up" : "down"}">${Math.abs(o.net) < 1e-4 ? "±0" : sgn(o.net, fBb)}</td>`;
+  const pct = (o) => { const before = o.hold - o.net; return before <= 1e-4 ? (o.hold > 1e-4 ? (o.new ? '<span class="ev up">new</span>' : '<span class="up" title="Held no GME at the start of the window">from 0</span>') : '<span class="flat">in &amp; out</span>') : `<span class="${o.net >= 0 ? "up" : "down"}">${sgn((100 * o.net) / before, (v) => (v >= 100 ? v.toFixed(0) : v.toFixed(1)) + "%")}</span>`; };
+  const pair = (a, b) => (a[1] || b[1] ? `${a[1] ? `<span class="up">+${fU(a[1])}</span>` : ""}${a[1] && b[1] ? " / " : ""}${b[1] ? `<span class="down">−${fU(b[1])}</span>` : ""}` : '<span class="flat">—</span>');
+  box.innerHTML = `<div class="ctl">${segBtns(MVW, mvWin, "mvw")}<span class="sub" style="margin-left:auto">As of ${fdt(new Date(M.asOf))} (${mvAge(M)})</span></div>
+    <div class="kv mvkv">${tiles.map(([v, k, c]) => `<div><b class="${c}">${v}</b><span>${k}</span></div>`).join("")}</div>
+    <div class="mvleg"><span><i style="background:var(--up)"></i>Bought on the DEX</span><span><i style="background:var(--s1)"></i>From exchanges</span><span><i style="background:var(--down)"></i>Sold on the DEX</span><span><i style="background:var(--crit)"></i>To exchanges</span><span><i class="ln"></i>Market cap (last trade)</span><span class="flat">${mvWin === "24h" ? "per hour" : mvWin === "7d" ? "per 6 hours" : "per day"} · point at a bar</span></div>
+    <div class="mvchart" id="mvchart"></div>
+    <div class="ctl" style="margin-top:.4rem">${F.map(([k, l, n]) => `<button type="button" class="chip${mvF === k ? " on" : ""}" data-mvf="${k}">${l}<b>${n}</b></button>`).join("")}</div>
+    <div class="tw" style="margin-top:.6rem"><table class="q mvt"><thead><tr><th>Owner</th><th class="n">Net GME</th><th class="n">Bought / sold</th><th class="n">Holds now</th><th class="n">vs before</th><th>Which wallets</th><th class="n">Exchanges in / out</th><th class="n">Wallets in / out</th></tr></thead><tbody>` +
+      shown.map((o) => `<tr><td><div class="mvo">${mvOwner(o)}${mvKindTag(o)}${o.new ? '<span class="ev up">new</span>' : ""}</div></td>${net(o)}<td class="n">${pair(o.b, o.s)}</td><td class="n">${fBb(o.hold)}</td><td class="n">${pct(o)}</td><td><div class="mvws">${mvWho(o.top, 3)}${o.nw > 3 ? `<small class="flat">+${o.nw - 3} more</small>` : ""}</div></td><td class="n">${pair(o.ci, o.co)}</td><td class="n">${pair(o.i, o.o)}</td></tr>`).join("") +
+    `</tbody></table></div>${!vis.length ? unavailable(`Nobody matches in the last ${wl}.`) : ""}${!mvAll && vis.length > 25 ? `<button type="button" class="mini" data-mvall style="margin-top:10px">Show all ${vis.length}</button>` : ""}
+    <span class="eyebrow" style="margin-top:14px">Largest trades · last ${wl}</span>
+    <div class="tw"><table class="q"><thead><tr><th>Time (UTC)</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">At MC</th><th>Wallet</th><th>Owner</th><th>Tx</th></tr></thead><tbody>` +
+      (mvTrAll ? W.trades : W.trades.slice(0, 12)).map(([ts, a, k, g, u, tx, key]) => { const o = W.owners.find((x) => x.k === key);
+        return `<tr><td class="num">${fdt(new Date(ts)).replace(" UTC", "")}</td><td class="${(WK[k] || [, "flat"])[1]}">${(WK[k] || [k])[0]}</td><td class="n">${sgn(g, fBb)}</td><td class="n">${fU(u)}</td><td class="n">${fP(u / Math.abs(g * 1e9))}</td><td>${wLink(a)}</td><td>${o && o.kind !== "wallet" ? mvOwner(o) : '<span class="flat">—</span>'}</td><td><a class="mono" href="https://etherscan.io/tx/${tx}" target="_blank" rel="noopener">${tx.slice(0, 10)}↗</a></td></tr>`; }).join("") +
+    `</tbody></table></div>${!mvTrAll && W.trades.length > 12 ? `<button type="button" class="mini" data-mvtr style="margin-top:10px">Show ${W.trades.length - 12} more trades</button>` : ""}`;
+  box.onclick = (ev) => { const b = ev.target.closest("[data-mvw],[data-mvf],[data-mvall],[data-mvtr]"); if (!b) return;
+    if (b.dataset.mvw) { mvWin = b.dataset.mvw; mvAll = mvTrAll = false; } else if (b.dataset.mvf) { mvF = b.dataset.mvf; mvAll = false; } else if (b.dataset.mvtr != null) mvTrAll = true; else mvAll = true; drawMovers(); };
+  mvChart($("mvchart"), W, M);
+}
+// The window's activity: DEX buys and exchange withdrawals up, DEX sells and exchange deposits down, per hour (24 h),
+// 6 hours (7 d) or day (30 d), with the market cap of the last trade in each bucket above. Point at a bucket for its
+// numbers and its largest trades.
+function mvChart(el, W, M) {
+  if (!el) return;
+  const w = el.clientWidth || 800, mob = w < 600, hP = mob ? 64 : 80, gap = 12, hB = mob ? 112 : 150, mL = mob ? 50 : 60, mR = 8, H = hP + gap + hB + 22;
+  const n = W.bars.length, step = (w - mL - mR) / n, bx = (j) => mL + j * step, bw = Math.max(1, step * 0.72);
+  const top = d3.max(W.bars, (b) => b[0] + b[2]) || 0, bot = d3.max(W.bars, (b) => b[1] + b[3]) || 0, m = Math.max(top, bot, 1);
+  const yB = d3.scaleLinear([-m, m], [hP + gap + hB, hP + gap]);
+  let last = null; const pts = W.bars.map((b, j) => (b[4] != null ? (last = b[4]) : last)).map((p) => (p == null ? null : p * SUPPLY));
+  const pv = pts.filter((p) => p != null), [plo, phi] = pv.length ? d3.extent(pv) : [1, 2], pad = (phi - plo) * 0.12 || phi * 0.02;
+  const yP = d3.scaleLinear([plo - pad, phi + pad], [hP - 4, 6]);
+  const t0 = W.t0, bk = W.bucket, lab = bk < 86400 ? (bk === 3600 ? d3.utcFormat("%H:%M") : d3.utcFormat("%-d %b %H:%M")) : d3.utcFormat("%-d %b");
+  const every = Math.max(1, Math.ceil(n / (mob ? 4 : 8)));
+  const ticks = d3.range(0, n, every);
+  const line = d3.line().defined((v) => v != null).x((v, j) => bx(j) + step / 2).y((v) => yP(v))(pts);
+  const bar = (j, y0, v, c) => (Math.abs(v) > 0 ? `<rect x="${bx(j) + (step - bw) / 2}" y="${Math.min(yB(y0), yB(y0 + v))}" width="${bw}" height="${Math.max(0.6, Math.abs(yB(y0 + v) - yB(y0)))}" fill="var(${c})"/>` : "");
+  el.innerHTML = `<svg width="${w}" height="${H}" viewBox="0 0 ${w} ${H}" role="img" aria-label="DEX buys and sells over the window, with the market cap above">
+    ${yP.ticks(3).map((v) => `<line x1="${mL}" x2="${w - mR}" y1="${yP(v)}" y2="${yP(v)}" class="gl"/><text x="${mL - 6}" y="${yP(v) + 3}" class="ax" text-anchor="end">${fMcap(v)}</text>`).join("")}
+    <path d="${line || ""}" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+    ${[m, m / 2, 0, -m / 2, -m].map((v) => `<line x1="${mL}" x2="${w - mR}" y1="${yB(v)}" y2="${yB(v)}" class="gl${v === 0 ? " z" : ""}"/><text x="${mL - 6}" y="${yB(v) + 3}" class="ax" text-anchor="end">${v === 0 ? "$0" : (v > 0 ? "" : "−") + fU(Math.abs(v))}</text>`).join("")}
+    ${W.bars.map((b, j) => bar(j, 0, b[0], "--up") + bar(j, b[0], b[2], "--s1") + bar(j, 0, -b[1], "--down") + bar(j, -b[1], -b[3], "--crit")).join("")}
+    ${ticks.map((j) => `<text x="${bx(j) + step / 2}" y="${H - 6}" class="ax" text-anchor="middle">${lab(new Date((t0 + j * bk) * 1000))}</text>`).join("")}
+    <line class="mvx" x1="0" x2="0" y1="4" y2="${hP + gap + hB}" style="display:none"/><rect class="mvhit" x="${mL}" y="0" width="${w - mL - mR}" height="${hP + gap + hB}" fill="transparent"/></svg>`;
+  const svg = el.querySelector("svg"), cx = svg.querySelector(".mvx"), hit = svg.querySelector(".mvhit");
+  const show = (ev) => { const r = svg.getBoundingClientRect(), j = Math.max(0, Math.min(n - 1, Math.floor((ev.clientX - r.left - mL) / step))), b = W.bars[j];
+    const s0 = t0 + j * bk, s1 = Math.min(s0 + bk, Date.parse(M.asOf) / 1000), f = (s) => fdt(new Date(s * 1000)).replace(" UTC", "");
+    cx.setAttribute("x1", bx(j) + step / 2); cx.setAttribute("x2", bx(j) + step / 2); cx.style.display = "";
+    const tr = W.trades.filter((x) => { const s = Date.parse(x[0]) / 1000; return s >= s0 && s < s0 + bk; }).slice(0, 5);
+    showTip(`<div class="h">${f(s0)} – ${f(s1).slice(-5)}${bk >= 86400 ? "" : " UTC"}</div>` + trow("var(--up)", "Bought on the DEX", fU(b[0])) + trow("var(--s1)", "From exchanges", fU(b[2])) + trow("var(--down)", "Sold on the DEX", fU(b[1])) + trow("var(--crit)", "To exchanges", fU(b[3])) +
+      trow("var(--accent)", "Market cap, last trade", pts[j] != null ? fMcap(pts[j]) : "—") +
+      (tr.length ? `<div class="h" style="margin-top:6px">Largest trades</div>` + tr.map(([ts, a, k, g, u]) => trow(null, `${ts.slice(11, 16)} ${short(a)} ${MVK[k]}`, fU(u))).join("") : ""), ev); };
+  hit.onpointermove = show; hit.onpointerdown = show; hit.onpointerleave = () => { cx.style.display = "none"; hideTip(); };
+}
+// Overview: the last 24 hours in one panel, with the top buyers and sellers.
+function moversMini() {
+  const M = S.MV; if (!M) return;
+  const W = M.windows["24h"], t = W.tot, px = mvPx(W);
+  const top = (f, s) => W.owners.filter(f).sort(s).slice(0, 4);
+  const row = (o, v, c) => `<li><span class="mvo">${mvOwner(o)}${o.new ? '<span class="ev up">new</span>' : ""}</span><b class="${c}">${v}</b></li>`;
+  const buyers = top((o) => o.b[1] > 0 && o.net > 0, (p, q) => q.b[1] - p.b[1]), sellers = top((o) => o.s[1] + o.co[1] > 0 && o.net < 0, (p, q) => q.s[1] + q.co[1] - p.s[1] - p.co[1]);
+  card({ title: "Who's moving · last 24 hours", q: "Who bought and who sold, by owner.", wide: true, val: `<a class="mini" href="#entities/cards">Open the board →</a>`,
+    body: `<div class="kv mvkv">${[[fU(t.buy), `bought by ${t.buyers} owners`, "up"], [fU(t.sell), `sold by ${t.sellers} owners`, "down"], [sgn(t.buy - t.sell, fU), "net DEX buying", t.buy >= t.sell ? "up" : "down"], [`${fU(t.cexIn)} / ${fU(t.cexOut)}`, "from / to exchanges", ""], [px ? fP(px[1]) : "—", px ? `market cap · ${sgn(100 * (px[1] / px[0] - 1), (v) => v.toFixed(1) + "%")} in 24 h` : "market cap", ""]].map(([v, k, c]) => `<div><b class="${c}">${v}</b><span>${k}</span></div>`).join("")}</div>
+      <div class="mvmini"><div><span class="eyebrow">Top buyers</span><ul>${buyers.map((o) => row(o, "+" + fU(o.b[1]), "up")).join("") || '<li class="flat">No buying.</li>'}</ul></div>
+      <div><span class="eyebrow">Top sellers</span><ul>${sellers.map((o) => row(o, "−" + fU(o.s[1] + o.co[1]), "down")).join("") || '<li class="flat">No selling.</li>'}</ul></div></div>
+      <p class="sub">As of ${fdt(new Date(M.asOf))} (${mvAge(M)}).</p>` });
+}
+
 // ---------- ENTITY CARDS (entity registry, data/entities.json) ----------
 const CHI = Object.fromEntries(["dexIn", "dexOut", "cexIn", "cexOut", "wIn", "wOut", "entIn", "entOut", "othIn", "othOut", "internal", "n"].map((k, i) => [k, i]));
 const STN = { accumulating: ["▲ Accumulating", "up", "--up"], distributing: ["▼ To exchanges", "down", "--crit"], selling: ["▼ Selling", "down", "--down"], moving: ["→ Moving out", "mv-move", "--warn"], holding: ["■ Holding", "flat", "--fg-2"], dormant: ["· Dormant", "flat", "--neutral"] };
@@ -1964,6 +2202,7 @@ const ewin = (e, wi) => { const w = e.w[wi], g = (k) => w[CHI[k]];
 const ownerIdx = (id) => (T.mon ? T.mon.owners.findIndex((o) => o.id === id) : -1);
 function entCards() {
   const E = S.E;
+  moversCard();
   if (!E || !E.entities) { card({ title: "Entities", wide: true, body: unavailable("The entity registry arrives with the next scheduled run.") }); return; }
   card({ title: "Entity cards", q: "Which groups of linked wallets are growing, shrinking or only moving coins between their own wallets?", wide: true, key: true, body: `<div id="ecbox"></div>`,
     note: "Each card is one entity: a group of wallets tied together by the linking rules (inferred, not proven). Change counts only GME entering or leaving the group; moves between its own wallets are shown as ↔ internal and never as selling. Red means coins left through the DEX or to an exchange; amber means they went to wallets outside the group. New wallets join automatically when a direct rule fires (a member gave them their first GME, or one sent the other ≥90% of its balance; ≥$2k). Wallets that received ≥$2k from a group without a rule firing are listed as provisional and not counted. Cost basis: first-in-first-out over the group's own inflows and outflows; coins that arrived by transfer are costed at that day's price." });
@@ -1994,13 +2233,39 @@ function drawCards() {
     ${!ecAll && vis.length > 24 ? `<button type="button" class="mini" data-eall style="margin-top:12px">Show all ${vis.length}</button>` : ""}`;
   box.onclick = (ev) => { const t = ev.target.closest("[data-ew],[data-ef],[data-eall]"); if (!t) return;
     if (t.dataset.ew != null) ecWin = +t.dataset.ew; else if (t.dataset.ef) ecFilter = t.dataset.ef; else ecAll = true; drawCards(); };
+  ecHover(box);
   $("ecsort").onchange = (ev) => { ecSort = ev.target.value; drawCards(); };
   const qi = $("ecq"); qi.oninput = () => { ecQ = qi.value; const p = qi.selectionStart; drawCards(); const n = $("ecq"); n.focus(); n.setSelectionRange(p, p); };
 }
 const svcEnt = (id) => { const x = S.H && (S.H.serviceEntities || []).find((y) => y.id === id); return x ? `${x.n} wallet(s) in this group moved exchange or market-maker volumes of ETH (ETH side). It may be infrastructure, not a person: to verify before reading its holdings as a holder's.` : ""; };
+// The card's 90-day line: index i is the end of day (registry date − (90 − i)); hover shows that day's holdings.
+const ecDay = (i) => new Date(Date.parse(S.E.asOf.slice(0, 10)) - (90 - i) * 864e5);
+let PXDAY = null;
+const pxOn = (d) => { if (!PXDAY) { PXDAY = new Map(); let p = null; T.daily.d.forEach((x, i) => { if (T.daily.price[i] != null) p = T.daily.price[i]; PXDAY.set(x, p); }); }
+  return PXDAY.get(d) ?? lastVal(col("price")); };
+// Which of its wallets moved GME into or out of the group in the window (movers.py, the same windows as the card).
+function ecWho(e, wl) {
+  const mv = S.MV && S.MV.ent && S.MV.ent[e.id], who = mv ? mv[ecWin] || [] : [];
+  if (!who.length) return "";
+  return `<div class="ecwho"><span class="eyebrow">Who moved · ${wl}</span>${who.slice(0, 4).map(([a, g, u, k]) => `<div>${wLink(a)}<b class="${Math.abs(g) < 1e-4 ? "flat" : g > 0 ? "up" : "down"}">${Math.abs(g) < 1e-4 ? "±0" : sgn(g, fBb)}</b><small>${MVK[k] || k} · ${fU(u)} moved</small></div>`).join("")}${who.length > 4 ? `<small class="flat">+${who.length - 4} more wallets</small>` : ""}</div>`;
+}
+function ecHover(box) {
+  for (const w of box.querySelectorAll(".ecspw")) {
+    const e = S.E.entities.find((x) => x.id === w.dataset.ec); if (!e) continue;
+    const ser = e.series, [lo, hi] = d3.extent(ser), y0 = Math.min(lo, hi * 0.9), y1 = hi === lo ? hi + 1 : hi, cx = w.querySelector(".ecx"), dot = w.querySelector(".ecdot");
+    const show = (ev) => { const r = w.getBoundingClientRect(), j = Math.max(0, Math.min(ser.length - 1, Math.round(((ev.clientX - r.left) / r.width) * (ser.length - 1))));
+      const fx = (100 * j) / (ser.length - 1), fy = 100 * (1 - (ser[j] - y0) / (y1 - y0)) * (54 / 56) + (100 * 1) / 56;
+      cx.style.left = fx + "%"; dot.style.left = fx + "%"; dot.style.top = fy + "%"; w.classList.add("on");
+      const d = ecDay(j), ds = d.toISOString().slice(0, 10), p = pxOn(ds), dd = j ? ser[j] - ser[j - 1] : 0, dw = ser[j] - ser[0];
+      showTip(`<div class="h">${fd(d)}${j === ser.length - 1 ? " · today" : ""}</div>` + trow(null, "Holds", fBb(ser[j]) + " GME") + trow(null, "Worth that day", p ? fU(ser[j] * 1e9 * p) : "—") +
+        trow(null, "Change that day", Math.abs(dd) < 1e-4 ? "±0" : sgn(dd, fBb)) + trow(null, "Since " + fd(ecDay(0)), Math.abs(dw) < 1e-4 ? "±0" : sgn(dw, fBb)) + trow(null, "Market cap", p ? fP(p) : "—") +
+        `<p class="tiphint">Holdings of today's ${e.n} wallets; moves between them cancel out.</p>`, ev); };
+    w.onpointermove = show; w.onpointerdown = show; w.onpointerleave = () => { w.classList.remove("on"); hideTip(); };
+  }
+}
 function ecard({ e, x, st }, wl) {
   const [sl, sc, svar] = STN[st] || STN.dormant, g = x.g, b = e.bal / 1e9, spot = S.E.spot;
-  const ser = e.series, W2 = 260, H2 = 40, xs = d3.scaleLinear([0, ser.length - 1], [0, W2]), [lo, hi] = d3.extent(ser), ys = d3.scaleLinear([Math.min(lo, hi * 0.9), hi === lo ? hi + 1 : hi], [H2 - 2, 2]);
+  const ser = e.series, W2 = 260, H2 = 56, xs = d3.scaleLinear([0, ser.length - 1], [0, W2]), [lo, hi] = d3.extent(ser), ys = d3.scaleLinear([Math.min(lo, hi * 0.9), hi === lo ? hi + 1 : hi], [H2 - 2, 2]);
   const area = d3.area().x((v, i) => xs(i)).y0(H2).y1((v) => ys(v))(ser), line = d3.line().x((v, i) => xs(i)).y((v) => ys(v))(ser);
   const winStart = xs(Math.max(0, ser.length - 1 - Math.round(WIN[ecWin][1] / 24)));
   const mx = Math.max(x.inn, x.out, 1e-9), seg = (v, c, t) => (v > 1e-6 ? `<i style="width:${(100 * v) / mx}%;background:var(${c})" title="${esc(t)}: ${fBb(v)}"></i>` : "");
@@ -2022,9 +2287,11 @@ function ecard({ e, x, st }, wl) {
   return `<article class="ec" style="--st:var(${svar})">
     <header><div><h4>${nm(e.name)}</h4><span class="ev inf">${KINDE[e.kind] || e.kind}</span>${e.forming ? `<span class="ev" style="color:var(--accent);border-color:var(--accent)" data-tip="${esc(e.forming)}">◆ forming</span>` : ""}${e.flagged ? '<span class="ev" style="color:var(--crit);border-color:var(--crit)">flagged &gt;60</span>' : ""}${svcEnt(e.id) ? `<span class="ev" style="color:var(--crit);border-color:var(--crit)" data-tip="${esc(svcEnt(e.id))}">exchange-scale wallets</span>` : ""}</div><span class="ecst ${sc}">${sl}</span></header>
     <div class="ecv"><b>${fBb(b)}</b><span>${fPct(e.pct, 2)} of supply · ${e.n} wallets${e.attached.length ? ` · <span style="color:var(--accent)">+${e.attached.length} joined</span>` : ""}</span><b class="${Math.abs(x.net) < 1e-3 ? "flat" : sc}" style="margin-left:auto">${Math.abs(x.net) < 1e-3 ? "±0" : sgn(x.net, fBb)}<small> ${wl}</small></b></div>
-    <svg viewBox="0 0 ${W2} ${H2}" preserveAspectRatio="none" class="ecsp"><rect x="${winStart}" y="0" width="${W2 - winStart}" height="${H2}" fill="var(--accent-2)"/><path d="${area}" fill="var(${svar})" fill-opacity=".14"/><path d="${line}" fill="none" stroke="var(${svar})" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg>
+    <div class="ecspw" data-ec="${e.id}"><svg viewBox="0 0 ${W2} ${H2}" preserveAspectRatio="none" class="ecsp"><rect x="${winStart}" y="0" width="${W2 - winStart}" height="${H2}" fill="var(--accent-2)"/><path d="${area}" fill="var(${svar})" fill-opacity=".14"/><path d="${line}" fill="none" stroke="var(${svar})" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg><i class="ecx"></i><i class="ecdot" style="--c:var(${svar})"></i><span class="ecax"><span>${fd(ecDay(0))}</span><span>90 days · point at the line</span><span>today</span></span></div>
+    <div class="ecwins">${WIN.map(([l], wi) => { const y = ewin(e, wi), s2 = STN[e.status[wi]] || STN.dormant; return `<button type="button" data-ew="${wi}" class="${wi === ecWin ? "on" : ""}"><span>${l}</span><b class="${Math.abs(y.net) < 1e-3 ? "flat" : s2[1]}">${Math.abs(y.net) < 1e-3 ? "±0" : sgn(y.net, fBb)}</b></button>`; }).join("")}</div>
     <div class="ecflow"><span>In</span><div class="ecbar">${inBar}</div><b>${x.inn > 1e-3 ? fBb(x.inn) : "—"}</b><span>Out</span><div class="ecbar">${outBar}</div><b>${x.out > 1e-3 ? fBb(x.out) : "—"}</b></div>
     <div class="how">${ch.join("") || `<span class="flat">No GME moved in or out in the last ${wl}.</span>`}</div>
+    ${ecWho(e, wl)}
     <dl class="eckv"><div><dt>Avg cost, as MC</dt><dd>${c.avg ? fP(c.avg) : "—"}${mult ? ` <small class="${mult >= 1 ? "up" : "down"}">${mult.toFixed(2)}× now</small>` : ""}</dd></div>
       <div><dt>Unrealized</dt><dd class="${(c.unreal ?? 0) >= 0 ? "up" : "down"}">${c.unreal != null ? sgn(c.unreal, fU) : "—"}</dd></div>
       <div><dt>Realized</dt><dd class="${(c.realized ?? 0) >= 0 ? "up" : "down"}">${c.realized != null ? sgn(c.realized, fU) : "—"}</dd></div>
@@ -2450,6 +2717,9 @@ function methodology() {
     <p>The <a href="#wallet">Wallet</a> page works for every address that ever sent or received GME (about 35,000). With every run the terminal writes one record per wallet: every transfer with its transaction, priced at the exact execution price when it is a DEX trade matched to a pool swap and at that day's close otherwise; profit and loss by the same FIFO method as the group charts (a DEX sale or an exchange deposit realizes, coins sent to other wallets leave at cost); and what the terminal already knows about it: its tracked or linked group, watch tags, where its first GME came from, which wallets it seeded with $2,000 or more (the grouping rules' bar), exchange deposit addresses it shares with other wallets, and strong ETH links.</p>
     <p>ETH funding comes from the BigQuery study for about 4,400 study wallets (top-level ETH transfers since April 2024; a first funder counts only if its ETH arrived before the wallet's own first transaction). For any other wallet the page asks Ethplorer's free API from your browser. It lists top-level transactions only, so ETH paid out by a contract or through an exchange's internal transaction does not show.</p>
     <p>“Bought the same way” compares buying fingerprints, not links: GME bought and number of DEX buys within 2.5× of the wallet's, the same main way of buying, and shares sold, sent on and received from other wallets within 15 points; ranked by how close they are, then by how near in time the buying started. Two wallets that behaved alike are not shown to be one owner.</p></div></section>
+  <section><span class="dn">10 · Who's moving · tokens</span><div><h2>Recent activity by owner, and everything a wallet holds</h2>
+    <p>The “Who's moving” board (Entities) and the Overview panel come from <code>movers.py</code>, run every time the terminal refreshes: every DEX buy and sale, exchange deposit and withdrawal and wallet-to-wallet transfer of the last 24 hours, 7 days and 30 days, grouped by owner (a tracked group, else a linked group, else the wallet), with GME moving between one owner's own wallets left out. Prices are the exact execution prices where the trade was matched to a pool swap, otherwise the day's close; transfers under $1 are ignored. A wallet that buys and sells in the same window shows both. Each entity card lists which of its wallets moved in the chosen window, and its 90-day line shows the holdings of today's wallets on each day.</p>
+    <p>“Tokens it holds” (Wallet page, group drawers, Visualizer) is live, not part of the terminal's data: the viewer's browser asks Ethplorer's free API for the address's ETH and up to 100 token balances, priced by Ethplorer (CoinGecko-based). A token is counted only with a real market price (a market cap or daily trading volume, and at least 50 holders); airdropped spam and dead copies are listed apart and never added. A group's tokens are its wallets' tokens added up, the largest GME holders first. Tokens on other chains and DeFi positions are not included.</p></div></section>
   </article>`);
 }
 
@@ -3004,7 +3274,8 @@ async function vzWalFill(d) {
       ...(now ? [["Realized P/L", sgn(now.rz, fU), cls(now.rz)], ["Unrealized P/L", sgn(now.un, fU), cls(now.un)]] : [])])}
     <div>${rec.t.slice(-5).reverse().map(([ts, g, u, k, cp]) => { const [l, c] = WK[k] || [k, "flat"]; return `<div class="vzrec"><span class="num">${fday(new Date(ts * 1000))}</span><span><span class="${c}">${l}</span> · ${cpHtml(cp)}</span><b>${fB(Math.abs(g))}</b></div>`; }).join("")}</div>
     ${links.length ? `<span class="eyebrow">Links to other wallets</span><div class="tie">${links.map((z) => `<div>${z}</div>`).join("")}</div>` : ""}
-    <div class="vzact"><a class="mini" href="#wallet/${d.addr}">Full analysis →</a>${zerLink(d.addr)}</div>`;
+    <div class="vzact"><a class="mini" href="#wallet/${d.addr}">Full analysis →</a>${zerLink(d.addr)}</div><div id="vzpf"></div>`;
+  pfMini($("vzpf"), d.addr, () => VZ.sel === id);
 }
 // A group's ties to other tracked groups (wallet_index.py _ties), with the two wallets behind each piece of evidence.
 async function vzTiesFill(d) {
@@ -3107,7 +3378,9 @@ async function wReport(a) {
     const L = wLabel(a);
     out.innerHTML = `<div class="grid"><section class="panel card wide key"><div class="whead"><span class="mono wa">${a}</span>${links}</div>` +
       (L ? unavailable(`This is <b>${esc(L[1])}</b>: infrastructure (a pool, router, exchange or contract), not a holder, so the terminal keeps no wallet record for it. Its flows are on the Visualizer.`)
-        : unavailable(`No GME has ever moved to or from this address (as of ${fdt(new Date(WI.meta.asOf))}). Check the address, or open it on Etherscan.`)) + `</section></div>`;
+        : unavailable(`No GME has ever moved to or from this address (as of ${fdt(new Date(WI.meta.asOf))}). Check the address, or open it on Etherscan.`)) + `</section></div>` +
+      (L ? "" : `<div class="grid">` + wcard("Tokens it holds", "Everything in this wallet on Ethereum, priced live.", `<div id="wpf"></div>`, { wide: true, note: PFNOTE }) + `</div>`);
+    if (!L) pfWallet($("wpf"), a);
     return;
   }
   const t = rec.t, price = lastVal(col("price")), P = { track: rec.pl.track, marks: rec.pl.marks }, now = plNow(P);
@@ -3141,6 +3414,8 @@ async function wReport(a) {
   const kv = [["Holds", fG(rec.b) + " GME"], ["% of supply", fPct((100 * rec.b) / SUPPLY, 3)], ["Worth now", fU(rec.b * price)], ["First GME", rec.f.slice(0, 10)], ["Last active", rec.l.slice(0, 10)], ["Transfers", fN(t.length)], ...plKv(now)];
   let html = `<div class="grid"><section class="panel card wide key"><div class="whead"><span class="mono wa">${a}</span>${links}</div>
     <div class="wtags"><span class="ev">${ty}</span>${tags.join("")}</div>${own.length ? `<div class="wbel"><span class="eyebrow">Belongs to</span>${own.join("")}</div>` : ""}<div class="kv wkv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div></section></div>`;
+  // ---- every token it holds (Zerion-style, live) ----
+  html += `<div class="grid">` + wcard("Tokens it holds", "Everything in this wallet on Ethereum, priced live: GME and every other token.", `<div id="wpf"></div>`, { wide: true, note: PFNOTE }) + `</div>`;
   // ---- how it traded ----
   html += `<div class="grid">` + wcard("How it traded", "Its trades on the price chart, holdings, and profit and loss.", `<div id="wpl">${plBox("w:" + a)}</div>`, { wide: true, note: PLNOTE + " This is the wallet on its own: coins from its group's other wallets count as transfers. Open the group's P&L chart to see the owner as a whole." }) + `</div>`;
   // ---- flows by kind ----
@@ -3191,6 +3466,7 @@ async function wReport(a) {
   const box = out.querySelector("#wpl .pl-box"); wirePl($("wpl"), P);
   draws.push(() => { if (box.isConnected) behaviourChart(box.querySelector(".pl-chart"), P); });
   wTx(rec);
+  pfWallet($("wpf"), a);
   $("wdust").onchange = (ev2) => { wDust = ev2.target.checked; wTx(rec); };
   if (!rec.eth) wEthLive(a, tok);
   wLook(a, rec, tok);
@@ -3434,6 +3710,7 @@ async function openGroup(gid) {
   const big = ((P && P.marks) || []).slice().sort((x, y) => y[3] - x[3]).slice(0, 12), off = d0off();
   $("db").innerHTML = `<div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
     <p class="sub">${web ? "A large web of wallets the grouping rules joined, flagged because it grew past 60 wallets: it is <b>not trusted as one owner</b>, so it has no combined P&amp;L. Parts of it are tracked as groups of their own." : "Wallets the grouping rules link as one owner, holding less than the 0.05% of supply that makes a group tracked by the daily watch."} Linked by: ${via || "—"}. Links are evidence of shared control, not proof of ownership.</p>
+    <div><span class="eyebrow">Tokens across its wallets · live</span><div id="dpf" style="margin-top:6px"></div><p class="sub" style="margin-top:6px">${PFNOTE} The largest GME holders load first.</p></div>
     ${ents.length ? `<div class="wbel"><span class="eyebrow">Tracked groups among its wallets</span>${ents.map((x) => `<button type="button" class="mini wown" data-pnl="${x.id}">${nm(x.name)}&nbsp;→</button>`).join("")}</div>` : ""}
     ${P ? `<div><span class="eyebrow">How it traded · the group as one owner</span><div style="margin-top:6px">${plBox("g:" + gid)}</div><p class="sub" style="margin-top:6px">${PLNOTE} Moves between the group's own wallets are internal: neither buys nor sales.</p></div>` : ""}
     ${big.length ? `<div><span class="eyebrow">Largest trades</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Date</th><th>Action</th><th class="n">GME</th><th class="n">≈ $</th><th class="n">At MC</th></tr></thead><tbody>` +
@@ -3441,6 +3718,7 @@ async function openGroup(gid) {
     <div><span class="eyebrow">Wallets (${fN(G.n)}${G.members.length < G.n ? `, the ${G.members.length} largest` : ""})</span><div class="tw" style="margin-top:6px"><table><thead><tr><th>Wallet</th><th class="n">Holds</th><th></th></tr></thead><tbody>` +
       G.members.map(([w, b]) => { const x = entOf(w); return `<tr><td><a class="addr" href="#wallet/${w}">${short(w)}</a>${x ? " " + entTag(x) : ""}</td><td class="n">${fB(b)}</td><td class="n">${fPct((100 * b) / SUPPLY, 3)}</td></tr>`; }).join("") + `</tbody></table></div></div>`;
   if (P) wirePl($("db"), P);
+  pfGroup($("dpf"), G.members.map((m) => m[0]));
 }
 async function openEntity(id) {
   const e = S.E && S.E.entities.find((x) => x.id === id); if (!e) return;
@@ -3453,6 +3731,7 @@ async function openEntity(id) {
   const kv = [["Holds", fBb(e.bal / 1e9) + " GME"], ["% of supply", fPct(e.pct, 2)], ["Wallets", e.n + (e.attached.length ? ` (+${e.attached.length} joined)` : "")], ...plKv(now)];
   const big = ((P && P.marks) || []).slice().sort((a, b) => b[3] - a[3]).slice(0, 12), off = d0off();
   $("db").innerHTML = `<div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
+    <div><span class="eyebrow">Tokens across its wallets · live</span><div id="dpf" style="margin-top:6px"></div><p class="sub" style="margin-top:6px">${PFNOTE} The largest GME holders load first.</p></div>
     <div><span class="eyebrow">How it traded · the whole group as one owner</span><div style="margin-top:6px">${plBox("e:" + id)}</div><p class="sub" style="margin-top:6px">${PLNOTE} Moves between the group's own wallets are internal: neither buys nor sales.</p></div>
     ${accHtml(e)}
     ${profileHtml(P && P.profile)}
@@ -3460,6 +3739,7 @@ async function openEntity(id) {
       big.map(([d, k, b, u]) => `<tr><td class="num">${fday(DD[d + off] || DD[N - 1])}</td><td class="${PLK[k][1] === "--up" ? "up" : "down"}">${PLK[k][0]}</td><td class="n">${fBb(b)}</td><td class="n">${fU(u)}</td><td class="n">${PLK[k][2] ? fP(u / (b * 1e9)) : "—"}</td></tr>`).join("") + `</tbody></table></div></div>` : ""}
     <div><span class="eyebrow">Wallets (${e.n})</span><div class="chips" style="margin-top:6px">${e.members.slice(0, 120).map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>`).join("")}</div></div>`;
   wirePl($("db"), P);
+  pfGroup($("dpf"), e.members.slice().sort((p, q) => monBal(q) - monBal(p)));
 }
 })();
 </script>
