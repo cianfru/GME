@@ -1,34 +1,20 @@
 {
  "summary": {
-  "asOf": "2026-11-19T18:25:47Z",
-  "since": "2026-11-19T17:40:35Z",
+  "asOf": "2026-11-19T18:43:35Z",
+  "since": "2026-11-19T18:25:47Z",
   "price": 6.891627716049819e-06,
   "mcap": 2899238.8638649983,
-  "pool": 40462653027.50607,
+  "pool": 40410684636.15499,
   "watchedGroups": 23,
-  "alerts": 3,
-  "high": 1
+  "alerts": 1,
+  "high": 0
  },
  "alerts": [
   {
-   "kind": "new_vault",
-   "severity": "high",
-   "text": "New buy-and-forward holding wallet 0x8260\u20261b52: 1 fresh wallet(s) forwarded 0.35B (bought for $2,418)",
-   "wallet": "0x826065fb081c61a2b150254768e4d7e532ba1b52"
-  },
-  {
-   "kind": "flow",
-   "severity": "info",
-   "text": "Holding wallet 1b52: bought on DEX 0.35B GME (~$2,418, 0.08% of supply)",
-   "group": "Holding wallet 1b52",
-   "what": "bought on DEX",
-   "tokens": 350924198.4287154
-  },
-  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME -0.46B since last run (net buying out of the pool); pool now 40.46B, market cap $2.90M",
-   "delta": -464599179.17607117
+   "text": "Pool GME -0.05B since last run (net buying out of the pool); pool now 40.41B, market cap $2.90M",
+   "delta": -51968391.35108185
   }
  ]
 }
