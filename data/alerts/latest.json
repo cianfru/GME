@@ -1,28 +1,20 @@
 {
  "summary": {
-  "asOf": "2026-11-18T22:39:47Z",
-  "since": "2026-11-18T17:15:11Z",
+  "asOf": "2026-11-19T07:10:47Z",
+  "since": "2026-11-18T22:39:47Z",
   "price": 6.891627716049819e-06,
   "mcap": 2899238.8638649983,
-  "pool": 41948665219.83229,
+  "pool": 41834745326.234055,
   "watchedGroups": 22,
-  "alerts": 2,
+  "alerts": 1,
   "high": 0
  },
  "alerts": [
   {
-   "kind": "flow",
-   "severity": "info",
-   "text": "fbb4: from other wallets 0.16B GME (~$1,120, 0.04% of supply)",
-   "group": "fbb4",
-   "what": "from other wallets",
-   "tokens": 162483045.18081787
-  },
-  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME -0.02B since last run (net buying out of the pool); pool now 41.95B, market cap $2.90M",
-   "delta": -20954404.288383484
+   "text": "Pool GME -0.11B since last run (net buying out of the pool); pool now 41.83B, market cap $2.90M",
+   "delta": -113919893.59823608
   }
  ]
 }
