@@ -358,6 +358,13 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 .pfrest { margin-top: 10px } .pfrest summary { list-style: none; cursor: pointer; width: fit-content } .pfrest summary::-webkit-details-marker { display: none } .pfrest .tw { margin-top: 8px; opacity: .8 }
 .pfmini { display: flex; align-items: baseline; gap: .6rem; margin: 2px 0 4px } .pfmini b { font: 500 18px var(--mono) }
 @media (max-width: 760px) { .pft .pfp { display: none } .pfside { align-items: flex-start } .pft .pfa small { max-width: 9rem } }
+.netgrid { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 18px; align-items: start }
+.netgrid .ec { box-shadow: inset 0 2px 0 var(--accent) } .netside { display: flex; flex-direction: column; gap: 8px; min-width: 0 } .netside .eyebrow { margin: 6px 0 0 }
+.netev { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column } .netev li { padding: 8px 0; border-bottom: 1px solid var(--line); font: 400 12px var(--sans); display: flex; flex-direction: column; gap: 3px }
+.netev li > div:first-child b { font-weight: 600 } .netev details summary { list-style: none; cursor: pointer; width: fit-content; margin-top: 2px } .netev details summary::-webkit-details-marker { display: none } .netev details .tw { margin-top: 6px }
+.netline { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; margin: 10px 0 2px; padding: 8px 10px; border: 1px solid var(--line); border-left: 2px solid var(--accent); font: 400 12px var(--sans) } .netline b { font: 500 12px var(--mono) } .netline .mini { margin-left: auto }
+.netev-tag { color: var(--accent); border-color: var(--accent); cursor: pointer; background: none }
+@media (max-width: 900px) { .netgrid { grid-template-columns: minmax(0, 1fr) } }
 .mvkv { margin: .7rem 0 .2rem }
 .mvleg { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin-top: .8rem; font: 400 11px var(--sans); color: var(--fg-2) } .mvleg span { display: inline-flex; align-items: center; gap: .35rem }
 .mvleg i { display: inline-block; width: 9px; height: 9px } .mvleg i.ln { height: 2px; width: 14px; background: var(--accent) } .mvkv b small { font-size: 10.5px; margin-left: .3rem }
@@ -1140,7 +1147,7 @@ function insiderCard(wide = true) {
   const rows = [["Net change", "net"], ["Bought on the DEX", "dexBuy"], ["Withdrawn from exchanges", "fromCex"], ["Sent to exchanges", "toCex"], ["Sold on the DEX", "dexSell"]];
   const body = `<div class="status"><span class="badge ${esc(I.status)}">${I.status === "ACCUMULATING" ? "▲" : I.status === "HOLDING" ? "■" : "▼"} ${esc(I.status)}</span>
     <span class="sub" style="margin:0">${esc(I.why)}</span></div>
-    <div class="trip${I.armed ? " armed" : ""}">${I.armed ? "⚠ Tripwire: " + esc(I.tripwire.join("; ")) : "Tripwire quiet · no exchange deposits in 7 days, no DEX sale by fbb4's main wallet in 30 days"}</div>
+    <div class="trip${I.armed ? " armed" : ""}">${I.armed ? "⚠ Tripwire: " + esc(I.tripwire.join("; ")) : "Tripwire quiet · no exchange deposits in 7 days, no DEX sale by fbb4's main wallet in 30 days"}</div>${netLine()}
     <div class="tw"><table><thead><tr><th>Cluster, GME</th><th class="n">7 days</th><th class="n">30 days</th><th class="n">90 days</th></tr></thead><tbody>` +
     rows.map(([l, k]) => `<tr><td>${l}</td>${["7", "30", "90"].map((n) => { const v = W[n][k]; const s = k === "net" ? sgn(v, fB) : v ? fB(v) : "—";
       return `<td class="n ${k === "net" ? cls(v) : k === "toCex" && v ? "down" : ""}">${s}</td>`; }).join("")}</tr>`).join("") + `</tbody></table></div>`;
@@ -2091,10 +2098,10 @@ let mvWin = "24h", mvF = "all", mvAll = false, mvTrAll = false;
 const MVW = [["24H", "24h"], ["7D", "7d"], ["30D", "30d"]];
 const MVK = { b: "bought", s: "sold", ci: "from exchange", co: "to exchange", i: "received", o: "sent out", la: "liquidity", lr: "liquidity", x: "burned" };
 const MVC = { b: "up", s: "down", ci: "up", co: "down", i: "up", o: "mv-move" };
-const mvEnt = (k) => S.E && S.E.entities.find((e) => e.id === k);
-const mvOwner = (o) => o.kind === "entity" ? (mvEnt(o.k) ? entTag(mvEnt(o.k)) : nm(o.name))
+const mvEnt = (k) => entById(k);
+const mvOwner = (o) => o.kind === "entity" || o.kind === "network" ? (mvEnt(o.k) ? entTag(mvEnt(o.k)) : nm(o.name))
   : o.kind === "group" ? `<button type="button" class="tag" data-grp="${o.k}" title="Open this linked group">${nm(o.name)}</button>` : wLink(o.k);
-const mvKindTag = (o) => (o.kind === "entity" && mvEnt(o.k) && mvEnt(o.k).kind !== "linked" ? `<span class="ev inf">${(KINDE[mvEnt(o.k).kind] || "group").toLowerCase()}</span>` : "");
+const mvKindTag = (o) => (o.kind === "network" ? `<span class="ev inf">network · ${(mvEnt(o.k) || { groups: [] }).groups.length} groups</span>` : o.kind === "entity" && mvEnt(o.k) && mvEnt(o.k).kind !== "linked" ? `<span class="ev inf">${(KINDE[mvEnt(o.k).kind] || "group").toLowerCase()}</span>` : "");
 const mvWho = (top, max = 3) => top.slice(0, max).map(([a, g, u, k]) => `<span class="mvw">${wLink(a)} <i class="${Math.abs(g) < 1e-4 ? "flat" : g > 0 ? "up" : "down"}">${Math.abs(g) < 1e-4 ? "±0" : sgn(g, fBb)}</i> <small>${MVK[k] || k}</small></span>`).join("");
 const mvAge = (M) => agoTxt((Date.now() - Date.parse(M.asOf)) / 36e5);
 const mvPx = (W) => { const p = W.bars.map((b) => b[4]).filter((v) => v != null); return p.length ? [p[0], p[p.length - 1], d3.min(W.bars, (b) => b[5] ?? b[4]), d3.max(W.bars, (b) => b[6] ?? b[4])] : null; };
@@ -2194,7 +2201,7 @@ const NEARN = { focus: () => FNAME, coinbase: () => "the Coinbase group" };
 const nearText = (n) => { const e = Object.entries(n || {}); if (!e.length) return "";
   return " " + e.map(([o, v]) => { const c = d3.sum(Object.values(v)); return `Also tied to ${(NEARN[o] || (() => o))()} by ${c} link${c === 1 ? "" : "s"} (${viaText(v)}).`; }).join(" ")
     + " Kept as its own group: a few transfers between two networks can be a trade as easily as one owner."; };
-const KINDE = { focus: "Main cluster", coinbase: "Coinbase-funded", watched: "Watched group", linked: "Linked group" };
+const KINDE = { focus: "Main cluster", coinbase: "Coinbase-funded", watched: "Watched group", linked: "Linked group", network: "Network · owner-reviewed" };
 let ecWin = 2, ecFilter = "all", ecSort = "bal", ecQ = "", ecAll = false;
 const ewin = (e, wi) => { const w = e.w[wi], g = (k) => w[CHI[k]];
   const inn = g("dexIn") + g("cexIn") + g("wIn") + g("entIn") + g("othIn"), out = g("dexOut") + g("cexOut") + g("wOut") + g("entOut") + g("othOut");
@@ -2203,6 +2210,7 @@ const ownerIdx = (id) => (T.mon ? T.mon.owners.findIndex((o) => o.id === id) : -
 function entCards() {
   const E = S.E;
   moversCard();
+  netCard();
   if (!E || !E.entities) { card({ title: "Entities", wide: true, body: unavailable("The entity registry arrives with the next scheduled run.") }); return; }
   card({ title: "Entity cards", q: "Which groups of linked wallets are growing, shrinking or only moving coins between their own wallets?", wide: true, key: true, body: `<div id="ecbox"></div>`,
     note: "Each card is one entity: a group of wallets tied together by the linking rules (inferred, not proven). Change counts only GME entering or leaving the group; moves between its own wallets are shown as ↔ internal and never as selling. Red means coins left through the DEX or to an exchange; amber means they went to wallets outside the group. New wallets join automatically when a direct rule fires (a member gave them their first GME, or one sent the other ≥90% of its balance; ≥$2k). Wallets that received ≥$2k from a group without a rule firing are listed as provisional and not counted. Cost basis: first-in-first-out over the group's own inflows and outflows; coins that arrived by transfer are costed at that day's price." });
@@ -2238,6 +2246,60 @@ function drawCards() {
   const qi = $("ecq"); qi.oninput = () => { ecQ = qi.value; const p = qi.selectionStart; drawCards(); const n = $("ecq"); n.focus(); n.setSelectionRange(p, p); };
 }
 const svcEnt = (id) => { const x = S.H && (S.H.serviceEntities || []).find((y) => y.id === id); return x ? `${x.n} wallet(s) in this group moved exchange or market-maker volumes of ETH (ETH side). It may be infrastructure, not a person: to verify before reading its holdings as a holder's.` : ""; };
+// ---------- OWNER-REVIEWED NETWORKS (network.py → S.NET): groups the rules keep apart, shown as one bloc ----------
+// Entity-shaped (kind "network"), so the card, the hover line, "who moved" and the P&L drawer reuse the entity code.
+// The groups underneath stay as they are; the evidence is recomputed from the chain every run.
+const NETS = () => (S.NET && S.NET.networks) || [];
+const entById = (id) => (S.E && S.E.entities.find((x) => x.id === id)) || NETS().find((n) => n.id === id);
+const netOf = (id) => NETS().find((n) => n.groups.includes(id));
+const gName = (id) => { const e = entById(id); return e ? nm(e.name) : esc(id); };
+const gBtn = (id) => { const e = entById(id); return e ? `<button type="button" class="tag hd" data-pnl="${id}">${nm(e.name)}</button>` : esc(id); };
+function netLine() {
+  const n = NETS()[0]; if (!n) return "";
+  const y = ewin(n, 2), s2 = STN[n.status[2]] || STN.dormant;
+  return `<div class="netline"><span>The whole <button type="button" class="tag hd" data-pnl="${n.id}">${esc(n.name)}</button> (${n.groups.length} groups, ${n.n} wallets) holds <b>${fBb(n.bal / 1e9)}</b> · ${fPct(n.pct, 2)} of supply</span>
+    <span class="${s2[1]}">30D ${s2[0].replace(/^. /, "")} ${Math.abs(y.net) < 1e-3 ? "±0" : sgn(y.net, fBb)}</span><a class="mini" href="#entities/cards">The network →</a></div>`;
+}
+function netSide(n, wi) {
+  const tot = n.bal || 1, wl = WIN[wi][0];
+  const rows = n.groups.map(entById).filter(Boolean).sort((p, q) => q.bal - p.bal).map((g) => { const y = ewin(g, wi), s2 = STN[g.status[wi]] || STN.dormant;
+    return `<tr><td>${gBtn(g.id)}</td><td class="n">${g.n}</td><td class="n">${fBb(g.bal / 1e9)}</td><td class="n"><span class="pfbar"><i style="width:${(100 * g.bal) / tot}%"></i></span>${fPct((100 * g.bal) / tot, 1)}</td><td class="n ${Math.abs(y.net) < 1e-3 ? "flat" : s2[1]}">${Math.abs(y.net) < 1e-3 ? "±0" : sgn(y.net, fBb)}</td></tr>`; }).join("");
+  return `<span class="eyebrow">Its groups</span><div class="tw"><table><thead><tr><th>Group</th><th class="n">Wallets</th><th class="n">Holds</th><th class="n">Of the network</th><th class="n">Net · ${wl}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${n.missing && n.missing.length ? `<p class="sub" style="color:var(--warn)">Not found in this run's registry: ${n.missing.map(esc).join(", ")}.</p>` : ""}
+    <span class="eyebrow">Why it is one bloc · owner-reviewed ${esc(n.decided || "")}</span><p class="sub">${esc(n.why || "")}</p>
+    <span class="eyebrow">Evidence between its groups · recomputed every run</span>${netEv(n)}`;
+}
+function netEv(n) {
+  const E = n.evidence || {}, txl = (h) => (h ? `<a class="mono" href="https://etherscan.io/tx/${h}" target="_blank" rel="noopener">${h.slice(0, 10)}↗</a>` : "");
+  const span = (a, b) => (a === b ? a : `${a} → ${b}`);
+  const gme = (E.pairs || []).filter((p) => p.kind === "gme"), eth = (E.pairs || []).filter((p) => p.kind === "eth");
+  const li = [];
+  for (const w of E.shared || []) { const tot = d3.sum(Object.values(w.out)) || 0;
+    li.push(`<li><div><b>Shared wallet ${wLink(w.a)}</b> <span class="flat">${w.group ? "in " + gName(w.group) : "in no group"}</span></div><div>Received GME from ${Object.entries(w.senders).map(([g, u]) => `${gName(g)} (${fU(u)})`).join(" and ")}${tot ? `; then sent ${Object.entries(w.out).map(([k, u]) => `${fU(u)} to ${k === "exchange" ? "an exchange" : k === "DEX" ? "the DEX" : esc(k)}`).join(", ")}` : "; still holds it"}.</div></li>`); }
+  for (const p of gme) li.push(`<li><div><b>${gName(p.a)} → ${gName(p.b)}</b> <span class="flat">GME</span></div><div>${p.n} transfer${p.n === 1 ? "" : "s"} · ${fBb(p.gme)} · ${fU(p.usd)} then · ${span(p.first, p.last)}</div>
+    <details><summary class="mini">The largest</summary><div class="tw"><table><tbody>${p.top.map(([ts, s, r, g, u, tx]) => `<tr><td class="num">${esc(ts.replace("T", " "))}</td><td>${wLink(s)} → ${wLink(r)}</td><td class="n">${fBb(g)}</td><td class="n">${fU(u)}</td><td>${txl(tx)}</td></tr>`).join("")}</tbody></table></div></details></li>`);
+  for (const p of eth) li.push(`<li><div><b>${gName(p.a)} → ${gName(p.b)}</b> <span class="flat">ETH</span></div><div>${p.eth.toLocaleString("en-US", { maximumFractionDigits: 3 })} ETH in ${p.n} transfer${p.n === 1 ? "" : "s"} · ${span(p.first, p.last)}</div>
+    <div class="flat">${p.top.slice(0, 3).map(([f, t, e2]) => `${wLink(f)} → ${wLink(t)} ${e2.toLocaleString("en-US", { maximumFractionDigits: 3 })} ETH`).join(" · ")}</div></li>`);
+  for (const d of E.deposits || []) li.push(`<li><div><b>Shared exchange deposit address ${wLink(d.a)}</b> <span class="ev inf">inferred</span></div><div>Paid into by ${d.groups.map(gName).join(" and ")}: one exchange account.</div></li>`);
+  const sum = [[(E.shared || []).length, "shared wallet"], [gme.length, "GME link"], [eth.length, "ETH link"], [(E.deposits || []).length, "shared deposit address"]].filter(([k]) => k).map(([k, l]) => `${k} ${l}${k === 1 ? "" : "s"}`).join(" · ");
+  return li.length ? `<p class="sub">${sum}. Shared wallets first: a wallet two of its groups both paid into is the hardest thing to explain away.</p><ul class="netev">${li.join("")}</ul>` : `<p class="sub">No evidence found between its groups this run.</p>`;
+}
+function netCard() {
+  for (const n of NETS())
+    card({ title: n.name, q: `${n.groups.length} groups the grouping rules keep apart, counted as one bloc after review: ${fPct(n.pct, 2)} of supply in ${n.n} wallets.`, wide: true, key: true,
+      body: `<div class="netbox" data-net="${n.id}"></div>`,
+      note: "The grouping rules merge wallets only on the strongest evidence (a first GME, a drain, first ETH or a gas top-up), so these five stay separate groups underneath; the network is an owner-reviewed view on top of them. Flows, holdings and P&L are the network as one owner: GME moving between its groups is internal, neither a buy nor a sale. The evidence list is recomputed from the chain every run. Whether it is one person or a few acting together, the chain cannot tell." });
+  draws.push(drawNets);
+}
+function drawNets() {
+  for (const box of document.querySelectorAll(".netbox")) {
+    const n = NETS().find((x) => x.id === box.dataset.net); if (!n) continue;
+    box.innerHTML = `<div class="netgrid"><div class="ecgrid1">${ecard({ e: n, x: ewin(n, ecWin), st: n.status[ecWin] }, WIN[ecWin][0])}</div><div class="netside">${netSide(n, ecWin)}</div></div>`;
+    ecHover(box);
+    box.onclick = (ev) => { const t = ev.target.closest("[data-ew]"); if (!t) return; ecWin = +t.dataset.ew; drawNets(); drawCards(); };
+  }
+}
+
 // The card's 90-day line: index i is the end of day (registry date − (90 − i)); hover shows that day's holdings.
 const ecDay = (i) => new Date(Date.parse(S.E.asOf.slice(0, 10)) - (90 - i) * 864e5);
 let PXDAY = null;
@@ -2251,7 +2313,7 @@ function ecWho(e, wl) {
 }
 function ecHover(box) {
   for (const w of box.querySelectorAll(".ecspw")) {
-    const e = S.E.entities.find((x) => x.id === w.dataset.ec); if (!e) continue;
+    const e = entById(w.dataset.ec); if (!e) continue;
     const ser = e.series, [lo, hi] = d3.extent(ser), y0 = Math.min(lo, hi * 0.9), y1 = hi === lo ? hi + 1 : hi, cx = w.querySelector(".ecx"), dot = w.querySelector(".ecdot");
     const show = (ev) => { const r = w.getBoundingClientRect(), j = Math.max(0, Math.min(ser.length - 1, Math.round(((ev.clientX - r.left) / r.width) * (ser.length - 1))));
       const fx = (100 * j) / (ser.length - 1), fy = 100 * (1 - (ser[j] - y0) / (y1 - y0)) * (54 / 56) + (100 * 1) / 56;
@@ -2281,11 +2343,11 @@ function ecard({ e, x, st }, wl) {
   if (x.internal > 1e-3) ch.push(`<span class="flat">↔ ${fBb(x.internal)} internal</span>`);
   const c = e.cost || {}, mult = c.avg ? spot / c.avg : null;
   const srcTxt = c.src ? [["D", "DEX"], ["C", "exchanges"], ["W", "transfers"]].filter(([k]) => c.src[k]).map(([k, l]) => `${fPct(c.src[k], 0)} ${l}`).join(" · ") : "";
-  const evid = e.direct ? `Direct evidence: ${fPct(e.direct.pct, 1)} of holdings (${e.direct.wallets} wallets); the rest rests on a shared deposit address somewhere on the path.` : e.kind === "linked" ? (e.via && Object.keys(e.via).length ? `Held together by ${viaText(e.via)}.` : "Linked by seed, drain or shared-deposit rules.") + nearText(e.near) : e.kind === "coinbase" ? "Wallets that sent to the same Coinbase collector." : "On the watchlist (accumulator, holding wallet or reshuffle wallet).";
+  const evid = e.kind === "network" ? `${e.groups.length} groups counted as one owner after review (${e.decided}): ${e.groups.map((g) => (entById(g) || { name: g }).name).join(", ")}. Moves between them are internal.` : e.direct ? `Direct evidence: ${fPct(e.direct.pct, 1)} of holdings (${e.direct.wallets} wallets); the rest rests on a shared deposit address somewhere on the path.` : e.kind === "linked" ? (e.via && Object.keys(e.via).length ? `Held together by ${viaText(e.via)}.` : "Linked by seed, drain or shared-deposit rules.") + nearText(e.near) : e.kind === "coinbase" ? "Wallets that sent to the same Coinbase collector." : "On the watchlist (accumulator, holding wallet or reshuffle wallet).";
   const pv = e.provisional || [], pvB = d3.sum(pv, (p) => p.bal);
   const oi = ownerIdx(e.id);
   return `<article class="ec" style="--st:var(${svar})">
-    <header><div><h4>${nm(e.name)}</h4><span class="ev inf">${KINDE[e.kind] || e.kind}</span>${e.forming ? `<span class="ev" style="color:var(--accent);border-color:var(--accent)" data-tip="${esc(e.forming)}">◆ forming</span>` : ""}${e.flagged ? '<span class="ev" style="color:var(--crit);border-color:var(--crit)">flagged &gt;60</span>' : ""}${svcEnt(e.id) ? `<span class="ev" style="color:var(--crit);border-color:var(--crit)" data-tip="${esc(svcEnt(e.id))}">exchange-scale wallets</span>` : ""}</div><span class="ecst ${sc}">${sl}</span></header>
+    <header><div><h4>${nm(e.name)}</h4><span class="ev inf">${KINDE[e.kind] || e.kind}</span>${e.forming ? `<span class="ev" style="color:var(--accent);border-color:var(--accent)" data-tip="${esc(e.forming)}">◆ forming</span>` : ""}${e.flagged ? '<span class="ev" style="color:var(--crit);border-color:var(--crit)">flagged &gt;60</span>' : ""}${svcEnt(e.id) ? `<span class="ev" style="color:var(--crit);border-color:var(--crit)" data-tip="${esc(svcEnt(e.id))}">exchange-scale wallets</span>` : ""}${e.kind !== "network" && netOf(e.id) ? `<button type="button" class="ev netev-tag" data-pnl="${netOf(e.id).id}" data-tip="${esc(`Part of the ${netOf(e.id).name}: ${netOf(e.id).groups.length} groups counted as one bloc after review (${fPct(netOf(e.id).pct, 2)} of supply). Opens the network.`)}">◆ ${esc(netOf(e.id).name)}</button>` : ""}</div><span class="ecst ${sc}">${sl}</span></header>
     <div class="ecv"><b>${fBb(b)}</b><span>${fPct(e.pct, 2)} of supply · ${e.n} wallets${e.attached.length ? ` · <span style="color:var(--accent)">+${e.attached.length} joined</span>` : ""}</span><b class="${Math.abs(x.net) < 1e-3 ? "flat" : sc}" style="margin-left:auto">${Math.abs(x.net) < 1e-3 ? "±0" : sgn(x.net, fBb)}<small> ${wl}</small></b></div>
     <div class="ecspw" data-ec="${e.id}"><svg viewBox="0 0 ${W2} ${H2}" preserveAspectRatio="none" class="ecsp"><rect x="${winStart}" y="0" width="${W2 - winStart}" height="${H2}" fill="var(--accent-2)"/><path d="${area}" fill="var(${svar})" fill-opacity=".14"/><path d="${line}" fill="none" stroke="var(${svar})" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg><i class="ecx"></i><i class="ecdot" style="--c:var(${svar})"></i><span class="ecax"><span>${fd(ecDay(0))}</span><span>90 days · point at the line</span><span>today</span></span></div>
     <div class="ecwins">${WIN.map(([l], wi) => { const y = ewin(e, wi), s2 = STN[e.status[wi]] || STN.dormant; return `<button type="button" data-ew="${wi}" class="${wi === ecWin ? "on" : ""}"><span>${l}</span><b class="${Math.abs(y.net) < 1e-3 ? "flat" : s2[1]}">${Math.abs(y.net) < 1e-3 ? "±0" : sgn(y.net, fBb)}</b></button>`; }).join("")}</div>
@@ -2298,7 +2360,7 @@ function ecard({ e, x, st }, wl) {
       <div><dt>Active</dt><dd>${esc(e.firstSeen)} → ${esc(e.lastActive)}</dd></div></dl>
     <p class="ecnote">${esc(evid)}${srcTxt ? ` Held coins came from ${srcTxt}.` : ""}</p>
     ${pv.length ? `<p class="ecnote" style="color:var(--warn)">${pv.length} provisional wallet(s) received coins from it and hold ${fB(pvB)}; no linking rule has fired, so they are not counted.</p>` : ""}
-    <footer><button type="button" class="mini" data-pnl="${e.id}">P&amp;L chart →</button><a class="mini" href="#visualizer/${e.id}">Visualize →</a>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Wallet map →</button>` : ""}<button type="button" class="mini" data-emap="${e.id}">Entity map →</button>
+    <footer><button type="button" class="mini" data-pnl="${e.id}">P&amp;L chart →</button><a class="mini" href="#visualizer/${e.kind === "network" ? e.lead : e.id}">Visualize →</a>${oi >= 0 ? `<button type="button" class="mini" data-owner="${oi}">Wallet map →</button>` : ""}${e.kind === "network" ? "" : `<button type="button" class="mini" data-emap="${e.id}">Entity map →</button>`}
       <details><summary class="mini">Wallets (${e.n})</summary><div class="chips">${e.members.slice(0, 80).map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>${(() => { const j = e.attached.find((j) => j.a === a); return j ? `<span class="ev" data-tip="${esc(`Joined ${j.d}: ${HOWN[j.how] || j.how} with ${short(j.frm)}`)}">joined · ${esc(HOWS[j.how] || j.how)}</span>` : ""; })()}`).join("")}${pv.map((p) => `<button class="addr" data-addr="${p.a}" style="opacity:.7">${short(p.a)}</button><span class="ev inf">provisional</span>`).join("")}</div></details></footer>
   </article>`;
 }
@@ -2720,6 +2782,9 @@ function methodology() {
   <section><span class="dn">10 · Who's moving · tokens</span><div><h2>Recent activity by owner, and everything a wallet holds</h2>
     <p>The “Who's moving” board (Entities) and the Overview panel come from <code>movers.py</code>, run every time the terminal refreshes: every DEX buy and sale, exchange deposit and withdrawal and wallet-to-wallet transfer of the last 24 hours, 7 days and 30 days, grouped by owner (a tracked group, else a linked group, else the wallet), with GME moving between one owner's own wallets left out. Prices are the exact execution prices where the trade was matched to a pool swap, otherwise the day's close; transfers under $1 are ignored. A wallet that buys and sells in the same window shows both. Each entity card lists which of its wallets moved in the chosen window, and its 90-day line shows the holdings of today's wallets on each day.</p>
     <p>“Tokens it holds” (Wallet page, group drawers, Visualizer) is live, not part of the terminal's data: the viewer's browser asks Ethplorer's free API for the address's ETH and up to 100 token balances, priced by Ethplorer (CoinGecko-based). A token is counted only with a real market price (a market cap or daily trading volume, and at least 50 holders); airdropped spam and dead copies are listed apart and never added. A group's tokens are its wallets' tokens added up, the largest GME holders first. Tokens on other chains and DeFi positions are not included.</p></div></section>
+  <section><span class="dn">11 · Networks</span><div><h2>Groups the rules keep apart, counted as one bloc after review</h2>
+    <p>The grouping rules merge wallets only on the strongest evidence, so they never merge two groups on their own. A network is a short, owner-reviewed list (<code>data/networks.json</code>) of groups that a human reading of the evidence treats as one bloc; today the fbb4 network: fbb4, a8c8, dcf4, 019d and 5b69. The groups stay as they are underneath; the network is a view on top. Every run recomputes it as one owner: holdings, the 90-day line, flows over 1/7/30/90 days with every move between its groups internal, the status (the same rule as a group) and profit and loss (the same FIFO method). It counts as one owner on the “Who's moving” board.</p>
+    <p>The evidence between its groups is recomputed from the chain every run: GME transfers between them (with the largest), ETH transfers (study data), shared wallets (a wallet that received GME from two or more of its groups other than its own, and where it sent the coins next) and shared exchange deposit addresses. A shared wallet is the hardest to explain away: two unrelated owners don't pay into the same private wallet. Whether a network is one person or a few people acting together, the chain cannot tell.</p></div></section>
   </article>`);
 }
 
@@ -3721,16 +3786,19 @@ async function openGroup(gid) {
   pfGroup($("dpf"), G.members.map((m) => m[0]));
 }
 async function openEntity(id) {
-  const e = S.E && S.E.entities.find((x) => x.id === id); if (!e) return;
+  const e = entById(id); if (!e) return;
   $("scrim").classList.add("on"); $("drawer").classList.add("open");
-  $("dh").innerHTML = `<span style="font-weight:600">${nm(e.name)}</span><span class="ev inf">${KINDE[e.kind] || e.kind}</span><button class="mini" type="button" data-emap="${e.id}">Entity map →</button><a class="mini" href="#visualizer/${e.id}">Visualize →</a><button class="x" type="button" aria-label="Close">×</button>`;
+  $("dh").innerHTML = `<span style="font-weight:600">${nm(e.name)}</span><span class="ev inf">${KINDE[e.kind] || e.kind}</span>${e.kind === "network" ? "" : `<button class="mini" type="button" data-emap="${e.id}">Entity map →</button>`}<a class="mini" href="#visualizer/${e.kind === "network" ? e.lead : e.id}">Visualize →</a><button class="x" type="button" aria-label="Close">×</button>`;
   $("dh").querySelector(".x").onclick = closeWallet;
-  $("dh").querySelector("[data-emap]").addEventListener("click", closeWallet);
+  $("dh").querySelector("[data-emap]")?.addEventListener("click", closeWallet);
   $("db").innerHTML = `<p class="sub">Loading…</p>`;
   const P = (await loadPnl()).ents[id], now = plNow(P);
   const kv = [["Holds", fBb(e.bal / 1e9) + " GME"], ["% of supply", fPct(e.pct, 2)], ["Wallets", e.n + (e.attached.length ? ` (+${e.attached.length} joined)` : "")], ...plKv(now)];
   const big = ((P && P.marks) || []).slice().sort((a, b) => b[3] - a[3]).slice(0, 12), off = d0off();
+  const nt = e.kind !== "network" && netOf(e.id);
   $("db").innerHTML = `<div class="kv">${kv.map(([k, v]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join("")}</div>
+    ${e.kind === "network" ? `<div class="netside">${netSide(e, 2)}</div>` : ""}
+    ${nt ? `<div class="wbel"><span class="eyebrow">Part of a network</span><button type="button" class="mini wown" data-pnl="${nt.id}">${esc(nt.name)} · ${nt.groups.length} groups · ${fPct(nt.pct, 2)} of supply&nbsp;→</button></div>` : ""}
     <div><span class="eyebrow">Tokens across its wallets · live</span><div id="dpf" style="margin-top:6px"></div><p class="sub" style="margin-top:6px">${PFNOTE} The largest GME holders load first.</p></div>
     <div><span class="eyebrow">How it traded · the whole group as one owner</span><div style="margin-top:6px">${plBox("e:" + id)}</div><p class="sub" style="margin-top:6px">${PLNOTE} Moves between the group's own wallets are internal: neither buys nor sales.</p></div>
     ${accHtml(e)}

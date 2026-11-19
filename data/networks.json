@@ -1,0 +1,19 @@
+{
+  "note": "Owner-reviewed networks: groups the grouping rules keep apart (they merge only on the strongest evidence) but that a human reading of the evidence treats as one bloc. Each group is matched by its entity id, or by its anchor wallet if the id ever changes. network.py recomputes holdings, flows, P&L and the evidence every run; this file only says which groups belong together and why.",
+  "networks": [
+    {
+      "id": "net-fbb4",
+      "name": "fbb4 network",
+      "lead": "e1476704",
+      "decided": "2026-11-19",
+      "why": "Two groups the rules keep apart, a8c8 (the #2 holder's network) and dcf4, both paid GME into the same two private fbb4 wallets (0x78b7…5869 and 0x0a9d…ed42) and the only other GME either wallet ever received was fbb4's own and one $2.3k purchase; 0x78b7…5869 forwarded every receipt to one exchange account within minutes. dcf4 also sent fbb4's main wallet 195 ETH (June 2024) and gave two fbb4 wallets their first GME; a8c8 sent fbb4 GME six times and ETH once; 019d shares an exchange deposit address with fbb4 and got GME from it; 5b69 received GME from fbb4, a8c8 and dcf4 and ETH from fbb4. All five were in fbb4's original linked web. One person or a few acting together: the chain cannot tell, but it is one bloc.",
+      "groups": [
+        {"id": "e1476704", "anchor": "0xe14767042159e5bd2bf16f81a0fe387ab153fbb4", "tag": "fbb4"},
+        {"id": "8d10bb06", "anchor": "0x8d10bb06cc54f61666f772f9d09cca714400a8c8", "tag": "a8c8"},
+        {"id": "506c88dd", "anchor": "0x506c88dd2c784cc0d82dbac9bfdfcac887c8dcf4", "tag": "dcf4"},
+        {"id": "f8ce9f1b", "anchor": "0xf8ce9f1bd06c7559ff45336d55b1c9de46ce019d", "tag": "019d"},
+        {"id": "937401f1", "anchor": "0x937401f18047f11fad96946dab3709846d0d5b69", "tag": "5b69"}
+      ]
+    }
+  ]
+}

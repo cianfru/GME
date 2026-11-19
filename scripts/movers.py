@@ -37,6 +37,15 @@ def owners(bal):
     return own
 
 
+def with_networks(own):
+    """An owner-reviewed network (network.py → network.json) counts as ONE owner on the board: its groups' wallets map
+    to the network, so GME moving between its groups cancels like moves inside one group."""
+    res = dict(own)
+    for n in ld("network.json", {"networks": []}).get("networks", []):
+        for a in n["members"]: res[a] = (n["id"], "network", n["name"])
+    return res
+
+
 def summarise(rows, own, first, hold_of, t0, t1, bucket):
     """One window: totals, owners, trades and the activity series from per-wallet rows [ts, s, signed GME, $, kind, cp, tx]."""
     O = {}; trades = []; nb = max(1, (t1 - t0 + bucket - 1) // bucket); bars = [[0.0, 0.0, 0.0, 0.0, None, None, None] for _ in range(nb)]
@@ -85,12 +94,12 @@ def summarise(rows, own, first, hold_of, t0, t1, bucket):
                 bars=[[round(b), round(s), round(ci), round(co), p, lo, hi] for b, s, ci, co, p, lo, hi in bars])
 
 
-def card_movers(rows, own, ent_ids, t1):
-    """Per tracked entity and card window: its wallets that moved GME in or out of the group, largest first."""
+def card_movers(rows, own, kinds, t1):
+    """Per tracked entity (or network) and card window: its wallets that moved GME in or out of it, largest first."""
     res = {}
     for a, rs in rows.items():
         key, kd, _ = own.get(a, (a, "wallet", ""))
-        if kd != "entity": continue
+        if kd not in kinds: continue
         for wi, h in enumerate(CARD_WIN):
             t0 = t1 - h * 3600; net = 0.0; u_ = 0.0; ks = collections.Counter()
             for ts, s, g, u, k, cp, tx in rs:
@@ -126,7 +135,7 @@ def main():
         for me, other, out in ((s, r, True), (r, s, False)):
             if me in infra or me in DEP: continue                     # pools, routers, exchanges and their deposit addresses
             rows[me].append((ts, st, -v if out else v, u, kind(other, out, infra, CEX, DEP), other, TX[j]))
-    own = owners(bal)
+    own_e = owners(bal); own = with_networks(own_e)
     hold_of, first_of = collections.Counter(), {}                   # per owner: all its wallets, not only the ones that moved
     for a, b in bal.items():
         if b > 0 and a not in infra and a not in DEP: hold_of[own.get(a, (a,))[0]] += b
@@ -136,7 +145,7 @@ def main():
     W = {name: summarise(rows, own, first_of, hold_of, t1 - h * 3600, t1, bucket) for name, h, bucket in WINDOWS}
     lastPx = next((PX[j] for j in range(len(T) - 1, -1, -1) if KEYS[j] in TP), PX[-1])
     res = dict(asOf=datetime.datetime.fromtimestamp(t1, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), lastTransfer=T[-1][2], price=lastPx,
-               windows=W, ent=card_movers(rows, own, None, t1), cardWin=list(CARD_WIN))
+               windows=W, ent={**card_movers(rows, own_e, ("entity",), t1), **card_movers(rows, own, ("network",), t1)}, cardWin=list(CARD_WIN))
     json.dump(res, open(os.path.join(D, "movers.json"), "w"), separators=(",", ":"))
     w = W["24h"]["tot"]
     print(f"movers.json: 24h buys ${w['buy']:,} by {w['buyers']} owners, sells ${w['sell']:,} by {w['sellers']} · "

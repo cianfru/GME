@@ -166,6 +166,12 @@ jobs:
       - name: Entity registry
         run: python3 scripts/entities.py
 
+      # Owner-reviewed networks (data/networks.json, e.g. the fbb4 network): one bloc over several groups, with its
+      # flows, P&L (added to pnl.json) and the evidence between its groups recomputed. movers.py reads it later.
+      - name: Networks
+        continue-on-error: true
+        run: python3 scripts/network.py
+
       # The Visualizer's transfer graph (every pair, per month). ~4.5 MB, so like wallets.json it is only committed by
       # the full daily run.
       - name: Visualizer graph

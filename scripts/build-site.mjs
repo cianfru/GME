@@ -91,6 +91,7 @@ const site = {
   E: json("entities.json"),                       // entity registry: cards, entity flow map, tripwires
   C: json("crowd.json"),                          // crowd behaviour (owner level)
   MV: json("movers.json"),                        // who is moving: 24 h / 7 d / 30 d by owner, largest trades, card movers
+  NET: json("network.json"),                      // owner-reviewed networks (fbb4 network): one bloc over several groups, with evidence
   X: json("trades_check.json"),                   // exact trade pricing: coverage and the day-close error it removes
   H: json("ethside.json"),                        // ETH side: funding, ETH links, paid purchases, flows, other tokens
   windows: (market.windows || []).map((w) => ({
