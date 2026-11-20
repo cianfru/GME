@@ -188,6 +188,12 @@ Guards:
   - accumulators `0x4553`, `0x7465` and `0xfa67` bought on the DEX;
   - no high-level alerts.
 
+- **PEPECOIN and BOOE across the fbb4 network (2026-11-20, live balances by `balanceOf` on public nodes; PEPECOIN history from the pepecoin terminal's archive; BOOE from Ethplorer + `eth_getLogs`; BOOE pools: V2 `0xdeba…21bf`, V3 1% `0xf023…dfdf`):**
+  - Of the network's 101 wallets, **50 have traded PEPECOIN, 21 hold it now (4.6M ≈ $331k)**; **36 have traded BOOE, 12 hold it now (8.5M ≈ $212k)**. fbb4's main wallet ≈ $725k: PEPECOIN 4.0M (40%), GME 31.4B (31%), BOOE 7.9M (26%); 019d's main wallet holds 485k PEPECOIN.
+  - **Same shop-window pattern in the other tokens:** the main wallet bought 11.4M PEPECOIN on the DEX and sold 1.2M there (sent 16.7M to other wallets, incl. exact round trips with the farm contract `0xa6b816…`, i.e. staking, not sales); it bought 12.6M BOOE on BOOE's pools (~$2.06M, from 26 Apr 2024, BOOE's first days), sold 0.75M there and sent 4.1M to other wallets (an fbb4 wallet, its exchange deposit address). Network wallets moved $22.4M of PEPECOIN and 8.0M BOOE between themselves.
+  - **Overlap with the pepecoin terminal:** 6 fbb4 wallets are on its "proven winners" list (main wallet included). **3 are members of its insider clusters:** `0x2f04…949c` and `0x29de…a3a0` are 2 of the 3 wallets of pepecoin cluster 10 (one seeder `0x49d7…12fa`; sold $25.4M near the pepecoin top; `0x2f04` = the pepecoin terminal's "serial operator": GME bought $1.2M / sold $1.41M around GME's top, BOOE sold $886k), and `0xbda6…e637` is one of the 2 of cluster 14 (funded and seeded by `0xf1cb…5954`, $13.2M near the top). The third cluster-10 wallet `0x9542…298b` (never held GME) sent fbb4's main wallet 400k PEPECOIN (Oct 2024); cluster 14 sent it 175k. None of the pepecoin "cycle insiders" (32) or its insider-watch cohort (47) are in the fbb4 network; 5 of them hold GME in other groups (3146, 20c0). Caveat: the pepecoin terminal's "sold near the top" counts transfers out at market price, so for these wallets it is mostly coins sent to other wallets, not DEX sales.
+  - Outside the network on the map: 24 more PEPECOIN and 19 more BOOE traders, holding little; "Linked group 855f" (a piece of the old web) bought ~$680k of BOOE across 5 wallets, all empty now.
+
 The full write-up is `report/gme-study.html` (also published as a private claude.ai page).
 
 ## 6. Lessons learned (don't repeat)
