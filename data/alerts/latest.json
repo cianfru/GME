@@ -1,20 +1,26 @@
 {
  "summary": {
-  "asOf": "2026-11-21T01:45:23Z",
-  "since": "2026-11-20T22:30:35Z",
+  "asOf": "2026-11-21T11:07:47Z",
+  "since": "2026-11-21T01:45:23Z",
   "price": 6.7448569117202496e-06,
   "mcap": 2837493.854191592,
-  "pool": 40780080358.013306,
+  "pool": 40557309720.85647,
   "watchedGroups": 28,
-  "alerts": 1,
+  "alerts": 2,
   "high": 0
  },
  "alerts": [
   {
+   "kind": "new_accumulator",
+   "severity": "medium",
+   "text": "New quiet accumulator 0x5ca0\u20264679 (3 wallet(s)): +0.49B in 90 days (0.12% of supply), spent $2,913; 3 linked wallets",
+   "wallet": "0x5ca0c3e11afa31865a406fbcdeab613912324679"
+  },
+  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME +0.24B since last run (net selling into the pool); pool now 40.78B, market cap $2.84M",
-   "delta": 243767176.8964386
+   "text": "Pool GME -0.22B since last run (net buying out of the pool); pool now 40.56B, market cap $2.84M",
+   "delta": -222770637.15683746
   }
  ]
 }
