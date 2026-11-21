@@ -1,40 +1,20 @@
 {
  "summary": {
-  "asOf": "2026-11-20T22:30:35Z",
-  "since": "2026-11-20T15:46:11Z",
-  "price": 6.8100684022530636e-06,
-  "mcap": 2864927.6761438414,
-  "pool": 40536313181.11687,
+  "asOf": "2026-11-21T01:45:23Z",
+  "since": "2026-11-20T22:30:35Z",
+  "price": 6.7448569117202496e-06,
+  "mcap": 2837493.854191592,
+  "pool": 40780080358.013306,
   "watchedGroups": 28,
-  "alerts": 4,
-  "high": 1
+  "alerts": 1,
+  "high": 0
  },
  "alerts": [
   {
-   "kind": "new_vault",
-   "severity": "high",
-   "text": "New buy-and-forward holding wallet 0x80db\u20263c3a: 1 fresh wallet(s) forwarded 0.02B (bought for $117)",
-   "wallet": "0x80db47477c80cedf7866f9122c643fc0f0863c3a"
-  },
-  {
-   "kind": "new_accumulator",
-   "severity": "medium",
-   "text": "New quiet accumulator 0xed60\u2026a5ea (1 wallet(s)): +0.44B in 90 days (0.10% of supply), spent $3,019; new to GME",
-   "wallet": "0xed60b26a57d710d8cad4d7b3b499f95b38f4a5ea"
-  },
-  {
-   "kind": "flow",
-   "severity": "info",
-   "text": "Accumulator a5ea: bought on DEX 0.36B GME (~$2,484, 0.09% of supply)",
-   "group": "Accumulator a5ea",
-   "what": "bought on DEX",
-   "tokens": 364699471.70949966
-  },
-  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME +0.27B since last run (net selling into the pool); pool now 40.54B, market cap $2.86M",
-   "delta": 274772713.3022537
+   "text": "Pool GME +0.24B since last run (net selling into the pool); pool now 40.78B, market cap $2.84M",
+   "delta": 243767176.8964386
   }
  ]
 }
