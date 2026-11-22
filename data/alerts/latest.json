@@ -1,10 +1,10 @@
 {
  "summary": {
-  "asOf": "2026-11-21T23:42:47Z",
-  "since": "2026-11-21T19:03:59Z",
-  "price": 7.204615140980563e-06,
-  "mcap": 3030909.5436591133,
-  "pool": 40110135490.84835,
+  "asOf": "2026-11-22T05:18:47Z",
+  "since": "2026-11-21T23:42:47Z",
+  "price": 7.189331182513118e-06,
+  "mcap": 3024479.735171444,
+  "pool": 40440310276.66387,
   "watchedGroups": 28,
   "alerts": 1,
   "high": 0
@@ -13,8 +13,8 @@
   {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME +0.08B since last run (net selling into the pool); pool now 40.11B, market cap $3.03M",
-   "delta": 76100902.26953125
+   "text": "Pool GME +0.33B since last run (net selling into the pool); pool now 40.44B, market cap $3.02M",
+   "delta": 330174785.81552124
   }
  ]
 }
