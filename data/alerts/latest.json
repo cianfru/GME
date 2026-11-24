@@ -1,84 +1,20 @@
 {
  "summary": {
-  "asOf": "2026-11-23T21:43:23Z",
-  "since": "2026-11-23T09:07:11Z",
-  "price": 8.127948347756016e-06,
-  "mcap": 3419346.5904174782,
-  "pool": 38173749998.179535,
+  "asOf": "2026-11-24T05:38:47Z",
+  "since": "2026-11-23T21:43:23Z",
+  "price": 8.122911589876375e-06,
+  "mcap": 3417227.6767450925,
+  "pool": 38132097428.16241,
   "watchedGroups": 25,
-  "alerts": 10,
+  "alerts": 1,
   "high": 0
  },
  "alerts": [
   {
-   "kind": "flow",
-   "severity": "medium",
-   "text": "Accumulator a5ea: sold on DEX 0.06B GME (~$502, 0.01% of supply)",
-   "group": "Accumulator a5ea",
-   "what": "sold on DEX",
-   "tokens": 61807212.24170649
-  },
-  {
-   "kind": "new_accumulator",
-   "severity": "medium",
-   "text": "New quiet accumulator 0x53ee\u2026efdb (7 wallet(s)): +3.84B in 90 days (0.91% of supply), spent $27,315; 4 fresh wallet(s) buy\u2192forward",
-   "wallet": "0x53ee29857d28411b2b7846e63b0732153efcefdb"
-  },
-  {
-   "kind": "new_accumulator",
-   "severity": "medium",
-   "text": "New quiet accumulator 0x93d0\u20263417 (1 wallet(s)): +0.55B in 90 days (0.13% of supply), spent $4,462; new to GME",
-   "wallet": "0x93d0443c4090431e0c013cc3ef9a686519913417"
-  },
-  {
-   "kind": "flow",
-   "severity": "info",
-   "text": "Accumulator efdb: bought on DEX 1.28B GME (~$10,426, 0.30% of supply)",
-   "group": "Accumulator efdb",
-   "what": "bought on DEX",
-   "tokens": 1282712628.4147131
-  },
-  {
-   "kind": "flow",
-   "severity": "info",
-   "text": "Accumulator a5ea: bought on DEX 0.12B GME (~$937, 0.03% of supply)",
-   "group": "Accumulator a5ea",
-   "what": "bought on DEX",
-   "tokens": 115255397.77964479
-  },
-  {
-   "kind": "flow",
-   "severity": "info",
-   "text": "Accumulator 3417: bought on DEX 0.19B GME (~$1,569, 0.05% of supply)",
-   "group": "Accumulator 3417",
-   "what": "bought on DEX",
-   "tokens": 193026382.8349737
-  },
-  {
-   "kind": "flow",
-   "severity": "info",
-   "text": "Accumulator 24d9: bought on DEX 0.64B GME (~$5,171, 0.15% of supply)",
-   "group": "Accumulator 24d9",
-   "what": "bought on DEX",
-   "tokens": 636257789.0539129
-  },
-  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME -1.63B since last run (net buying out of the pool); pool now 38.17B, market cap $3.42M",
-   "delta": -1625979329.1419144
-  },
-  {
-   "kind": "balance",
-   "severity": "info",
-   "text": "Accumulator efdb: holdings +1.28B since last run, now 4.72B (1.12%)",
-   "group": "Accumulator efdb"
-  },
-  {
-   "kind": "balance",
-   "severity": "info",
-   "text": "Accumulator 24d9: holdings +0.64B since last run, now 1.20B (0.28%)",
-   "group": "Accumulator 24d9"
+   "text": "Pool GME -0.04B since last run (net buying out of the pool); pool now 38.13B, market cap $3.42M",
+   "delta": -41652570.01712799
   }
  ]
 }
