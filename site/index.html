@@ -152,6 +152,12 @@ input, select { border-radius: 0 }
 @media (max-width: 1100px) { .grid.c3 { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 @media (max-width: 860px) { .grid, .grid.c3 { grid-template-columns: minmax(0, 1fr) } }
 main { padding-bottom: 60px }
+/* fbb4 tracker */
+.trkbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 14px; border: 1px solid var(--line); border-left: 3px solid var(--neutral); font: 500 12px var(--mono) }
+.trkbar.hot { border-left-color: var(--crit) } .trkbar.buy { border-left-color: var(--up) } .trkbar.err { border-left-color: var(--warn) }
+.trkbar b { font-weight: 600 } .trkbar .sp { flex: 1 }
+.trk td, .trk th { white-space: nowrap } .trk .own { color: var(--muted) }
+.trk .wt { font: 600 11px var(--mono); color: var(--accent); margin-right: 6px }
 /* public landing hero */
 .hp-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 40px; align-items: end }
 .hp-top h1 { margin: 6px 0 0 }
@@ -650,7 +656,7 @@ let PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"
 // efdb", "Linked group 847d"). fbb4's group is just "fbb4" (the owner's X name, the end of 0xe147…fbb4).
 const nm = (s) => esc(s).replace(/(^|\s)([0-9a-f]{4,6})$/, (m, sp, h) => (sp ? "&nbsp;" : "") + `<span class="hd">${h}</span>`);   // nbsp: flex buttons drop a plain trailing space
 const FTAG = ' <span class="tag hd">fbb4</span>';
-const SUBS = [["cards", "Entities"], ["network", "fbb4 network"], ["cluster", "fbb4"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["eth", "ETH side"], ["watchlist", "Watchlist"]];
+const SUBS = [["cards", "Entities"], ["tracker", "fbb4 tracker"], ["network", "fbb4 network"], ["cluster", "fbb4"], ["monitor", "Wallet monitor"], ["map", "Flow map"], ["eth", "ETH side"], ["watchlist", "Watchlist"]];
 const LEGACY = { wallets: "entities/monitor", bubbles: "entities/map", insiders: "entities/cluster", watchlist: "entities/watchlist", valuation: "holders", flows: "transfers" };
 let page = "overview", sub = "cluster", lastPage = null;
 const draws = [];
@@ -1872,8 +1878,9 @@ function movesCard() {
 
 // ---------- ENTITIES ----------
 function entities() {
-  const titles = { network: "fbb4 network", eth: "The ETH side", cards: "Entities", cluster: "fbb4: the main wallet and its linked wallets", monitor: "Wallet monitor", map: "Flow map", watchlist: "Watchlist" };
+  const titles = { tracker: "fbb4 tracker", network: "fbb4 network", eth: "The ETH side", cards: "Entities", cluster: "fbb4: the main wallet and its linked wallets", monitor: "Wallet monitor", map: "Flow map", watchlist: "Watchlist" };
   const desc = { eth: "What the ETH trail adds: who funded each wallet, who paid for whose purchases, money in and out of exchanges, and the other tokens these owners trade.",
+    tracker: "Every transfer of the network's wallets: live from the chain since the last index run, then the last 30 days.",
     network: "Every wallet of fbb4's network on one map: how many coins each holds today and what it did in the last 7, 30 and 90 days.",
     cards: "Every group of linked wallets as one card: how big it is, whether it is growing or shrinking, and through which channel. Followed automatically as coins move into fresh wallets.",
     cluster: "The largest group of linked wallets: what it holds, what it did, and the evidence tying each wallet to it.",
@@ -1887,7 +1894,7 @@ function entities() {
     <div><svg width="38" height="10" aria-hidden="true"><line x1="0" y1="5" x2="38" y2="5" stroke="var(--fg-2)" stroke-width="2" stroke-dasharray="5 4"/></svg><b>Inferred relationship</b><p>Derived by a rule, not seen as a transfer between the two: a shared exchange deposit address, or membership of the same owner group. Dashed lines, marked “inferred”.</p></div>
     <p class="disc">Wallet links are evidence of shared control, not proof of ownership. Groups are a floor: linking errs toward not merging.</p></section>`);
   grid();
-  ({ cards: entCards, network: entNetwork, cluster: entCluster, monitor: entMonitor, map: entMap, eth: entEth, watchlist: entWatch })[sub]();
+  ({ cards: entCards, tracker: entTracker, network: entNetwork, cluster: entCluster, monitor: entMonitor, map: entMap, eth: entEth, watchlist: entWatch })[sub]();
 }
 function entCluster() {
   insiderCard(false); chCluster(false);
@@ -2499,6 +2506,90 @@ function netInd(n) {
   return `<div class="nmind"><div class="nmbig"><span class="eyebrow">Holds today</span><b>${fBb(n.bal / 1e9)}</b><span>${fPct(n.pct, 2)} of supply · ${holding} of ${net.length} wallets hold GME</span>${nmCell(today)}<small class="flat">last 24 h</small></div><div class="nmwins">${tiles}</div></div>
     <div class="nmsplit">${main ? row("fbb4's main wallet", short(M.main) + " · the one everyone watches", [main], true) : ""}${row(`Its other ${rest.length} wallets`, `${rest.filter((w) => w[3] > 0.001).length} hold GME · 5 groups`, rest, false)}</div>
     ${read ? `<p class="nmread">${read}</p>` : ""}`;
+}
+// ---------- fbb4 TRACKER (desk only): the network's transfers, live from a public node since the last index run ----------
+const TRK = { rows: null, at: 0, err: null, busy: false, filt: "all", days: 7 };
+const RPCS = ["https://rpc.mevblocker.io", "https://rpc.flashbots.net", "https://rpc.mevblocker.io"], XFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+async function rpcCall(method, params) {
+  let last;
+  for (const u of RPCS) { try { const r = await fetch(u, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+    const j = await r.json(); if (j.result !== undefined && j.result !== null) return j.result; last = new Error((j.error && j.error.message) || "no result"); } catch (e) { last = e; } }
+  throw last || new Error("no node answered");
+}
+const TKIND = { buy: ["Bought on the DEX", "up"], sell: ["Sold on the DEX", "down"], dep: ["Sent to an exchange", "down"], wd: ["From an exchange", "up"], own: ["Between its own wallets", "own"], out: ["Sent to a wallet", "mv-move"], inn: ["From a wallet", ""], oth: ["Other", "flat"] };
+function trkKind(fromNet, toNet, fl, tl) {       // labels: "dex" | "cex" | "deposit" | "lp" | "burn" | "token" | "mint" | undefined
+  if (fromNet && toNet) return "own";
+  const l = fromNet ? tl : fl;
+  if (l === "dex") return fromNet ? "sell" : "buy";
+  if (l === "cex" || l === "deposit") return fromNet ? "dep" : "wd";
+  if (l) return "oth";
+  return fromNet ? "out" : "inn";
+}
+function trkNames(n) { const M = n.map, m = new Map(); for (const w of M.wallets) if (w[2]) { const g = M.groups[w[1]]; m.set(w[0], w[0] === M.main ? "main" : (entById(g.k) || {}).tag || g.name.slice(-4)); } for (const a of n.members) if (!m.has(a)) m.set(a, "net"); return m; }
+async function trkPoll(n) {
+  if (TRK.busy) return; TRK.busy = true;
+  try {
+    const L = await wLoad("labels"), names = trkNames(n), mem = [...names.keys()], pad = mem.map((a) => "0x" + "0".repeat(24) + a.slice(2));
+    const head = await rpcCall("eth_getBlockByNumber", ["latest", false]), bn = parseInt(head.number, 16), ts = parseInt(head.timestamp, 16);
+    const since = Date.parse(IDX.lastTransfer) / 1000, back = Math.min(9500, Math.ceil(Math.max(0, ts - since) / 12) + 30), from = "0x" + (bn - back).toString(16);
+    const [a, b] = await Promise.all([[XFER, pad], [XFER, null, pad]].map((topics) => rpcCall("eth_getLogs", [{ address: TOKEN, fromBlock: from, toBlock: "latest", topics }])));
+    const seen = new Set(), rows = [];
+    for (const g of [...a, ...b]) { const id = g.transactionHash + g.logIndex; if (seen.has(id)) continue; seen.add(id);
+      const t = g.blockTimestamp ? parseInt(g.blockTimestamp, 16) : ts - 12 * (bn - parseInt(g.blockNumber, 16)); if (t <= since) continue;
+      const f = "0x" + g.topics[1].slice(26), to = "0x" + g.topics[2].slice(26), gme = Number(BigInt(g.data) / 1000000n) / 1e3 / 1e9;
+      rows.push({ t: t * 1000, f, to, g: gme, tx: g.transactionHash, k: trkKind(names.has(f), names.has(to), (L[f] || [])[0], (L[to] || [])[0]) }); }
+    TRK.rows = rows.sort((x, y) => y.t - x.t); TRK.at = Date.now(); TRK.err = null; TRK.short = ts - since > 9500 * 12;
+  } catch (e) { TRK.err = String(e.message || e); }
+  TRK.busy = false; trkDraw(n);
+}
+function trkIndexed(n) {        // the last 30 days from the index: hourly totals per pair of T.mon
+  const M = T.mon, names = trkNames(n), t0 = Date.parse(M.start), CAT = { D: "dex", C: "cex", L: "lp", B: "burn", T: "token" }, out = [];
+  const end = (x) => (typeof x === "number" ? [M.A[x], null] : x.length === 1 ? [null, CAT[x] || "oth"] : [x, null]);
+  for (const [h, f, to, g] of M.e) { if (h < M.hours - 24 * 30) continue; const [fa, fl] = end(f), [ta, tl] = end(to), fn = !!fa && names.has(fa), tn = !!ta && names.has(ta); if (!fn && !tn) continue;
+    out.push({ t: t0 + h * 3600e3, f: fa, to: ta, fl, tl, g, k: trkKind(fn, tn, fl, tl), hour: true }); }
+  return out.sort((x, y) => y.t - x.t);
+}
+function trkTable(rows, names, L, px, live) {
+  const end = (a, l) => (a ? `${names.has(a) ? `<span class="wt">${names.get(a)}</span>` : ""}<button class="addr" data-addr="${a}">${short(a)}</button>${!names.has(a) && L[a] ? ` <span class="tag">${esc(L[a][1] || L[a][0])}</span>` : ""}` : `<span class="tag">${{ dex: "DEX", cex: "Exchange", lp: "Liquidity", burn: "Burn", token: "Token contract" }[l] || "Other"}</span>`);
+  return `<div class="tw"><table class="trk"><thead><tr><th>${live ? "Time (UTC)" : "Hour (UTC)"}</th><th>What</th><th class="n">GME</th><th class="n">≈ $</th><th>From</th><th>To</th>${live ? "<th>Tx</th>" : ""}</tr></thead><tbody>` +
+    rows.map((r) => `<tr class="${r.k === "own" ? "own" : ""}"><td class="num">${fdt(new Date(r.t)).replace(" UTC", "")}</td><td class="${TKIND[r.k][1]}">${TKIND[r.k][0]}</td><td class="n">${fBb(r.g)}</td><td class="n">${fU(r.g * 1e9 * px)}</td><td>${end(r.f, r.fl)}</td><td>${end(r.to, r.tl)}</td>${live ? `<td><a class="mono" href="https://etherscan.io/tx/${r.tx}" target="_blank" rel="noopener">${r.tx.slice(0, 10)}↗</a></td>` : ""}</tr>`).join("") + `</tbody></table></div>`;
+}
+function trkDraw(n) {
+  const el = $("trklive"); if (!el) return;
+  const names = trkNames(n), L = WI.labels || {}, px = lastVal(col("price")), R = TRK.rows;
+  const sum = (k) => d3.sum(R || [], (r) => (k.includes(r.k) ? r.g : 0)), sold = sum(["sell", "dep"]), bought = sum(["buy", "wd"]);
+  const mainSold = (R || []).some((r) => r.f === n.map.main && (r.k === "sell" || r.k === "dep"));
+  const st = TRK.err && !R ? "err" : sold > 0 ? "hot" : bought > 0 ? "buy" : "";
+  el.innerHTML = `<div class="trkbar ${st}"><span class="dstat${TRK.err ? " stale" : ""}"><i aria-hidden="true"></i>${TRK.err ? "Node not answering" : R ? "Watching " + names.size + " wallets" : "Connecting…"}</span>
+      ${R ? `<span><b>${R.length}</b> transfer${R.length === 1 ? "" : "s"} since the index (${fdt(new Date(IDX.lastTransfer))})</span>${sold > 0 ? `<span class="down"><b>${fBb(sold)}</b> sold or sent to exchanges${mainSold ? " · incl. the main wallet" : ""}</span>` : ""}${bought > 0 ? `<span class="up"><b>${fBb(bought)}</b> bought or withdrawn</span>` : ""}` : ""}
+      <span class="sp"></span><span class="flat">${TRK.at ? "checked " + d3.utcFormat("%H:%M:%S UTC")(new Date(TRK.at)) : ""}</span><button class="mini" type="button" id="trknow">Check now</button></div>
+    ${TRK.err ? `<p class="sub">The public node did not answer (${esc(TRK.err)}). The page tries again every minute.</p>` : ""}
+    ${R && R.length ? trkTable(R, names, L, px, true) : R ? `<p class="sub" style="margin-top:10px">No GME has moved in or out of the network's wallets since the last index run.</p>` : ""}
+    ${TRK.short ? `<p class="sub">The index is more than a day old, so the live view covers only the last ~31 hours.</p>` : ""}`;
+  $("trknow").onclick = () => trkPoll(n);
+}
+function trkHist(n) {
+  const el = $("trkhist"); if (!el) return;
+  const all = trkIndexed(n), names = trkNames(n), L = WI.labels || {}, px = lastVal(col("price")), since = Date.now() - TRK.days * 864e5;
+  const F = { all: () => true, out: (r) => r.k === "sell" || r.k === "dep", in: (r) => r.k === "buy" || r.k === "wd", wal: (r) => r.k === "out" || r.k === "inn", own: (r) => r.k === "own" };
+  const rows = all.filter((r) => r.t >= since && F[TRK.filt](r)), cnt = (k) => all.filter((r) => r.t >= since && F[k](r)).length;
+  el.innerHTML = `<div class="ctl" style="margin-bottom:8px">${segBtns([["7 days", 7], ["30 days", 30]], TRK.days, "td")}${segBtns([[`All · ${cnt("all")}`, "all"], [`Sold / to exchanges · ${cnt("out")}`, "out"], [`Bought / withdrawn · ${cnt("in")}`, "in"], [`Other wallets · ${cnt("wal")}`, "wal"], [`Own wallets · ${cnt("own")}`, "own"]], TRK.filt, "tf")}</div>
+    ${rows.length ? trkTable(rows.slice(0, 200), names, L, px, false) : `<p class="sub">Nothing in this view.</p>`}${rows.length > 200 ? `<p class="sub">Showing the latest 200 of ${rows.length}.</p>` : ""}`;
+  el.onclick = (ev) => { const b = ev.target.closest("[data-td],[data-tf]"); if (!b) return; if (b.dataset.td) TRK.days = +b.dataset.td; else TRK.filt = b.dataset.tf; trkHist(n); };
+}
+function entTracker() {
+  const n = NETS()[0];
+  if (!n || !n.map) { card({ title: "fbb4 tracker", wide: true, body: unavailable("The tracker needs the network data from the next scheduled run.") }); return; }
+  card({ title: n.name, q: "What it holds and what it did, at the last index run.", wide: true, key: true, body: `<div>${netInd(n)}</div>` });
+  card({ title: "Live · since the last index run", q: "Read from a public Ethereum node by this page, every minute.", wide: true, body: `<div id="trklive"></div>`,
+    note: "Every GME transfer in or out of the network's wallets after the newest transfer in the index, straight from a public node. Dollar values use the last indexed price. A sale is GME sent to a DEX pool or router; a deposit is GME sent to an exchange wallet or a known deposit address. A new deposit address is not known until the next full run, so it shows as “Sent to a wallet”." });
+  card({ title: "Recent activity · from the index", q: "Hourly totals per pair of addresses.", wide: true, body: `<div id="trkhist"></div>` });
+  const W = n.map.wallets.filter((w) => w[2] && (w[3] > 0.001 || fsum(w[6][2]).inn + fsum(w[6][2]).out > 0.0005)).sort((a, b) => Math.abs(nmNet(b[6][1])) - Math.abs(nmNet(a[6][1])) || b[3] - a[3]), names = trkNames(n);
+  card({ title: "Wallets · holding or active in 30 days", wide: true, body: `<div class="tw"><table class="q trk"><thead><tr><th>Wallet</th><th class="n">Holds</th><th class="n">24h</th><th class="n">7d</th><th class="n">30d</th><th class="n">Sold 30d</th><th>Last active</th></tr></thead><tbody>` +
+    W.map((w) => `<tr><td><span class="wt">${names.get(w[0])}</span><button class="addr" data-addr="${w[0]}">${short(w[0])}</button></td><td class="n">${fBb(w[3])}</td>${[0, 1, 2].map((i) => `<td class="n">${nmCell(nmNet(w[6][i]))}</td>`).join("")}<td class="n ${fsum(w[6][2]).sell > 0.0005 ? "down" : "flat"}">${fsum(w[6][2]).sell > 0.0005 ? fBb(fsum(w[6][2]).sell) : "—"}</td><td class="num">${w[5] || "—"}</td></tr>`).join("") + `</tbody></table></div>`,
+    note: "Net change counts everything in and out of the wallet, moves to the network's own wallets included. Sold = DEX sales + exchange deposits." });
+  wLoad("labels").catch(() => ({})).then(() => { trkHist(n); trkDraw(n); trkPoll(n); });
+  clearInterval(TRK.timer); TRK.timer = setInterval(() => { if (!$("trklive")) return clearInterval(TRK.timer); if (!document.hidden) trkPoll(n); }, 60000);
 }
 function entNetwork() {
   const n = NETS()[0];
