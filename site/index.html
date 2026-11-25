@@ -152,6 +152,33 @@ input, select { border-radius: 0 }
 @media (max-width: 1100px) { .grid.c3 { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 @media (max-width: 860px) { .grid, .grid.c3 { grid-template-columns: minmax(0, 1fr) } }
 main { padding-bottom: 60px }
+/* public landing hero */
+.hp-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 40px; align-items: end }
+.hp-top h1 { margin: 6px 0 0 }
+.hp-mc { text-align: right; display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.hp-mc b { font: 600 clamp(38px, 5.4vw, 68px)/1 var(--mono); letter-spacing: -.02em }
+.hp-mc span { font: 500 12px var(--mono); color: var(--fg-2) }
+.hp-read { margin: 0; font: 400 clamp(15px, 1.5vw, 18px)/1.5 var(--sans); color: var(--fg-2); max-width: 70ch }
+.hp-read b { color: var(--fg); font-weight: 600 }
+.zchip { display: inline-block; padding: 1px 8px 2px; border-left: 3px solid var(--zc, var(--accent)); background: color-mix(in srgb, var(--zc, var(--accent)) 16%, transparent); color: var(--fg); font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap }
+.hp-chart { padding: 14px 16px 12px }
+.hp-chead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; margin-bottom: 6px }
+.hp-chead .seg { display: inline-flex; gap: 0 }
+.hp-chead .mini.on { border-color: var(--accent); color: var(--accent) }
+#hpc { position: relative; touch-action: pan-y }
+#hpc svg { display: block; width: 100%; overflow: visible }
+.hp-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-2) }
+.hp-key i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px }
+.hp-key .ln { width: 16px; height: 0; border-top: 2px solid var(--fg); vertical-align: 3px }
+.hp-key .ln.d { border-top: 2px dashed var(--accent) }
+.hp-cta { display: flex; flex-wrap: wrap; gap: 8px }
+.hp-cta a { padding: 9px 14px; border: 1px solid var(--line); font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--fg); text-decoration: none; background: color-mix(in srgb, var(--fg) 4%, transparent) }
+.hp-cta a.pri { border-color: var(--accent); color: var(--accent) }
+.hp-cta a:hover { background: color-mix(in srgb, var(--accent) 14%, transparent) }
+@media (max-width: 720px) {
+  .hp-top { grid-template-columns: 1fr } .hp-mc { text-align: left } .hp-chart { padding: 10px 8px 10px }
+  .hp-cta a { flex: 1 1 auto; text-align: center }
+}
 #view.enter .panel, #view.enter .phead, #view.enter .hero > *, #view.enter .sect { animation: enter .28s ease-out }
 @keyframes enter { from { opacity: 0; transform: translateY(6px) } }
 
@@ -1104,7 +1131,8 @@ function closeChart() {
 
 // ---------- OVERVIEW ----------
 function overview() {
-  hero(); metrics(); grid(); primary();
+  if (DESK) { hero(); metrics(); } else heroPublic();
+  grid(); primary();
   if (DESK) { sect("Signals", "fbb4's wallets, the latest run, and what changed."); insiderCard(false); alertsCard(false); moversMini(); changesCard(true); }
   else { sect("Signals", "Who bought and sold in the last 24 hours, and what changed."); moversMini(); changesCard(true); }
   sect("Market structure", "Where holders stand against their own cost, and the pool that sets the price.", true);
@@ -1114,6 +1142,98 @@ function overview() {
   ts(id, { h: [150, 140], fmt: (v) => v.toFixed(0) + "%", yMax: 100, ref: [{ y: 50, label: "50%" }], series: [{ label: "In profit", color: "--s3", v: sp, type: "area" }] });
   const pl = col("pool"); id = card({ title: "GME in the pool", val: valDelta(lastVal(pl), ago(pl, 7), fBb, fBb), sub: "Falling = coins bought out of the Uniswap pool." });
   ts(id, { h: [150, 140], fmt: fBb, axisFmt: (v) => v + "B", zero: false, series: [{ label: "GME in pool", color: "--s7", v: pl, type: "area" }] });
+}
+// ---------- PUBLIC LANDING HERO: market cap against what holders paid ----------
+// Zones are cuts of MVRV's own history (10th / 25th / 75th / 90th percentile of every day since launch), drawn as
+// multiples of holders' average cost. They describe where the market cap sits against its past, not where it goes.
+const HZN = [["Deep discount", "--s1"], ["Discount", "--s3"], ["Typical range", "--neutral"], ["Premium", "--s4"], ["Stretched", "--s8"]];
+let HZ = 0, HZQ = null;
+function heroZones() {
+  if (HZQ) return HZQ;
+  const mv = col("mvrv").filter((v) => v != null && isFinite(v) && v > 0).sort(d3.ascending);
+  const q = [0.1, 0.25, 0.75, 0.9].map((f) => d3.quantileSorted(mv, f)), cur = lastVal(col("mvrv"));
+  HZQ = { q, lo: mv[0], hi: mv[mv.length - 1], cur, zone: cur == null ? null : q.filter((x) => cur >= x).length, low: cur == null ? null : (100 * d3.bisectLeft(mv, cur)) / mv.length };
+  return HZQ;
+}
+function heroPublic() {
+  const at = new Date(IDX?.indexedAt || T.asOf), p = col("price"), rp = col("rp"), p0 = lastVal(p), r0 = lastVal(rp), Z = heroZones();
+  const chg = (n) => { const o = ago(p, n); return o ? (100 * (p0 - o)) / o : null; }, c1 = chg(1), c7 = chg(7), c30 = chg(30);
+  const zn = Z.zone == null ? null : HZN[Z.zone];
+  const read = Z.cur == null ? "" : `GME's market cap is <b>${Z.cur.toFixed(2)}×</b> what its holders paid on average (<b>${fP(r0)}</b>). It has been lower on ${Z.low < 1 ? "under 1" : Math.round(Z.low)}% of days since launch. <span class="zchip" style="--zc:var(${zn[1]})">${zn[0]}</span>`;
+  const M = S.MV && S.MV.windows["24h"], t = M && M.tot, A = S.accumulators || [], h = col("holders"), hd = lastVal(h) - ago(h, 30), P = T.pool || {}, sp = lastVal(col("sip"));
+  const dd = (v, f, lab) => (v == null ? "" : `<span class="${cls(v)}">${arrow(v)} ${f(Math.abs(v))}</span> ${lab}`);
+  const items = [
+    ["Bought · 24h", t ? fU(t.buy) : "—", t ? `by ${fN(t.buyers)} owners on the DEX` : "", "Dollars of GME bought on the DEX in the last 24 hours, counted by owner (linked wallets are one owner)."],
+    ["Sold · 24h", t ? fU(t.sell) : "—", t ? `by ${fN(t.sellers)} owners · net <span class="${cls(t.buy - t.sell)}">${sgn(t.buy - t.sell, fU)}</span>` : "", "Dollars of GME sold on the DEX in the last 24 hours."],
+    ["Quiet accumulators", fN(A.length), A.length ? `added ${fB(d3.sum(A, (a) => a.net))} GME in 90 days` : "", "Owners that added at least 0.1% of supply in 90 days and sold under 15% of it."],
+    ["Holders", fN(lastVal(h)), dd(hd, fN, "30d"), "Wallets holding any GME. Pools, exchanges and contracts are excluded."],
+    ["Supply in profit", sp == null ? "—" : fPct(sp), "of held GME was bought below today's price", "Share of the GME held in wallets whose cost is below today's price."],
+    ["Pool liquidity", P.weth != null ? P.weth.toFixed(1) + " ETH" : "—", P.weth != null ? `${fU(P.weth * (P.ethUsd || 0))} · ${fB(P.gme)} GME` : "", "Reserves of the Uniswap V2 pair (the main market) at index time."],
+    ["Active wallets · 7d", IDX ? fN(IDX.active168h) : "—", IDX ? `${fN(IDX.active24h)} in 24h` : "", "Distinct wallets that sent or received GME. Pools, routers, exchanges and contracts excluded."],
+    ["Last indexed", d3.utcFormat("%H:%M UTC")(at), `${fd(at)} · ${agoTxt(AGEH)}`, "When the scheduled job last rebuilt the data (every 4 hours). Marked stale after 12 hours."],
+  ];
+  add(`<section class="hero">
+    <div class="sline"><span>Ethereum mainnet</span><span class="sep">·</span><span>Every transfer since launch</span><span class="sep">·</span>
+      <span class="dstat${STALE ? " stale" : ""}"><i aria-hidden="true"></i>${STALE ? "Data stale · last indexed " + agoTxt(AGEH) : "Data current · " + agoTxt(AGEH)}</span></div>
+    <div class="hp-top"><div><h1>GME <span>on Ethereum</span></h1></div>
+      <div class="hp-mc"><b>${fP(p0)}</b><span>market cap · ${[dd(c1, fPct, "24h"), dd(c7, fPct, "7d"), dd(c30, fPct, "30d")].filter(Boolean).join(" · ")}</span></div></div>
+    <p class="hp-read">${read}</p>
+    <div class="panel key hp-chart"><div class="hp-chead"><span class="eyebrow">Market cap against what holders paid · log scale</span>
+        <span class="seg" id="hpz">${["ALL", "1Y", "90D"].map((l, i) => `<button class="mini${i === HZ ? " on" : ""}" type="button" data-hz="${i}">${l}</button>`).join("")}</span></div>
+      <div id="hpc"></div>
+      <div class="hp-key"><span><i class="ln"></i>Market cap</span><span><i class="ln d"></i>Holders' avg cost</span>${HZN.map(([n, c]) => `<span><i style="background:var(${c});opacity:.55"></i>${n}</span>`).join("")}</div></div>
+    <div class="hp-cta"><a class="pri" href="#buyers">Who's buying →</a><a href="#wallet">Look up a wallet →</a><a href="#crowd">Cost basis and crowd →</a><a href="#methodology">How it's built →</a></div>
+    <div class="contract"><span class="eyebrow">Contract</span><span class="mono full">${TOKEN}</span><span class="mono shortc">${short(TOKEN)}</span><button class="mini" type="button" data-copy="${TOKEN}">Copy</button><a class="mini" href="${ETH(TOKEN)}" target="_blank" rel="noopener">Etherscan ↗</a></div>
+  </section>
+  <section class="panel metrics collapsed" id="metrics"><div class="mgrid">${items.map(([k, v, d, tp], i) => `<div class="m${i >= 4 ? " sec" : ""}"><span class="mk" data-tip="${esc(tp)}" tabindex="0">${k}</span><span class="mv">${v}</span><span class="md">${d}</span></div>`).join("")}</div></section>
+    <button class="mini mtoggle" type="button" data-mtoggle>All metrics +</button>
+  <p class="sub" style="margin:10px 2px 0">Zones are cuts of this ratio's own history (10th, 25th, 75th and 90th percentile of every day since launch), drawn as multiples of holders' average cost. They show where the market cap sits against its past. They are not a forecast and not advice.</p>`);
+  $("hpz").onclick = (e) => { const b = e.target.closest("[data-hz]"); if (!b) return; HZ = +b.dataset.hz; $("hpz").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); drawHero(); };
+  draws.push(drawHero); drawHero();
+}
+function drawHero() {
+  const el = $("hpc"); if (!el) return;
+  const Z = heroZones(), p = col("price"), rp = col("rp"), mvA = col("mvrv"), phone = innerWidth < 720;
+  const W = el.clientWidth || 600, H = phone ? 270 : Math.max(360, Math.min(480, Math.round(innerHeight * 0.48)));
+  const m = { t: 10, r: phone ? 8 : 104, b: 22, l: phone ? 44 : 56 };
+  const i0 = HZ === 0 ? 0 : Math.max(0, N - (HZ === 1 ? 365 : 90)), idx = d3.range(i0, N).filter((i) => p[i] > 0);
+  if (!idx.length) return;
+  const mult = [Z.lo, ...Z.q, Z.hi], x = d3.scaleUtc([DD[idx[0]], DD[N - 1]], [m.l, W - m.r]);
+  const lows = idx.flatMap((i) => [p[i], rp[i] > 0 ? rp[i] * Z.q[0] : null]).filter((v) => v > 0), highs = idx.flatMap((i) => [p[i], rp[i] > 0 ? rp[i] * Z.q[3] : null]).filter((v) => v > 0);
+  const y = d3.scaleLog([d3.min(lows) * 0.75, d3.max(highs) * 1.3], [H - m.b, m.t]).clamp(true);
+  const svg = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H).attr("role", "img").attr("aria-label", "Market cap and holders' average cost, with zones from the ratio's own history");
+  const rIdx = idx.filter((i) => rp[i] > 0);
+  HZN.forEach(([, c], k) => {
+    svg.append("path").attr("fill", css(c)).attr("opacity", k === 2 ? 0.1 : 0.2)
+      .attr("d", d3.area().x((i) => x(DD[i])).y0((i) => y(rp[i] * mult[k])).y1((i) => y(rp[i] * mult[k + 1])).curve(d3.curveMonotoneX)(rIdx));
+  });
+  const tk = mcTicks(y, (mn) => true).filter((_, i, a) => a.length <= 7 || i % Math.ceil(a.length / 7) === 0);
+  const g = svg.append("g").attr("font-family", "var(--mono)").attr("font-size", 10).attr("fill", css("--muted"));
+  tk.forEach((v) => { g.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(v)).attr("y2", y(v)).attr("stroke", css("--line")).attr("stroke-dasharray", "2 4");
+    g.append("text").attr("x", m.l - 6).attr("y", y(v) + 3).attr("text-anchor", "end").text(tickP(v)); });
+  x.ticks(phone ? 4 : 8).forEach((d) => g.append("text").attr("x", x(d)).attr("y", H - 6).attr("text-anchor", "middle").text(d3.utcFormat(HZ === 2 ? "%b %d" : "%b %y")(d)));
+  const line = (a) => d3.line().defined((i) => a[i] > 0).x((i) => x(DD[i])).y((i) => y(a[i]))(idx);
+  svg.append("path").attr("d", line(rp)).attr("fill", "none").attr("stroke", css("--accent")).attr("stroke-width", 1.6).attr("stroke-dasharray", "6 4");
+  svg.append("path").attr("d", line(p)).attr("fill", "none").attr("stroke", css("--fg")).attr("stroke-width", 2).attr("stroke-linejoin", "round");
+  const last = idx[idx.length - 1], zn = Z.zone == null ? null : HZN[Z.zone];
+  svg.append("circle").attr("cx", x(DD[last])).attr("cy", y(p[last])).attr("r", 4.5).attr("fill", css("--fg")).attr("stroke", css(zn ? zn[1] : "--accent")).attr("stroke-width", 2.5);
+  if (!phone) {   // zone names at the right edge, at the band's position today
+    const rl = rIdx[rIdx.length - 1]; let prev = Infinity;
+    if (rl != null) HZN.forEach(([n, c], k) => { const a = y(rp[rl] * mult[k]), b = y(rp[rl] * mult[k + 1]), yy = Math.min(prev - 12, (a + b) / 2 + 3); if (a - b < 9 || yy < m.t + 8) return; prev = yy;
+      g.append("text").attr("x", W - m.r + 8).attr("y", yy).attr("fill", css(k === 2 ? "--fg-2" : c)).attr("font-weight", k === Z.zone ? 700 : 500).text(n.toUpperCase()); });
+  }
+  const cur = svg.append("g").style("display", "none");
+  cur.append("line").attr("y1", m.t).attr("y2", H - m.b).attr("stroke", css("--fg-2")).attr("stroke-dasharray", "3 3");
+  const dot = cur.append("circle").attr("r", 4).attr("fill", css("--fg")), dot2 = cur.append("circle").attr("r", 3.5).attr("fill", css("--accent"));
+  const bis = d3.bisector((i) => DD[i]).center;
+  svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", H - m.t - m.b).attr("fill", "transparent").style("cursor", "crosshair")
+    .on("pointermove pointerdown", (ev) => { const [px] = d3.pointer(ev), i = idx[bis(idx, x.invert(px))]; if (i == null) return;
+      cur.style("display", null).select("line").attr("x1", x(DD[i])).attr("x2", x(DD[i])); dot.attr("cx", x(DD[i])).attr("cy", y(p[i]));
+      dot2.style("display", rp[i] > 0 ? null : "none").attr("cx", x(DD[i])).attr("cy", rp[i] > 0 ? y(rp[i]) : 0);
+      const mv = mvA[i] > 0 ? mvA[i] : rp[i] > 0 ? p[i] / rp[i] : null, zi = mv == null ? null : Z.q.filter((q) => mv >= q).length;
+      showTip(`<b>${fd(DD[i])}</b><p>Market cap <b>${fP(p[i])}</b><br>Holders' avg cost <b>${rp[i] > 0 ? fP(rp[i]) : "—"}</b>${mv == null ? "" : `<br>Ratio <b>${mv.toFixed(2)}×</b> · <span style="color:${css(HZN[zi][1])}">${HZN[zi][0]}</span>`}</p>`, ev); })
+    .on("pointerleave pointercancel", () => { cur.style("display", "none"); hideTip(); });
+  el.replaceChildren(svg.node());
 }
 function hero() {
   const at = new Date(IDX?.indexedAt || T.asOf), lt = IDX?.lastTransfer ? new Date(IDX.lastTransfer) : null;
@@ -1149,15 +1269,15 @@ function metrics() {
 }
 function primary() {
   const p = col("price"), rp = col("rp"), b = col("buyUsd"), s = col("sellUsd"), net = b.map((v, i) => (v ?? 0) - (s[i] ?? 0)), cl = col("cluster");
-  card({ title: "Primary instrument", q: "What is actually happening with GME on Ethereum?", wide: true, key: true, val: rangeCtl(),
+  card({ title: DESK ? "Primary instrument" : "Flows and holders", q: DESK ? "What is actually happening with GME on Ethereum?" : "Is money coming in or going out, and is the holder base growing?", wide: true, key: DESK, val: rangeCtl(),
     body: `<div class="prim"><div><div class="chart" id="pc"></div><div class="legend" id="pc-l" style="margin-top:8px"></div></div><aside class="sop" id="sop"></aside></div>`,
-    note: "Three panes share one time axis. Market cap and holders' average cost (realized price), both shown as market cap (price × 420.69B), on a log scale; daily dollars bought minus sold on the DEX; and the GME held by fbb4's wallets (today's members). Shaded spans are past pumps. Ranges over 200 days show weekly totals." });
+    note: DESK ? "Three panes share one time axis. Market cap and holders' average cost (realized price), both shown as market cap (price × 420.69B), on a log scale; daily dollars bought minus sold on the DEX; and the GME held by fbb4's wallets (today's members). Shaded spans are past pumps. Ranges over 200 days show weekly totals." : "Daily dollars bought minus sold on the DEX, and the number of wallets holding GME, on one time axis. Shaded spans are past pumps. Ranges over 200 days show weekly totals." });
   ts("pc", { bands: runsBands(), panes: [
     { label: "Market cap · log scale", h: [250, 190], log: true, price: true, fmt: fP, series: [
       { label: "Market cap", color: "--fg", v: p, type: "line", width: 1.8 }, { label: "Holders' avg cost", color: "--accent", v: rp, type: "line", dash: "5 3", width: 1.5 }] },
     { label: "DEX net flow · USD", h: [92, 72], fmt: (v) => sgn(v, fU), axisFmt: fU, series: [{ label: "DEX net flow", colorBy: ["--up", "--down"], v: net, type: "bar" }] },
     { label: "fbb4 · GME held", h: [92, 72], fmt: fBb, axisFmt: (v) => v + "B", zero: false, series: [{ label: "Cluster holdings", color: "--s1", v: cl, type: "area" }] },
-  ].slice(0, DESK ? 3 : 2) });
+  ].slice(DESK ? 0 : 1, DESK ? 3 : 2).concat(DESK ? [] : [{ label: "Holders", h: [110, 84], fmt: fN, axisFmt: d3.format("~s"), zero: false, series: [{ label: "Holders", color: "--s1", v: col("holders"), type: "line" }] }]) });
   draws.push(stateOfPlay);
 }
 function stateOfPlay() {
