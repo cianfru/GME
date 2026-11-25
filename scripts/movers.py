@@ -147,6 +147,24 @@ def main():
     res = dict(asOf=datetime.datetime.fromtimestamp(t1, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), lastTransfer=T[-1][2], price=lastPx,
                windows=W, ent={**card_movers(rows, own_e, ("entity",), t1), **card_movers(rows, own, ("network",), t1)}, cardWin=list(CARD_WIN))
     json.dump(res, open(os.path.join(D, "movers.json"), "w"), separators=(",", ":"))
+    # The public board (the public site's bundle): the same windows with no attribution to fbb4, its network's groups or
+    # the linked web they came from. Those wallets appear as plain wallets; every other owner is unchanged.
+    priv = set()
+    for n in ld("network.json", {"networks": []}).get("networks", []):
+        priv |= set(n["members"]) | {w[0] for w in (n.get("map") or {}).get("wallets", [])}
+    for e in ld("entities.json", {"entities": []})["entities"]:
+        ms = e["members"] + [x["a"] for x in e.get("attached", [])]
+        if e["kind"] == "focus" or priv & set(ms): priv |= set(ms)
+    own_p = {a: v for a, v in own_e.items() if a not in priv}
+    hold_p, first_p = collections.Counter(), {}
+    for a, b in bal.items():
+        if b > 0 and a not in infra and a not in DEP: hold_p[own_p.get(a, (a,))[0]] += b
+    for a, f in first.items():
+        k = own_p.get(a, (a,))[0]
+        if k not in first_p or f < first_p[k]: first_p[k] = f
+    Wp = {name: summarise(rows, own_p, first_p, hold_p, t1 - h * 3600, t1, bucket) for name, h, bucket in WINDOWS}
+    json.dump(dict(asOf=res["asOf"], lastTransfer=res["lastTransfer"], price=lastPx, windows=Wp, ent=card_movers(rows, own_p, ("entity",), t1), cardWin=list(CARD_WIN)),
+              open(os.path.join(D, "movers_public.json"), "w"), separators=(",", ":"))
     w = W["24h"]["tot"]
     print(f"movers.json: 24h buys ${w['buy']:,} by {w['buyers']} owners, sells ${w['sell']:,} by {w['sellers']} · "
           f"7d {W['7d']['tot']['owners']} owners moved · {len(res['ent'])} entities with movers · "

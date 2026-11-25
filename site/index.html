@@ -386,6 +386,7 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 @media (max-width: 900px) { .nmind { grid-template-columns: minmax(0, 1fr) } .nmrow { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 6px } .nmrow .nml { grid-column: span 3 } .nmrow .nmh { text-align: right } .nmrow .nms { text-align: right } .nmweb { flex-direction: column; height: auto } .nmweb i { padding: 6px 10px; flex: none !important } }
 @media (max-width: 760px) { .nmleg { display: none } }
 @media (max-width: 520px) { .nmwins { grid-template-columns: minmax(0, 1fr) } .nmw { box-shadow: 0 1px 0 var(--line) } .nmw > b { font-size: 19px } }
+body.pub a[href^="#visualizer"], body.pub a[href^="#entities"], body.pub [data-emap], body.pub [data-owner], body.pub a[href="/study"], body.pub a[href="/study.html"] { display: none !important }
 .mvkv { margin: .7rem 0 .2rem }
 .mvleg { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin-top: .8rem; font: 400 11px var(--sans); color: var(--fg-2) } .mvleg span { display: inline-flex; align-items: center; gap: .35rem }
 .mvleg i { display: inline-block; width: 9px; height: 9px } .mvleg i.ln { height: 2px; width: 14px; background: var(--accent) } .mvkv b small { font-size: 10.5px; margin-left: .3rem }
@@ -616,7 +617,8 @@ let S, T, DD, N, IDX = null, AGEH = 0, STALE = false, PARTIAL = false;
 const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
-const PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["visualizer", "Visualizer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
+const PAGES_PUBLIC = [["overview", "Overview"], ["buyers", "Who's buying"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
+let PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["visualizer", "Visualizer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
 // Group names end in a short handle: the last four characters of the wallet the group is named after ("Accumulator
 // efdb", "Linked group 847d"). fbb4's group is just "fbb4" (the owner's X name, the end of 0xe147…fbb4).
 const nm = (s) => esc(s).replace(/(^|\s)([0-9a-f]{4,6})$/, (m, sp, h) => (sp ? "&nbsp;" : "") + `<span class="hd">${h}</span>`);   // nbsp: flex buttons drop a plain trailing space
@@ -626,8 +628,19 @@ const LEGACY = { wallets: "entities/monitor", bubbles: "entities/map", insiders:
 let page = "overview", sub = "cluster", lastPage = null;
 const draws = [];
 
-fetch("/site.json", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("site.json " + r.status); return r.json(); }).then((d) => {
+// Two bundles: the public terminal (/site.json) and the owner desk (/desk/site.json, behind a password: open
+// /desk/unlock once). The desk bundle has everything; the public one has no fbb4 or network attribution, so the
+// pages below show their owner-only parts only when DESK is true. BASE is where the other data files are read from.
+let DESK = false, BASE = "/";
+const getSite = async () => {
+  let want = false; try { want = localStorage.getItem("gme-desk") === "1"; } catch (e) {}
+  if (want) { try { const r = await fetch("/desk/site.json", { cache: "no-store" }); if (r.ok) { DESK = true; BASE = "/desk/"; return r.json(); } } catch (e) {} }
+  const r = await fetch("/site.json", { cache: "no-store" }); if (!r.ok) throw new Error("site.json " + r.status); return r.json();
+};
+getSite().then((d) => {
   S = d; T = d.T; DD = T.daily.d.map(pd); N = DD.length;
+  if (!DESK) PAGES = PAGES_PUBLIC; else document.querySelectorAll('a[href="/study.html"]').forEach((a) => (a.href = "/desk/study.html"));
+  document.body.classList.toggle("pub", !DESK);
   if (S.C && S.C.daily && S.C.d1 === T.daily.d[N - 1] && S.C.daily.buyNew.length === N) Object.assign(T.daily, S.C.daily);   // crowd series share the terminal's days
   init();
 }).catch((e) => { $("err").style.display = "block"; $("err").textContent = "Could not load the data (" + e.message + ")."; console.error(e); });
@@ -679,6 +692,7 @@ function parseHash() {
   if (LEGACY[h]) { h = LEGACY[h]; history.replaceState(null, "", "#" + h); }
   const [p, s] = h.split("/");
   page = PAGES.some((x) => x[0] === p) ? p : "overview";
+  if (p && page !== p) history.replaceState(null, "", "#overview");
   if (page === "entities") sub = SUBS.some((x) => x[0] === s) ? s : "cards";
   if (page === "wallet") { const m = W_ADDR.exec(s || ""); wAddr = m ? m[0].toLowerCase() : ""; wAll = false; }
 }
@@ -717,11 +731,19 @@ function render() {
   document.body.classList.toggle("vzmode", page === "visualizer");
   if (page !== "visualizer" && VZ.sim) { VZ.sim.stop(); VZ.sim = null; }
   if (page !== "visualizer" && VZ.keys) { removeEventListener("keydown", VZ.keys); VZ.keys = null; }
-  ({ overview, holders, crowd, transfers, entities, visualizer, wallet, methodology })[page]();
+  ({ overview, buyers, holders, crowd, transfers, entities, visualizer, wallet, methodology })[page]();
+  if (!DESK) pubScrub(); else document.querySelectorAll('a[href="/study.html"]').forEach((a) => (a.href = "/desk/study.html"));
   document.title = (page === "overview" ? "GME on Ethereum" : PAGES.find((p) => p[0] === page)[1] + " · GME on Ethereum") + " · Terminal";
   markRange(); redraw(); qTables();
   if (page !== lastPage) scrollTo({ top: 0 });
   lastPage = page; hideTip();
+}
+// Public mode: remove links to owner-only pages and methodology passages about owner-only layers.
+function pubScrub() {
+  const v = $("view");
+  for (const el of v.querySelectorAll(".eyebrow")) if (/^Research · snapshot/.test(el.textContent)) el.parentElement.remove();
+  if (page === "methodology") { for (const el of v.querySelectorAll("p, li, tr")) if (/fbb4|ETH side|Visualizer|network|ledger/i.test(el.textContent)) el.remove();
+    for (const sec of v.querySelectorAll("section")) if (/Networks|Attribution/.test((sec.querySelector(".dn") || {}).textContent || "") && /Networks/.test(sec.querySelector(".dn").textContent)) sec.remove(); }
 }
 function redraw() { draws.forEach((f) => { try { f(); } catch (e) { console.error(e); } }); }
 // ---- queryable tables ------------------------------------------------------------------------------------------
@@ -1083,8 +1105,8 @@ function closeChart() {
 // ---------- OVERVIEW ----------
 function overview() {
   hero(); metrics(); grid(); primary();
-  sect("Signals", "fbb4's wallets, the latest run, and what changed.");
-  insiderCard(false); alertsCard(false); moversMini(); changesCard(true);
+  if (DESK) { sect("Signals", "fbb4's wallets, the latest run, and what changed."); insiderCard(false); alertsCard(false); moversMini(); changesCard(true); }
+  else { sect("Signals", "Who bought and sold in the last 24 hours, and what changed."); moversMini(); changesCard(true); }
   sect("Market structure", "Where holders stand against their own cost, and the pool that sets the price.", true);
   const mv = col("mvrv"); let id = card({ title: "MVRV", val: valDelta(lastVal(mv), ago(mv, 30), (v) => v.toFixed(3) + "×", (v) => v.toFixed(3)), sub: "Price ÷ realized price. Below 1× the average holder is underwater." });
   ts(id, { h: [150, 140], fmt: (v) => v.toFixed(2) + "×", log: true, ref: [{ y: 1, label: "break-even" }], series: [{ label: "MVRV", color: "--s1", v: mv, type: "line" }] });
@@ -1135,7 +1157,7 @@ function primary() {
       { label: "Market cap", color: "--fg", v: p, type: "line", width: 1.8 }, { label: "Holders' avg cost", color: "--accent", v: rp, type: "line", dash: "5 3", width: 1.5 }] },
     { label: "DEX net flow · USD", h: [92, 72], fmt: (v) => sgn(v, fU), axisFmt: fU, series: [{ label: "DEX net flow", colorBy: ["--up", "--down"], v: net, type: "bar" }] },
     { label: "fbb4 · GME held", h: [92, 72], fmt: fBb, axisFmt: (v) => v + "B", zero: false, series: [{ label: "Cluster holdings", color: "--s1", v: cl, type: "area" }] },
-  ] });
+  ].slice(0, DESK ? 3 : 2) });
   draws.push(stateOfPlay);
 }
 function stateOfPlay() {
@@ -1150,14 +1172,14 @@ function stateOfPlay() {
     ["DEX net flow", `<b class="${cls(net)}">${sgn(net, fU)}</b>`],
     ["Holders", `<b class="${cls(hd)}">${sgn(hd, fN)}</b>`],
     ["New wallets", `<b>${fN(nw)}</b>`],
-    ["fbb4 holdings", `<b class="${cls(cd)}">${sgn(cd, fBb)}</b>`],
+    ...(DESK ? [["fbb4 holdings", `<b class="${cls(cd)}">${sgn(cd, fBb)}</b>`]] : []),
     ["GME in the pool", `<b class="${cls(-pl)}">${sgn(pl, fBb)}</b>`],
     ["Transfers", `<b>${tx == null ? "—" : fN(tx)}</b>`],
-    ["Insider status (30d rule)", `<b class="${T.insider.status === "ACCUMULATING" ? "up" : /SELL|DISTRIB/.test(T.insider.status) ? "down" : ""}">${esc(T.insider.status)}</b>`],
+    ...(DESK ? [["Insider status (30d rule)", `<b class="${T.insider.status === "ACCUMULATING" ? "up" : /SELL|DISTRIB/.test(T.insider.status) ? "down" : ""}">${esc(T.insider.status)}</b>`]] : []),
   ];
   const read = `Over the ${lab}, market cap ${pc == null ? "is unchanged" : (pc >= 0 ? "rose " : "fell ") + fPct(Math.abs(pc))}. DEX trading was net ${net >= 0 ? "buying" : "selling"} of ${fU(Math.abs(net))}, ` +
     `the pool ${pl <= 0 ? "lost" : "gained"} ${fBb(Math.abs(pl))} GME, and holders ${hd >= 0 ? "rose" : "fell"} by ${fN(Math.abs(hd))}. ` +
-    `fbb4 ${cd >= 0 ? "added" : "reduced by"} ${fBb(Math.abs(cd))} GME.`;
+    (DESK ? `fbb4 ${cd >= 0 ? "added" : "reduced by"} ${fBb(Math.abs(cd))} GME.` : "");
   el.innerHTML = `<span class="eyebrow" style="margin-bottom:4px">State of play · ${esc(lab)}</span>` + rows.map(([k, v]) => `<div class="row"><span>${k}</span>${v}</div>`).join("") + `<p class="read">${read}</p>`;
 }
 
@@ -1185,7 +1207,7 @@ function changesCard(wide) {
   const p = col("price"), rows = [
     ["Price", p, fP, (o, v) => fPct(Math.abs((100 * (v - o)) / o))],
     ["Holders", col("holders"), fN, (o, v) => fN(Math.abs(v - o))],
-    ["fbb4 holdings", col("cluster"), fBb, (o, v) => fBb(Math.abs(v - o))],
+    ...(DESK ? [["fbb4 holdings", col("cluster"), fBb, (o, v) => fBb(Math.abs(v - o))]] : []),
     ["GME in the pool", col("pool"), fBb, (o, v) => fBb(Math.abs(v - o)), true],
     ["MVRV", col("mvrv"), (v) => v.toFixed(3) + "×", (o, v) => Math.abs(v - o).toFixed(3)],
     ["Supply in profit", col("sip"), (v) => fPct(v), (o, v) => Math.abs(v - o).toFixed(1) + "pt"],
@@ -1207,7 +1229,7 @@ function changesCard(wide) {
 // ---------- HOLDERS ----------
 function holders() {
   pageHead("Holders", "GME supply distribution", "Who holds the 420.69B supply: how concentrated it is, the largest wallets, and how much sits with groups of linked wallets.", true);
-  grid(); supplySplit(); topHolders(); largestEntities();
+  grid(); supplySplit(); topHolders(); if (DESK) largestEntities();
   sect("Concentration and holder base", "How the holder base is spread, how big each position is, and how long coins have stayed put.");
   const t10 = col("top10"), t100 = col("top100"), wp = col("whalePct");
   let id = card({ title: "Concentration", val: fPct(lastVal(t100)) + `<small class="flat">top 100</small>`, sub: "Share of held supply in the largest 10 and 100 wallets, and in wallets with ≥0.1% each. Pools and exchanges excluded." });
@@ -1269,7 +1291,7 @@ function topHolders() {
   const top = T.top || [], mx = d3.max(top, (t) => t.pct) || 1;
   card({ title: "Largest holders", q: "Which single wallets hold the most?", val: fPct(d3.sum(top.slice(0, 10), (t) => t.pct)) + `<small class="flat">top 10</small>`,
     body: `<div class="tw" style="max-height:520px;overflow-y:auto"><table class="q"><thead><tr><th>#</th><th>Wallet</th><th class="n">Holds</th><th class="n">%</th><th>Share</th><th>Group</th><th>Last active</th></tr></thead><tbody>` +
-    top.map((t, i) => `<tr><td class="num">${i + 1}</td><td><button class="addr" data-addr="${t.a}">${short(t.a)}</button>${t.a === FOCUS ? FTAG : ""}</td><td class="n">${fB(t.bal)}</td><td class="n">${fPct(t.pct, 2)}</td><td><div class="bar"><i style="width:${(100 * t.pct) / mx}%"></i></div></td><td>${t.group ? `<span class="ev inf nm" data-tip="Group membership is inferred by the linking rules.">${esc(t.group.replace(/Accumulator /, "acc "))}</span>` : ""}</td><td class="num">${t.last}</td></tr>`).join("") + `</tbody></table></div>`,
+    top.map((t, i) => `<tr><td class="num">${i + 1}</td><td><button class="addr" data-addr="${t.a}">${short(t.a)}</button>${DESK && t.a === FOCUS ? FTAG : ""}</td><td class="n">${fB(t.bal)}</td><td class="n">${fPct(t.pct, 2)}</td><td><div class="bar"><i style="width:${(100 * t.pct) / mx}%"></i></div></td><td>${t.group ? `<span class="ev inf nm" data-tip="Group membership is inferred by the linking rules.">${esc(t.group.replace(/Accumulator /, "acc "))}</span>` : ""}</td><td class="num">${t.last}</td></tr>`).join("") + `</tbody></table></div>`,
     note: "Single addresses ranked by balance, with pools, exchanges, routers and contracts left out. Tap a wallet for its full history." });
 }
 function ownerTotals() {
@@ -1824,14 +1846,7 @@ function entMap() {
     note: "Drawn like the Visualizer. Entities view: one ring per group of wallets, sized by what it holds, coloured by its status in the window (green accumulating, red selling or sending to exchanges, amber moving coins to wallets outside, grey holding or dormant); fbb4 has the gold dashed halo. Arrows are the GME that moved in the window between groups, the DEX (hexagon), exchanges (square) and wallets outside any group (dashed circle); width = GME moved, the arrow points to the receiver, and the dollar figure shows on the links of the node in focus. Buyers drift left toward the DEX, sellers right toward the exchanges. Dashed lines between two groups are ties, all time: gold = the wallets behind them are linked by the same evidence the grouping rules use (one wallet got its first GME from, or drained into, a wallet of the other group; a first-ETH or gas top-up between them), grey = weaker evidence (a shared exchange deposit address, a larger ETH payment) or only GME moved between them. They stay two groups because their own rules built them (fbb4, the Coinbase group, the watched groups) or a guard kept them apart; the panel lists the two wallets behind every tie. One owner's wallets view: the owner's wallets, sized by what they hold now, coloured the same way; dashed rings are another monitored owner's wallets, dashed grey links moves between the owner's own wallets. ⌘/Ctrl-click a wallet to open it on Zerion. Dragged nodes stay where you put them; ⤢ resets." });
   draws.push(drawBub);
 }
-function entWatch() {
-  const Gs = T.groups.filter((g) => g.bal >= 1e6), empty = T.groups.filter((g) => g.bal < 1e6);
-  const dcell = (v) => `<td class="n ${cls(v)}">${Math.abs(v) < 1e6 ? "—" : sgn(v, fB)}</td>`;
-  card({ title: "Watched groups", wide: true, sub: "Every group the daily run compares. Tap a row to list its wallets. Changes count only GME entering or leaving the group.", body: `<div class="tw"><table><thead><tr><th>Group</th><th class="n">Wallets</th><th class="n">Holds</th><th class="n">% supply</th><th class="n">1d</th><th class="n">7d</th><th class="n">30d</th><th>180 days</th></tr></thead><tbody>` +
-    Gs.map((g, i) => `<tr data-g="${i}" style="cursor:pointer"><td>${nm(g.name)} <span class="ev inf">inferred</span></td><td class="n">${g.n}</td><td class="n">${fB(g.bal)}</td><td class="n">${fPct((100 * g.bal) / SUPPLY, 2)}</td>${dcell(g.d1)}${dcell(g.d7)}${dcell(g.d30)}<td>${spark(g.series, g.d30 >= 0 ? "--up" : "--down")}</td></tr>` +
-      `<tr hidden data-gm="${i}"><td colspan="8"><div class="chips">${g.members.map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>`).join("")}</div></td></tr>`).join("") +
-    `</tbody></table></div>${empty.length ? `<p class="sub" style="color:var(--muted)">${empty.length} more watched wallets hold nothing now; they stay watched in case coins come back.</p>` : ""}` });
-  document.querySelectorAll("tr[data-g]").forEach((tr) => tr.onclick = (e) => { if (e.target.closest("[data-addr]")) return; const m = document.querySelector(`tr[data-gm="${tr.dataset.g}"]`); m.hidden = !m.hidden; });
+function accCards() {
   const A = S.accumulators || [];
   card({ title: "Quiet accumulators · last 90 days", wide: true, sub: "Owners that added ≥0.1% of supply in 90 days and sold under 15% of it.", body: `<div class="tw"><table><thead><tr><th>Owner</th><th class="n">Wallets</th><th class="n">Added</th><th class="n">% supply</th><th class="n">Spent</th><th class="n">Buys</th><th class="n">Holds</th><th>Last buy</th><th>Notes</th></tr></thead><tbody>` +
     A.map((a) => `<tr><td><button class="addr" data-addr="${a.wallets[0] || a.owner}">${short(a.wallets[0] || a.owner)}</button>${a.kind !== "independent" ? (a.kind === "focus" ? FTAG : ' <span class="tag">Coinbase group</span>') : ""}</td><td class="n">${a.n}</td><td class="n up">+${fB(a.net)}</td><td class="n">${fPct(a.netPct, 2)}</td><td class="n">${a.usd ? fU(a.usd) : "—"}</td><td class="n">${a.buys ? a.buys + " / " + a.buyDays + "d" : "—"}</td><td class="n">${fB(a.held)}</td><td class="num">${a.lastBuy || (a.cexin ? "from exchange" : a.xin ? "cross-chain" : "—")}${a.active ? ' <span class="tag" data-tip="Bought in the last 14 days.">recent</span>' : ""}</td><td>${a.tags.filter((t) => !/cluster|Coinbase group/i.test(t)).map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</td></tr>`).join("") +
@@ -1840,6 +1855,22 @@ function entWatch() {
   const st = (v) => hold(v) ? `<span class="up">holding</span>` : v.toCex > 1e6 ? `<span class="down">sent to exchange</span>` : v.soldDex > 1e6 ? `<span class="down">sold on DEX</span>` : `<span class="mv-move">moved on</span>`;
   card({ title: "Buy-and-hide holding wallets · last 90 days", wide: true, sub: `Fresh wallets fed by wallets that bought on the DEX and forwarded ≥80% of it, and still holding it.${S.relays ? " " + S.relays + " more received coins this way but already sold them or passed them on; they are not counted." : ""}`, body: `<div class="tw"><table><thead><tr><th>Holding wallet</th><th class="n">Received</th><th class="n">Bought for</th><th class="n">Holds now</th><th>Status</th><th class="n">Feeders</th><th>Active</th></tr></thead><tbody>` +
     (S.vaults || []).map((v) => `<tr><td><button class="addr" data-addr="${v.a}">${short(v.a)}</button></td><td class="n">${fB(v.tok)}</td><td class="n">${fU(v.usd)}</td><td class="n">${fB(v.bal || 0)}</td><td>${st(v)}</td><td class="n">${v.feeders.length}</td><td class="num">${(v.first || "").slice(0, 10)} → ${(v.last || "").slice(0, 10)}</td></tr>`).join("") + `</tbody></table></div>` });
+}
+// Public page: who is buying. The movers board (every holder, by owner), the quiet accumulators and the fresh
+// holding wallets fed by buy-and-forward wallets.
+function buyers() {
+  pageHead("Who's buying", "Who is buying GME", "Every buyer and seller of the last day, week and month, the owners quietly building a position over 90 days, and the fresh wallets coins are being parked in.");
+  grid(); moversCard(); accCards();
+}
+function entWatch() {
+  const Gs = T.groups.filter((g) => g.bal >= 1e6), empty = T.groups.filter((g) => g.bal < 1e6);
+  const dcell = (v) => `<td class="n ${cls(v)}">${Math.abs(v) < 1e6 ? "—" : sgn(v, fB)}</td>`;
+  card({ title: "Watched groups", wide: true, sub: "Every group the daily run compares. Tap a row to list its wallets. Changes count only GME entering or leaving the group.", body: `<div class="tw"><table><thead><tr><th>Group</th><th class="n">Wallets</th><th class="n">Holds</th><th class="n">% supply</th><th class="n">1d</th><th class="n">7d</th><th class="n">30d</th><th>180 days</th></tr></thead><tbody>` +
+    Gs.map((g, i) => `<tr data-g="${i}" style="cursor:pointer"><td>${nm(g.name)} <span class="ev inf">inferred</span></td><td class="n">${g.n}</td><td class="n">${fB(g.bal)}</td><td class="n">${fPct((100 * g.bal) / SUPPLY, 2)}</td>${dcell(g.d1)}${dcell(g.d7)}${dcell(g.d30)}<td>${spark(g.series, g.d30 >= 0 ? "--up" : "--down")}</td></tr>` +
+      `<tr hidden data-gm="${i}"><td colspan="8"><div class="chips">${g.members.map((a) => `<button class="addr" data-addr="${a}">${short(a)}</button>`).join("")}</div></td></tr>`).join("") +
+    `</tbody></table></div>${empty.length ? `<p class="sub" style="color:var(--muted)">${empty.length} more watched wallets hold nothing now; they stay watched in case coins come back.</p>` : ""}` });
+  document.querySelectorAll("tr[data-g]").forEach((tr) => tr.onclick = (e) => { if (e.target.closest("[data-addr]")) return; const m = document.querySelector(`tr[data-gm="${tr.dataset.g}"]`); m.hidden = !m.hidden; });
+  accCards();
   const log = S.history || [];
   card({ title: "Alert log", wide: true, sub: "Every run that raised a medium or high alert.", body: `<ul class="alist" style="max-height:520px;overflow-y:auto">${log.length ? log.flatMap((r) => r.alerts.map((a) => `<li><span class="sev ${a.severity}">${d3.utcFormat("%-d %b")(new Date(r.asOf)).toUpperCase()}</span><span>${esc(a.text)}</span></li>`)).join("") : `<li><span class="sev info">—</span><span>Nothing yet.</span></li>`}</ul>` });
 }
@@ -2204,7 +2235,7 @@ function moversMini() {
   const top = (f, s) => W.owners.filter(f).sort(s).slice(0, 4);
   const row = (o, v, c) => `<li><span class="mvo">${mvOwner(o)}${o.new ? '<span class="ev up">new</span>' : ""}</span><b class="${c}">${v}</b></li>`;
   const buyers = top((o) => o.b[1] > 0 && o.net > 0, (p, q) => q.b[1] - p.b[1]), sellers = top((o) => o.s[1] + o.co[1] > 0 && o.net < 0, (p, q) => q.s[1] + q.co[1] - p.s[1] - p.co[1]);
-  card({ title: "Who's moving · last 24 hours", q: "Who bought and who sold, by owner.", wide: true, val: `<a class="mini" href="#entities/cards">Open the board →</a>`,
+  card({ title: "Who's moving · last 24 hours", q: "Who bought and who sold, by owner.", wide: true, val: `<a class="mini" href="${DESK ? "#entities/cards" : "#buyers"}">Open the board →</a>`,
     body: `<div class="kv mvkv">${[[fU(t.buy), `bought by ${t.buyers} owners`, "up"], [fU(t.sell), `sold by ${t.sellers} owners`, "down"], [sgn(t.buy - t.sell, fU), "net DEX buying", t.buy >= t.sell ? "up" : "down"], [`${fU(t.cexIn)} / ${fU(t.cexOut)}`, "from / to exchanges", ""], [px ? fP(px[1]) : "—", px ? `market cap · ${sgn(100 * (px[1] / px[0] - 1), (v) => v.toFixed(1) + "%")} in 24 h` : "market cap", ""]].map(([v, k, c]) => `<div><b class="${c}">${v}</b><span>${k}</span></div>`).join("")}</div>
       <div class="mvmini"><div><span class="eyebrow">Top buyers</span><ul>${buyers.map((o) => row(o, "+" + fU(o.b[1]), "up")).join("") || '<li class="flat">No buying.</li>'}</ul></div>
       <div><span class="eyebrow">Top sellers</span><ul>${sellers.map((o) => row(o, "−" + fU(o.s[1] + o.co[1]), "down")).join("") || '<li class="flat">No selling.</li>'}</ul></div></div>
@@ -2960,7 +2991,7 @@ const VZTOOLS = [["inspect", "Inspect", "click a node to open its panel", `<circ
 const VZK = ["wallet", "contract", "deposit", "cex", "dex", "lp", "burn", "mint", "token"];
 async function loadVG() {
   if (VG) return VG;
-  const g = await (await fetch("/graph.json", { cache: "no-store" })).json();
+  const g = await (await fetch(BASE + "graph.json", { cache: "no-store" })).json();
   const adj = Array.from({ length: g.nodes.length }, () => []);
   g.edges.forEach((e, k) => { adj[e[0]].push(k); adj[e[1]].push(k); });
   const entMembers = g.entities.map(() => []);
@@ -3001,7 +3032,7 @@ function vzStep(n) {                                              // −1 undo, 
 let VT = null, VTby = null, VTerr = false;
 async function loadVT() {
   if (VT) return VT;
-  const r = await fetch("/graph_tx.json", { cache: "no-store" });
+  const r = await fetch(BASE + "graph_tx.json", { cache: "no-store" });
   if (!r.ok) throw new Error("graph_tx.json " + r.status);
   const j = await r.json();
   VTby = new Map();                                               // raw node index -> row indices touching it
@@ -3544,7 +3575,7 @@ const WI = { meta: null, labels: null, fp: null, shards: new Map() };
 const WK = { b: ["▲ Bought on DEX", "up"], s: ["▼ Sold on DEX", "down"], ci: ["◆ From exchange", "up"], co: ["▼ To exchange", "down"], la: ["+ Added liquidity", "flat"],
   lr: ["− Removed liquidity", "flat"], i: ["← Received", "up"], o: ["→ Sent", "mv-move"], x: ["✕ Burned", "flat"] };
 const W_ADDR = /0x[0-9a-fA-F]{40}/;
-const wget = async (p) => { const r = await fetch("/w/" + p + ".json"); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); };
+const wget = async (p) => { const r = await fetch(BASE + "w/" + p + ".json"); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); };
 async function wLoad(name) { if (!WI[name]) WI[name] = await wget("_" + name); return WI[name]; }
 async function wRec(a) { const k = a.slice(2, 5); if (!WI.shards.has(k)) WI.shards.set(k, await wget(k).catch(() => ({}))); return WI.shards.get(k)[a] || null; }
 let ENTOF = null;
@@ -3579,7 +3610,7 @@ function wallet() {
   q.addEventListener("paste", () => setTimeout(() => { if (W_ADDR.test(q.value)) f.requestSubmit(); }, 0));
   const rec = wRecent(), top = ((T && T.top) || []).filter((t) => t.a && !isInfra(t.a)).slice(0, 5);
   $("wrecent").innerHTML = (rec.length ? `<span class="eyebrow">Recent</span>${rec.map(wLink).join("")}` : "") +
-    `<span class="eyebrow">Try</span><a class="addr" href="#wallet/${FOCUS}">fbb4's main wallet</a>${top.filter((t) => t.a !== FOCUS).slice(0, 3).map((t) => wLink(t.a)).join("")}`;
+    `<span class="eyebrow">Try</span>${DESK ? `<a class="addr" href="#wallet/${FOCUS}">fbb4's main wallet</a>` : ""}${top.filter((t) => DESK ? t.a !== FOCUS : true).slice(0, DESK ? 3 : 4).map((t) => wLink(t.a)).join("")}`;
   wLoad("meta").then((m) => { $("wasof").textContent = `Index covers ${fN(m.wallets)} wallets and ${fN(m.rows)} transfers, up to ${fdt(new Date(m.asOf))}. Rebuilt with every run of the terminal.`; })
     .catch(() => { $("wasof").textContent = "The wallet index isn't available on this deploy; it appears after the next run of the terminal."; });
   if (!wAddr) { $("wout").innerHTML = ""; q.focus({ preventScroll: true }); return; }
@@ -3685,10 +3716,11 @@ async function wReport(a) {
   out.innerHTML = html;
   const box = out.querySelector("#wpl .pl-box"); wirePl($("wpl"), P);
   draws.push(() => { if (box.isConnected) behaviourChart(box.querySelector(".pl-chart"), P); });
+  if (!DESK) for (const h of out.querySelectorAll("h3")) if (/^(Links to other wallets|ETH side)$/.test(h.textContent)) { const c = h.closest(".card"); if (h.textContent === "ETH side") { $("weth")?.removeAttribute("id"); } c.remove(); }
   wTx(rec);
   pfWallet($("wpf"), a);
   $("wdust").onchange = (ev2) => { wDust = ev2.target.checked; wTx(rec); };
-  if (!rec.eth) wEthLive(a, tok);
+  if (DESK && !rec.eth) wEthLive(a, tok);
   wLook(a, rec, tok);
 }
 function wTx(rec) {
@@ -3766,7 +3798,7 @@ async function openWallet(a) {
   $("dh").innerHTML = `<span class="mono" style="font-weight:500">${short(a)}</span><button class="mini" type="button" data-copy="${a}">Copy</button><a class="mini" href="${ETH(a)}" target="_blank" rel="noopener">Etherscan ↗</a><a class="mini" href="https://app.zerion.io/${a}/overview" target="_blank" rel="noopener">Zerion ↗</a><a class="mini" href="#visualizer/${a}">Visualize →</a><a class="mini" href="#wallet/${a}">Full analysis →</a><button class="x" type="button" aria-label="Close">×</button>`;
   $("dh").querySelector(".x").onclick = closeWallet;
   $("db").innerHTML = `<p class="sub">Loading…</p>`;
-  if (!WALLETS) { try { WALLETS = await (await fetch("/wallets.json", { cache: "no-store" })).json(); } catch (e) { WALLETS = {}; } }
+  if (!WALLETS) { try { WALLETS = await (await fetch(BASE + "wallets.json", { cache: "no-store" })).json(); } catch (e) { WALLETS = {}; } }
   const w = WALLETS[a];
   if (!w) { closeWallet(); location.hash = "#wallet/" + a; return; }   // not watched: the Wallet page has every address
   const ent = S.E && S.E.entities.find((x) => x.members.includes(a));
@@ -3788,7 +3820,7 @@ function closeWallet() { $("scrim").classList.remove("on"); $("drawer").classLis
 // the first GME transfer. Unrealized on a day = holdings × that day's close − cost of the coins still held.
 const PLK = { b: ["Bought on DEX", "--up", true], s: ["Sold on DEX", "--down", true], ci: ["From an exchange", "--up", false], co: ["To an exchange", "--down", false] };
 let PNL = null;
-async function loadPnl() { if (!PNL) { try { PNL = await (await fetch("/pnl.json", { cache: "no-store" })).json(); } catch (e) { PNL = { ents: {} }; } } return PNL; }
+async function loadPnl() { if (!PNL) { try { PNL = await (await fetch(BASE + "pnl.json", { cache: "no-store" })).json(); } catch (e) { PNL = { ents: {} }; } } return PNL; }
 const d0off = () => Math.round((pd(T.index.firstTransfer.slice(0, 10)) - DD[0]) / 864e5);
 function plSeries(P) {
   const tr = (P && P.track) || []; if (!tr.length) return null;

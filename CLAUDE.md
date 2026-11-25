@@ -7,6 +7,20 @@ An on-chain study and daily watch for **GME on Ethereum**. It follows the method
 
 Read this file first. It is enough to continue without the original conversation.
 
+## 0. Public terminal and owner desk (owner, 2026-11-25) — READ FIRST
+
+The owner is turning this into a **public product** (like the SPX Rainbow; planned domain gmeterminal.xyz, not bought yet) while keeping the fbb4 layer private. **The repo must be PRIVATE** (owner's call: one private repo, no split): this file, `data/networks.json` and the data name fbb4.
+
+- **Two bundles, one pipeline** (`scripts/public-site.mjs`, used by `build-site.mjs`):
+  - **Public** (`dist/site.json`, `dist/w/`, `dist/pnl.json`, `urpd-history.json`): market-wide facts, the movers board, accumulators and holding wallets (owner: accumulators are public), wallet lookup. `publicSite()` drops `NET`, `H`, `T.insider/cluster/mon`, the cluster daily series, entity `edges`/`near`/`direct`, and every entity, alert, event, accumulator, vault, smart-money row, group and label that belongs to or names the **private set** (`privateSets()`: the focus entity, every group of a network, their wallets and the linked web on the network map); the fbb4 supply rows fold into "Other multi-wallet groups". `publicIndexFile()` strips the wallet index of private membership and of ALL linking evidence (`seed`, `seeded`, `shared`, `ethl`, `eth`, `_ties`, webs). `movers.py` writes `data/movers_public.json` (private wallets appear as plain wallets).
+  - **Owner desk** (`dist/desk/`: full `site.json`, full `w/`, `wallets.json`, `pnl.json`, `graph.json`, `graph_tx.json`, `study.html`, `unlock.html`): everything as before.
+- **The lock** (`middleware.js`): `/desk/*` needs `DESK_PASSWORD` (Vercel env; HTTP Basic, then a 30-day HttpOnly cookie). **No `DESK_PASSWORD` → `/desk/*` is 404 (fails closed).** Open `/desk/unlock` once per browser: it sets `localStorage["gme-desk"]`, and the page then loads `/desk/site.json` (`DESK = true`, `BASE = "/desk/"`). `SITE_PASSWORD` still locks the whole site if set.
+- **The page** (`site/index.html`): `DESK` false → `PAGES_PUBLIC` (Overview, Who's buying = `buyers()`: movers board + `accCards()`, Holders, Crowd, Transfers, Wallet, Methodology); owner-only cards are guarded by `DESK`; `body.pub` CSS hides links to `#entities` / `#visualizer`; `pubScrub()` removes methodology passages about owner layers; the public Wallet page has no Links / ETH side cards. `DESK` true → exactly the old terminal.
+- **Rule: the public site never states anything the desk contradicts** (concentration stays "by wallet", no "largest owner holds X%", no "never sells" claims). A private wallet's own buys and sells still show on the public board as that wallet's.
+- **Tests:** `test/public-site.test.mjs` (synthetic + the built `dist/`: no private name, key or file in the public bundle), `test/middleware.test.mjs` (desk fails closed, password, cookie).
+- **Known gaps:** `site/index.html` itself is public and its code and comments still mention fbb4 (no data); strip owner code from the public page later. With a private repo the Vercel build needs **`GH_TOKEN`** (read access to this repo) to download the wallet index release asset; without it the Wallet page says "unavailable". A private repo also bills Actions minutes (the twice-hourly tick ≈ 1,500 min/month in skips alone): move to the outside timer or tick hourly.
+- **Next (plan agreed):** new public landing + hero (market cap vs holders' cost with valuation zones), polish and interactivity (3D where it earns it: cost-basis terrain, holder map), share cards, then the fbb4 tracker on the desk (near-real-time view of all its wallets), then a members tier.
+
 ## 1. Rules (same as the sibling projects)
 
 - **Every number must be checkable.** Use free public data only (public RPC, DeFiLlama, Blockscout, Ethplorer). No paid quota.

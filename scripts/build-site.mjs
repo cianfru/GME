@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, copyFileSync, existsSyn
 import { join, dirname } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
+import { publicSite, publicIndexFile, privateSets } from "./public-site.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const D = join(ROOT, "data");
@@ -99,22 +100,33 @@ const site = {
   })),
 };
 
+// Two bundles (scripts/public-site.mjs): the public terminal at the root, and the owner desk under desk/, which
+// middleware.js serves only with DESK_PASSWORD. Everything that names fbb4, its network or the evidence is desk-only.
+const DESK = join(OUT, "desk");
+const PRIV = privateSets(site);
+const pub = publicSite(site, json("movers_public.json"));
 rmSync(OUT, { recursive: true, force: true });
-mkdirSync(OUT, { recursive: true });
-writeFileSync(join(OUT, "site.json"), JSON.stringify(site));
+mkdirSync(DESK, { recursive: true });
+writeFileSync(join(OUT, "site.json"), JSON.stringify(pub));
+writeFileSync(join(DESK, "site.json"), JSON.stringify(site));
+writeFileSync(join(DESK, "unlock.html"), `<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>Desk</title><script>try{localStorage.setItem("gme-desk","1")}catch(e){}location.replace("/#overview")</script>`);
 copyFileSync(join(ROOT, "site/index.html"), join(OUT, "index.html"));
 copyFileSync(join(ROOT, "site/logo.png"), join(OUT, "logo.png"));   // the token's logo (CoinGecko "GME (Ethereum)")
 // Daily cost-basis distribution of held supply (engine, ~900 × 40): fetched only by the Crowd page's heatmap.
 if (existsSync(join(D, "engine/urpd-history.json"))) copyFileSync(join(D, "engine/urpd-history.json"), join(OUT, "urpd-history.json"));
 // The Visualizer's transfer graph (graph.py → graph.json, ~1.6 MB gzipped): fetched only by #visualizer.
-if (existsSync(join(D, "graph.json"))) copyFileSync(join(D, "graph.json"), join(OUT, "graph.json"));
+if (existsSync(join(D, "graph.json"))) copyFileSync(join(D, "graph.json"), join(DESK, "graph.json"));
 // The ledger behind the graph (graph.py → graph_tx.json, ~1.8 MB gzipped): fetched only when the ledger is opened.
-if (existsSync(join(D, "graph_tx.json"))) copyFileSync(join(D, "graph_tx.json"), join(OUT, "graph_tx.json"));
+if (existsSync(join(D, "graph_tx.json"))) copyFileSync(join(D, "graph_tx.json"), join(DESK, "graph_tx.json"));
 // Per-group P/L tracks and trades (entities.py → pnl.json): fetched only when a group's P&L chart is opened.
-if (existsSync(join(D, "pnl.json"))) copyFileSync(join(D, "pnl.json"), join(OUT, "pnl.json"));
+if (existsSync(join(D, "pnl.json"))) {
+  copyFileSync(join(D, "pnl.json"), join(DESK, "pnl.json"));
+  const pl = json("pnl.json"), keep = new Set(pub.E ? pub.E.entities.map((e) => e.id) : []);   // public: the public groups only
+  writeFileSync(join(OUT, "pnl.json"), JSON.stringify({ ...pl, ents: Object.fromEntries(Object.entries(pl.ents || {}).filter(([id]) => keep.has(id))) }));
+}
 // Per-wallet histories: a separate file, fetched only when a wallet is opened.
 if (existsSync(join(D, "wallets.json")))
-  writeFileSync(join(OUT, "wallets.json"), relabel(readFileSync(join(D, "wallets.json"), "utf8")));
+  writeFileSync(join(DESK, "wallets.json"), relabel(readFileSync(join(D, "wallets.json"), "utf8")));
 await walletIndex();
 
 // The Wallet page's index (wallet_index.py → wallet-index.jsonl.gz, ~24 MB): every address's full GME history, split
@@ -129,21 +141,32 @@ async function walletIndex() {
   else {
     // `gh release upload --clobber` deletes the old asset before the new one lands, so a build that starts in those
     // seconds sees a 404: retry a few times before giving up.
+    // A private repo's release asset needs a token: set GH_TOKEN in the Vercel project (read access to this repo).
+    const tok = process.env.GH_TOKEN || process.env.GITHUB_TOKEN, hdr = tok ? { Authorization: `Bearer ${tok}`, "X-GitHub-Api-Version": "2022-11-28" } : {};
     for (let i = 1; i <= 4 && !buf; i++) {
       try {
-        const r = await fetch("https://github.com/cianfru/GME/releases/download/gme-archive/wallet-index.jsonl.gz", { signal: AbortSignal.timeout(120000) });
+        let url = "https://github.com/cianfru/GME/releases/download/gme-archive/wallet-index.jsonl.gz", h = {};
+        if (tok) {
+          const rel = await (await fetch("https://api.github.com/repos/cianfru/GME/releases/tags/gme-archive", { headers: hdr })).json();
+          const as = (rel.assets || []).find((x) => x.name === "wallet-index.jsonl.gz");
+          if (as) { url = as.url; h = { ...hdr, Accept: "application/octet-stream" }; }
+        }
+        const r = await fetch(url, { headers: h, signal: AbortSignal.timeout(120000) });
         if (r.ok) { buf = Buffer.from(await r.arrayBuffer()); src = "release asset"; } else console.warn(`wallet index: download HTTP ${r.status} (attempt ${i})`);
       } catch (e) { console.warn(`wallet index: download failed (attempt ${i}): ${e.message}`); }
       if (!buf && i < 4) await new Promise((res) => setTimeout(res, 10000 * i));
     }
   }
   if (!buf) { console.warn("wallet index: none; the Wallet page will say it is unavailable"); return; }
-  const dir = join(OUT, "w"); mkdirSync(dir, { recursive: true });
+  const dir = join(DESK, "w"), pdir = join(OUT, "w"); mkdirSync(dir, { recursive: true }); mkdirSync(pdir, { recursive: true });
   let n = 0;
   for (const line of gunzipSync(buf).toString("utf8").split("\n")) {
     const m = /^\{"k":"([0-9a-f]{3}|_[a-z]+)","d":/.exec(line);
     if (!m) continue;
-    writeFileSync(join(dir, m[1] + ".json"), line.slice(m[0].length, -1)); n++;
+    const body = line.slice(m[0].length, -1);
+    writeFileSync(join(dir, m[1] + ".json"), body); n++;
+    const p = publicIndexFile(m[1], JSON.parse(body), PRIV);          // the public copy: no attribution, no linking evidence
+    if (p) writeFileSync(join(pdir, m[1] + ".json"), JSON.stringify(p));
   }
   console.log(`wallet index: ${n} files in dist/w/ (${src}, ${(buf.length / 1e6).toFixed(1)} MB)`);
 }
@@ -155,7 +178,7 @@ const study = readFileSync(join(ROOT, "report/gme-study.html"), "utf8")
 body { font-variant-numeric: tabular-nums } h1, h2, h3 { font-stretch: normal; letter-spacing: -.01em } * { border-radius: 0 !important }</style>`;
 const back = `<a href="/" style="position:fixed;top:10px;right:max(16px,env(safe-area-inset-right,0px));z-index:9;font:500 12px/1 'Geist Mono',ui-monospace,monospace;letter-spacing:.1em;padding:9px 12px;border-radius:0;background:#15181b;color:#fff;text-decoration:none">← Terminal</a>`;
 writeFileSync(
-  join(OUT, "study.html"),
+  join(DESK, "study.html"),
   `<!doctype html>\n<html lang="en">\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="robots" content="noindex">\n${study}\n${back}\n</html>\n`,
 );
 
