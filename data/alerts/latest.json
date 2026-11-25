@@ -1,20 +1,34 @@
 {
  "summary": {
-  "asOf": "2026-11-25T10:06:35Z",
-  "since": "2026-11-25T00:38:11Z",
+  "asOf": "2026-11-25T19:37:23Z",
+  "since": "2026-11-25T10:06:35Z",
   "price": 8.27214369545637e-06,
   "mcap": 3480008.1312415404,
-  "pool": 37794958209.18371,
+  "pool": 36952246927.87634,
   "watchedGroups": 26,
-  "alerts": 1,
+  "alerts": 3,
   "high": 0
  },
  "alerts": [
   {
+   "kind": "flow",
+   "severity": "info",
+   "text": "Accumulator efdb: bought on DEX 1.19B GME (~$9,873, 0.28% of supply)",
+   "group": "Accumulator efdb",
+   "what": "bought on DEX",
+   "tokens": 1193501047.5847433
+  },
+  {
    "kind": "pool",
    "severity": "info",
-   "text": "Pool GME +0.37B since last run (net selling into the pool); pool now 37.79B, market cap $3.48M",
-   "delta": 365913327.8973541
+   "text": "Pool GME -0.84B since last run (net buying out of the pool); pool now 36.95B, market cap $3.48M",
+   "delta": -842711281.3073654
+  },
+  {
+   "kind": "balance",
+   "severity": "info",
+   "text": "Accumulator efdb: holdings +1.19B since last run, now 5.92B (1.41%)",
+   "group": "Accumulator efdb"
   }
  ]
 }
