@@ -158,6 +158,32 @@ main { padding-bottom: 60px }
 .trkbar b { font-weight: 600 } .trkbar .sp { flex: 1 }
 .trk td, .trk th { white-space: nowrap } .trk .own { color: var(--muted) }
 .trk .wt { font: 600 11px var(--mono); color: var(--accent); margin-right: 6px }
+/* groups list */
+.gfeat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px }
+.gf { text-align: left; background: color-mix(in srgb, var(--fg) 3%, transparent); border: 1px solid var(--line); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; color: var(--fg); cursor: pointer; font: inherit; min-width: 0 }
+.gf:hover, .gl:not(.gh):hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent) }
+.gf > b { font: 600 17px var(--sans) } .gf dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 }
+.gf dt { font: 500 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted) } .gf dd { margin: 2px 0 0; font: 500 14px var(--mono) }
+.gfilt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 20px; padding: 14px 16px; border: 1px solid var(--line) }
+.gfilt > div > div { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px }
+.gchk { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--fg-2); cursor: pointer; min-height: 26px }
+.gchk input { width: 15px; height: 15px; accent-color: var(--accent); margin: 0 } .gchk:has(input:checked) { color: var(--fg) }
+.gcount { font: 500 12px var(--mono); color: var(--fg-2); margin-right: auto } .gcount b { color: var(--fg) }
+.glist { border: 1px solid var(--line) }
+.gl { display: grid; grid-template-columns: minmax(0, 2.4fr) repeat(4, minmax(0, 1fr)) minmax(0, .6fr) 118px; gap: 12px; align-items: center; width: 100%; padding: 11px 16px; background: none; border: 0; border-top: 1px solid var(--line); color: var(--fg); font: 500 13.5px var(--mono); text-align: right; cursor: pointer }
+.gl > span:first-child { text-align: left } .gl.gh { border-top: 0; cursor: default; font: 500 9.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding-top: 9px; padding-bottom: 9px }
+.gl small { display: block; font-size: 10.5px; color: var(--muted) }
+.gn { display: flex; flex-direction: column; gap: 5px; min-width: 0 } .gn b { font: 600 14.5px var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap } .gn i { display: flex; flex-wrap: wrap; gap: 5px; font-style: normal }
+.gtag { font: 500 9.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--line); color: var(--fg-2) }
+.gtag.acc, .gtag.quiet { color: var(--up); border-color: color-mix(in srgb, var(--up) 45%, transparent) } .gtag.sell { color: var(--down); border-color: color-mix(in srgb, var(--down) 45%, transparent) } .gtag.whale { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent) }
+.gs svg { display: block; margin-left: auto }
+@media (max-width: 900px) {
+  .gfeat { grid-template-columns: 1fr } .gfilt { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .gl.gh { display: none } .gl { grid-template-columns: repeat(3, minmax(0, 1fr)); text-align: left; gap: 10px 12px; padding: 14px }
+  .gl > .gn { grid-column: 1 / -1 } .gl > .gs { display: none }
+  .gl > span[data-l]::before { content: attr(data-l); display: block; font: 500 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px }
+}
+@media (max-width: 520px) { .gfilt { grid-template-columns: 1fr } .gf dl { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 /* link cards, chart jump list */
 .lcards { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px }
 .lcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 18px 44px 18px 18px; text-decoration: none; color: var(--fg) }
@@ -2035,15 +2061,55 @@ function charts() {
   if ($("jump") && hs.length > 3) { $("jump").innerHTML = `<span class="eyebrow">On this page</span>` + hs.map((h, i) => `<button type="button" class="mini" data-jump="${i}">${esc(h.textContent.trim())}</button>`).join("");
     $("jump").onclick = (e) => { const b = e.target.closest("[data-jump]"); if (b) hs[+b.dataset.jump].closest(".panel").scrollIntoView({ behavior: "smooth", block: "start" }); }; }
 }
+// ---------- GROUPS: one row per group, plain traits, click opens the group's card ----------
+const GL = { q: "", sort: "bal", on: new Set(), all: false, cards: false };
+const GTRAITS = [["Size", [["whale", "Whale · 1%+ of supply"], ["large", "Large · 0.25%+"], ["small", "Smaller"]]], ["Doing now · 30 days", [["acc", "Accumulating"], ["sell", "Selling"], ["hold", "Holding"], ["dorm", "Dormant"]]],
+  ["Result", [["profit", "In profit"], ["under", "Underwater"]]], ["Style", [["quiet", "Quiet accumulator"], ["launch", "Since launch"], ["new", "New in 90 days"], ["solo", "Single wallet"]]]];
+const GTAG = { whale: "Whale", large: "Large", acc: "Accumulating", sell: "Selling", hold: "Holding", dorm: "Dormant", quiet: "Quiet accumulator", launch: "Since launch", new: "New", solo: "Single wallet" };
+function glRows() {
+  const E = S.E, acc = new Set((S.accumulators || []).flatMap((a) => a.wallets || [])), asOf = Date.parse(E.asOf);
+  return E.entities.map((e) => { const st = e.status[2], c = e.cost || {}, pl = c.unreal == null ? null : (c.unreal || 0) + (c.realized || 0), t = new Set();
+    t.add(e.pct >= 1 ? "whale" : e.pct >= 0.25 ? "large" : "small");
+    t.add(st === "accumulating" ? "acc" : st === "selling" || st === "distributing" || st === "moving" ? "sell" : st === "dormant" ? "dorm" : "hold");
+    if (pl != null) t.add(pl >= 0 ? "profit" : "under");
+    if (e.members.some((a) => acc.has(a))) t.add("quiet");
+    if (e.firstSeen && e.firstSeen <= "2024-06-30") t.add("launch");
+    if (e.firstSeen && asOf - Date.parse(e.firstSeen) < 90 * 864e5) t.add("new");
+    if (e.n === 1) t.add("solo");
+    return { e, t, pl, d7: ewin(e, 1).net, d30: ewin(e, 2).net }; });
+}
+function glDraw() {
+  const box = $("glbox"); if (!box) return;
+  const R = glRows(), q = GL.q.trim().toLowerCase();
+  const pass = (r) => GTRAITS.every(([, opts]) => { const sel = opts.filter(([k]) => GL.on.has(k)); return !sel.length || sel.some(([k]) => r.t.has(k)); }) && (!q || r.e.name.toLowerCase().includes(q) || r.e.id.includes(q) || r.e.members.some((a) => a.includes(q)));
+  const sorters = { bal: (a, b) => b.e.bal - a.e.bal, buy: (a, b) => b.d7 - a.d7, sell: (a, b) => a.d7 - b.d7, buy30: (a, b) => b.d30 - a.d30, pl: (a, b) => (b.pl ?? -1e18) - (a.pl ?? -1e18), wal: (a, b) => b.e.n - a.e.n };
+  const vis = R.filter(pass).sort(sorters[GL.sort]), shown = GL.all ? vis : vis.slice(0, 30);
+  const chg = (v) => (Math.abs(v) < 0.0005 ? `<span class="flat">±0</span>` : `<span class="${v > 0 ? "up" : "down"}">${v > 0 ? "+" : "−"}${fBb(Math.abs(v))}</span>`);
+  const plc = (v) => (v == null ? `<span class="flat">—</span>` : `<span class="${v >= 0 ? "up" : "down"}">${sgn(v, fU)}</span>`);
+  const tags = (r) => ["whale", "large", "acc", "sell", "quiet", "launch", "new"].filter((k) => r.t.has(k)).slice(0, 3).map((k) => `<span class="gtag ${k}">${GTAG[k]}</span>`).join("");
+  const feat = [["Biggest buyer · 7 days", R.filter((r) => r.d7 > 0.0005).sort(sorters.buy)[0]], ["Biggest seller · 7 days", R.filter((r) => r.d7 < -0.0005).sort(sorters.sell)[0]], ["Largest group", R.slice().sort(sorters.bal)[0]]].filter((f) => f[1]);
+  const kv = (r) => `<dl><div><dt>Holds</dt><dd>${fB(r.e.bal)}</dd></div><div><dt>7 days</dt><dd>${chg(r.d7)}</dd></div><div><dt>Profit / loss</dt><dd>${plc(r.pl)}</dd></div><div><dt>Wallets</dt><dd>${r.e.n}</dd></div></dl>`;
+  box.innerHTML = `<div class="gfeat">${feat.map(([l, r]) => `<button type="button" class="gf" data-pnl="${r.e.id}"><span class="eyebrow">${l}</span><b>${nm(r.e.name)}</b>${kv(r)}</button>`).join("")}</div>
+    <div class="gfilt">${GTRAITS.map(([g, opts]) => `<div><span class="eyebrow">${g}</span><div>${opts.map(([k, l]) => `<label class="gchk"><input type="checkbox" data-gt="${k}"${GL.on.has(k) ? " checked" : ""}><span>${l}</span></label>`).join("")}</div></div>`).join("")}</div>
+    <div class="ctl" style="margin:12px 0 10px"><span class="gcount"><b>${vis.length}</b> of ${R.length} groups</span><select class="q" id="glsort" aria-label="Sort">${[["bal", "Largest"], ["buy", "Bought most · 7 days"], ["sell", "Sold most · 7 days"], ["buy30", "Bought most · 30 days"], ["pl", "Best profit"], ["wal", "Most wallets"]].map(([k, l]) => `<option value="${k}"${k === GL.sort ? " selected" : ""}>Sort: ${l}</option>`).join("")}</select>
+      <input class="q" id="glq" type="search" placeholder="Search a name or address" value="${esc(GL.q)}" aria-label="Search groups">${GL.on.size || GL.q ? `<button type="button" class="mini" data-gclear>Clear filters</button>` : ""}</div>
+    <div class="glist"><div class="gl gh"><span>Group</span><span>Holds</span><span>7 days</span><span>30 days</span><span>Profit / loss</span><span>Wallets</span><span>90 days</span></div>
+      ${shown.map((r) => `<button type="button" class="gl" data-pnl="${r.e.id}"><span class="gn"><b>${nm(r.e.name)}</b><i>${tags(r)}</i></span><span data-l="Holds">${fB(r.e.bal)}<small>${fPct(r.e.pct, 2)}</small></span><span data-l="7 days">${chg(r.d7)}</span><span data-l="30 days">${chg(r.d30)}</span><span data-l="Profit / loss">${plc(r.pl)}</span><span data-l="Wallets">${r.e.n}</span><span class="gs">${spark(r.e.series, r.d30 > 0.0005 ? "--up" : r.d30 < -0.0005 ? "--down" : "--fg-2")}</span></button>`).join("") || `<p class="sub" style="padding:14px">No group matches these filters.</p>`}</div>
+    ${!GL.all && vis.length > 30 ? `<button type="button" class="mini" data-gall style="margin-top:12px">Show all ${vis.length}</button>` : ""}`;
+  box.onchange = (ev) => { const t = ev.target.closest("[data-gt]"); if (t) { if (t.checked) GL.on.add(t.dataset.gt); else GL.on.delete(t.dataset.gt); GL.all = false; glDraw(); } else if (ev.target.id === "glsort") { GL.sort = ev.target.value; glDraw(); } };
+  box.onclick = (ev) => { if (ev.target.closest("[data-gall]")) { GL.all = true; glDraw(); } else if (ev.target.closest("[data-gclear]")) { GL.on.clear(); GL.q = ""; glDraw(); } };
+  const qi = $("glq"); qi.oninput = () => { GL.q = qi.value; const p2 = qi.selectionStart; glDraw(); const n = $("glq"); n.focus(); n.setSelectionRange(p2, p2); };
+}
 function groups() {
-  pageHead("Groups", "Who else is here", "Wallets that belong together, shown as one owner: what each group holds, whether it is growing or shrinking, and how it got there. Open any card for its wallets, trades and profit and loss.");
+  pageHead("Groups", "Who else is here", "Wallets that belong together, shown as one owner. Tick what you are looking for, then open any group for its wallets, trades and profit and loss.");
   grid();
   const E = S.E;
   if (!E || !E.entities) { card({ title: "Groups", wide: true, body: unavailable("The groups arrive with the next scheduled run.") }); return; }
-  card({ title: "All groups", q: "Which groups are growing, shrinking or only moving coins between their own wallets?", wide: true, key: true, body: `<div id="ecbox"></div>`,
-    note: "Each card is a group of wallets tied together by the linking rules (inferred, not proven). Change counts only GME entering or leaving the group. Red means coins left through the DEX or to an exchange. Groups are a floor on what one owner controls." });
+  card({ title: "All groups", wide: true, key: true, body: `<div id="glbox"></div>`,
+    note: "A group is a set of wallets tied together by the linking rules (inferred, not proven), and a floor on what one owner controls. Change counts only GME entering or leaving the group, never moves between its own wallets. Profit / loss = realized on sales plus the gain or loss on what it still holds, at today's price. Traits describe what a group did; they are not advice." });
+  card({ title: "Detailed cards", wide: true, body: `<details class="nmev"><summary class="mini">Show every group as a detailed card</summary><div id="ecbox" style="margin-top:12px"></div></details>` });
   accCards();
-  draws.push(drawCards);
+  draws.push(glDraw); draws.push(drawCards);
 }
 function buyers() {
   pageHead("Who's buying", "Who is buying GME", "Every buyer and seller of the last day, week and month, the owners quietly building a position over 90 days, and the fresh wallets coins are being parked in.");
