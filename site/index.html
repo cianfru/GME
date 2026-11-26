@@ -158,6 +158,17 @@ main { padding-bottom: 60px }
 .trkbar b { font-weight: 600 } .trkbar .sp { flex: 1 }
 .trk td, .trk th { white-space: nowrap } .trk .own { color: var(--muted) }
 .trk .wt { font: 600 11px var(--mono); color: var(--accent); margin-right: 6px }
+/* plain-language layer: chart tiles, technical tags */
+.tech { margin-left: 8px; padding: 1px 5px; border: 1px solid var(--line); font: 500 9px var(--mono); letter-spacing: .1em; color: var(--muted); vertical-align: 1px }
+.ctiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px }
+.ctile { display: flex; flex-direction: column; gap: 8px; padding: 18px; text-decoration: none; color: var(--fg); min-height: 150px }
+.ctile > b { font: 500 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--fg-2) }
+.ctile p { margin: 0; font: 400 17px/1.4 var(--sans); color: var(--fg-2) } .ctile p b { color: var(--fg); font-weight: 600 } .ctile p b.up { color: var(--up) } .ctile p b.down { color: var(--down) }
+.ctile .csp { margin-top: auto; opacity: .9 } .ctile .csp svg { display: block }
+.ctile i { font: 500 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; font-style: normal; color: var(--accent) }
+.ctile:hover { border-color: var(--accent) }
+@media (max-width: 1000px) { .ctiles { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 600px) { .ctiles { grid-template-columns: 1fr } .ctile { min-height: 0 } .ctile p { font-size: 16px } }
 /* groups list */
 .gfeat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px }
 .gf { text-align: left; background: color-mix(in srgb, var(--fg) 3%, transparent); border: 1px solid var(--line); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; color: var(--fg); cursor: pointer; font: inherit; min-width: 0 }
@@ -692,8 +703,8 @@ const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
 const PAGES_PUBLIC = [["overview", "Overview"], ["buyers", "Who's buying"], ["groups", "Groups"], ["charts", "Charts"], ["visualizer", "Explorer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
-const CHARTS = [["market", "Market"], ["holders", "Holders"], ["crowd", "Buyers and sellers"], ["transfers", "Activity"]];
-let csub = "market";
+const CHARTS = [["all", "At a glance"], ["market", "Market"], ["holders", "Holders"], ["crowd", "Buyers and sellers"], ["transfers", "Activity"]];
+let csub = "all", cjump = null;
 let PAGES = [["overview", "Overview"], ["buyers", "Who's buying"], ["groups", "Groups"], ["charts", "Charts"], ["entities", "Desk"], ["visualizer", "Explorer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
 // Group names end in a short handle: the last four characters of the wallet the group is named after ("Accumulator
 // efdb", "Linked group 847d").
@@ -783,7 +794,7 @@ function parseHash() {
   if (["holders", "crowd", "transfers"].includes(p)) { s = p; p = "charts"; history.replaceState(null, "", "#charts/" + s); }
   page = PAGES.some((x) => x[0] === p) ? p : "overview";
   if (p && page !== p) history.replaceState(null, "", "#overview");
-  if (page === "charts") csub = CHARTS.some((x) => x[0] === s) ? s : "market";
+  if (page === "charts") csub = CHARTS.some((x) => x[0] === s) ? s : "all";
   if (page === "entities") sub = SUBS.some((x) => x[0] === s) ? s : "cards";
   if (page === "wallet") { const m = W_ADDR.exec(s || ""); wAddr = m ? m[0].toLowerCase() : ""; wAll = false; }
 }
@@ -906,12 +917,46 @@ const add = (html) => $("view").insertAdjacentHTML("beforeend", html);
 const grid = (c3) => add(`<div class="grid${c3 ? " c3" : ""}"></div>`);
 const lastGrid = () => { const g = $("view").querySelectorAll(".grid"); return g[g.length - 1]; };
 function sect(title, desc, c3) { add(`<div class="sect"><h2>${esc(title)}</h2>${desc ? `<p>${desc}</p>` : ""}</div>`); grid(c3); }
+// Plain words first: the technical name of a measure stays visible as a small tag, never as the title.
+const PLAIN = {
+  "MVRV": ["Price against what holders paid", "Is GME trading above or below what its holders paid on average?", "MVRV"],
+  "Supply in profit": ["Coins in profit", "How much of the GME in wallets was bought cheaper than today's price?"],
+  "GME in the pool": ["Coins left in the market pool", "Are coins being bought out of the pool, or sold back into it?"],
+  "GME in the Uniswap pool": ["Coins left in the market pool", "Are coins being bought out of the pool, or sold back into it?"],
+  "Concentration": ["How concentrated it is", "How much do the biggest wallets hold?"],
+  "Holders": ["Number of holders", "Is the holder base growing?"],
+  "New wallets per day": ["New holders per day", "Are new people arriving?"],
+  "Holders by position size": ["How big the holders are", "How many small, medium and large holders are there?"],
+  "Holding age (HODL waves)": ["How long coins have been held", "Are holders patient, or are coins changing hands?", "HODL waves"],
+  "Market cap vs holders' cost": ["Market cap against what holders paid", "Is the market above or below what holders paid?"],
+  "Cost basis of held supply (today)": ["What today's holders paid", "At which prices were the coins in wallets bought?", "URPD"],
+  "Cost basis of held supply": ["What today's holders paid", "At which prices were the coins in wallets bought?", "URPD"],
+  "Cost basis over time": ["What holders paid, over time", "How did the prices holders paid shift as coins changed hands?"],
+  "Holders by arrival quarter": ["When today's holders arrived", "Which waves of buyers are still here?"],
+  "Net DEX flow": ["Money in minus money out", "Is more being bought than sold?"],
+  "DEX buys vs sells": ["Bought against sold", "How many dollars were bought and sold each day?"],
+  "Buyers vs sellers": ["Buyers against sellers", "Are there more people buying or selling?"],
+  "Sales in profit or at a loss": ["Selling at a gain or at a loss", "Are sellers cashing out gains or cutting losses?"],
+  "SOPR (7-day average)": ["Are sellers selling at a profit?", "Above 1 sellers got more than they paid; below 1 they sold at a loss.", "SOPR"],
+  "Net realized profit / loss": ["Profit and loss taken by sellers", "How many dollars of gain or loss did sellers lock in each day?"],
+  "Liveliness": ["Are old coins moving?", "Rising means long-held coins are being spent; falling means holders are sitting tight.", "Liveliness"],
+  "Valuation composite": ["Cheap or expensive, in one number", "Where does GME sit between its cheapest and most expensive days?"],
+  "Transfer activity": ["How much GME is moving", "How busy is the token, and which days stood out?"],
+  "Unusual days": ["Days that stood out", "When did far more GME move than usual?"],
+  "Largest movements · 90 days": ["Biggest transfers · 90 days", "Which single transfers were the largest?"],
+  "GME on known exchanges": ["Coins on exchanges", "How much GME sits on exchanges?"],
+  "Smart money owners": ["Owners who made money before", "Who sold well in the past, and what do they hold now?"],
+  "Pool and overhang calculator": ["What would it take to reach a market cap?", "Pick a market cap and see the buying it needs."],
+  "Reading": ["In short", null],
+  "Who's moving": ["Who's moving", null],
+};
 function card({ title, q, sub, val, wide, note, body, key, id: fixedId }) {
-  const id = fixedId || "c" + (++cid);
+  const id = fixedId || "c" + (++cid), P0 = PLAIN[title]; let tech = "";
+  if (P0) { if (P0[2]) tech = `<span class="tech">${P0[2]}</span>`; title = P0[0]; if (!q && P0[1]) q = P0[1]; }
   lastGrid().insertAdjacentHTML("beforeend",
-    `<section class="panel card${wide ? " wide" : ""}${key ? " key" : ""}"><header class="ph"><div><h3>${esc(title)}</h3>${q ? `<p class="q">${q}</p>` : ""}</div>${val ? `<div class="pv">${val}</div>` : ""}</header>` +
+    `<section class="panel card${wide ? " wide" : ""}${key ? " key" : ""}"><header class="ph"><div><h3>${esc(title)}${tech}</h3>${q ? `<p class="q">${q}</p>` : ""}</div>${val ? `<div class="pv">${val}</div>` : ""}</header>` +
     (sub ? `<p class="sub">${sub}</p>` : "") + (body ?? `<div class="chart" id="${id}"></div><div class="legend" id="${id}-l"></div>`) +
-    (note ? `<details class="about"><summary>Method</summary><p>${note}</p></details>` : "") + `</section>`);
+    (note ? `<details class="about"><summary>How this is measured</summary><p>${note}</p></details>` : "") + `</section>`);
   return id;
 }
 const rangeCtl = () => `<div class="seg" role="group" aria-label="Chart range">${RANGES.map(([l, d]) => `<button type="button" data-r="${d}">${l}</button>`).join("")}</div>`;
@@ -2051,15 +2096,44 @@ function accCards() {
 }
 // Public page: who is buying. The movers board (every holder, by owner), the quiet accumulators and the fresh
 // holding wallets fed by buy-and-forward wallets.
+function chartTiles() {       // one sentence per chart, in plain words, computed from the latest data
+  const L = (k) => lastVal(col(k)), d = (k, n) => { const a = col(k); return lastVal(a) - ago(a, n); };
+  const net7 = sumLast(col("buyUsd"), 7) - sumLast(col("sellUsd"), 7), age = col("age"), a1 = age[lastIdx(age)]?.[4], C = composite(), cv = lastVal(C.comp), so = d3.mean(col("sopr").slice(-7).filter((x) => x != null)), pl7 = d("pool", 7);
+  return [
+    ["market", "Price against what holders paid", L("mvrv") == null ? "" : `GME trades at <b>${L("mvrv").toFixed(2)}×</b> what its holders paid on average.`, col("mvrv"), "--s1"],
+    ["market", "Coins in profit", L("sip") == null ? "" : `<b>${fPct(L("sip"), 0)}</b> of the coins in wallets were bought below today's price.`, col("sip"), "--s3"],
+    ["market", "Coins left in the market pool", `<b>${fBb(L("pool"))}</b> GME sit in the pool, ${Math.abs(pl7) < 0.005 ? "unchanged" : (pl7 < 0 ? "down " : "up ") + fBb(Math.abs(pl7))} in 7 days${pl7 < -0.005 ? ": coins are being bought out" : pl7 > 0.005 ? ": coins are being sold back" : ""}.`, col("pool"), "--s7"],
+    ["transfers", "Money in minus money out", `In 7 days buyers put in <b class="${cls(net7)}">${fU(Math.abs(net7))} ${net7 >= 0 ? "more" : "less"}</b> than sellers took out.`, col("buyUsd").map((v, i) => (v ?? 0) - (col("sellUsd")[i] ?? 0)), net7 >= 0 ? "--up" : "--down"],
+    ["holders", "Number of holders", `<b>${fN(L("holders"))}</b> wallets hold GME, ${sgn(d("holders", 30), fN)} in 30 days.`, col("holders"), "--s1"],
+    ["holders", "New holders per day", `<b>${fN(sumLast(col("newWallets"), 30))}</b> new wallets arrived in the last 30 days.`, col("newWallets"), "--s3"],
+    ["holders", "How concentrated it is", `The 100 largest wallets hold <b>${fPct(L("top100"), 0)}</b> of the coins in wallets.`, col("top100"), "--s4"],
+    ["holders", "How long coins have been held", a1 == null ? "" : `<b>${fPct(a1, 0)}</b> of coins have not moved for over a year.`, age.map((x) => (x ? x[4] : null)), "--s7"],
+    ["transfers", "Are sellers selling at a profit?", so == null ? "" : `Over the last 7 days sellers got <b class="${so >= 1 ? "up" : "down"}">${so.toFixed(2)}×</b> what they paid: ${so >= 1 ? "they sold at a gain" : "they sold at a loss"}.`, col("sopr"), so >= 1 ? "--up" : "--down"],
+    ["transfers", "How much GME is moving", IDX ? `<b>${fN(IDX.tx168h)}</b> transfers in 7 days by ${fN(IDX.active168h)} wallets.` : "", col("tx"), "--s1"],
+    ["crowd", "Cheap or expensive, in one number", cv == null ? "" : `Score <b>${Math.round(100 * cv)}</b> of 100, where 0 is the cheapest it has been and 100 the most expensive.`, C.comp, "--accent"],
+    ["crowd", "Selling at a gain or at a loss", "Are sellers cashing out gains or cutting losses, day by day.", null, null],
+    ["crowd", "What would it take to reach a market cap?", "Pick a market cap and see how much buying it needs.", null, null],
+    ["holders", "What today's holders paid", L("sip") == null ? "" : `<b>${fPct(100 - L("sip"), 0)}</b> of coins are held at a loss at today's price.`, null, null],
+  ].filter((t) => t[2]);
+}
 function charts() {
+  const sub2 = () => { const ph = document.querySelector("#view .phead"); if (!ph) return; const k = ph.querySelector(".eyebrow"); if (k) k.textContent = "Charts";
+    ph.insertAdjacentHTML("afterend", `<nav class="subnav" aria-label="Chart groups">${CHARTS.map(([k2, l]) => `<a href="#charts/${k2}" class="${k2 === csub ? "on" : ""}">${l}</a>`).join("")}</nav><div class="jump" id="jump"></div>`); };
+  if (csub === "all") {
+    pageHead("Charts", "GME at a glance", "Each card answers one question in a sentence. Open a card for the full chart.");
+    sub2();
+    const sp = (v, c) => { const a = (v || []).filter((x) => x != null && isFinite(x)).slice(-180); return a.length > 5 ? spark(a, c).replace('width="110" height="26"', 'width="100%" height="44" preserveAspectRatio="none"') : ""; };
+    add(`<div class="ctiles">${chartTiles().map(([tab, t, a, v, c]) => `<a class="panel ctile" href="#charts/${tab}" data-cj="${esc(t)}"><b>${esc(t)}</b><p>${a}</p>${v ? `<div class="csp">${sp(v, c)}</div>` : ""}<i>Open the chart →</i></a>`).join("")}</div>`);
+    document.querySelector(".ctiles").onclick = (e) => { const a = e.target.closest("[data-cj]"); if (a) cjump = a.dataset.cj; };
+    return;
+  }
   if (csub === "market") { pageHead("Charts", "Market", "Money in and out on the DEX, the holder base, and where holders stand against their own cost.", true); grid(); primary(); marketCards(); }
   else ({ holders, crowd, transfers })[csub]();
-  const ph = document.querySelector("#view .phead");
-  if (ph) { const k = ph.querySelector(".eyebrow"); if (k) k.textContent = "Charts";
-    ph.insertAdjacentHTML("afterend", `<nav class="subnav" aria-label="Chart groups">${CHARTS.map(([k2, l]) => `<a href="#charts/${k2}" class="${k2 === csub ? "on" : ""}">${l}</a>`).join("")}</nav><div class="jump" id="jump"></div>`); }
-  const hs = [...document.querySelectorAll("#view .panel .ph h3")].filter((h) => h.textContent.trim());
-  if ($("jump") && hs.length > 3) { $("jump").innerHTML = `<span class="eyebrow">On this page</span>` + hs.map((h, i) => `<button type="button" class="mini" data-jump="${i}">${esc(h.textContent.trim())}</button>`).join("");
+  sub2();
+  const hs = [...document.querySelectorAll("#view .panel .ph h3")].filter((h) => h.textContent.trim()), txt = (h) => (h.firstChild ? h.firstChild.textContent : h.textContent).trim();
+  if ($("jump") && hs.length > 3) { $("jump").innerHTML = `<span class="eyebrow">On this page</span>` + hs.map((h, i) => `<button type="button" class="mini" data-jump="${i}">${esc(txt(h))}</button>`).join("");
     $("jump").onclick = (e) => { const b = e.target.closest("[data-jump]"); if (b) hs[+b.dataset.jump].closest(".panel").scrollIntoView({ behavior: "smooth", block: "start" }); }; }
+  if (cjump) { const h = hs.find((x) => txt(x) === cjump); cjump = null; if (h) setTimeout(() => h.closest(".panel").scrollIntoView({ block: "start" }), 120); }
 }
 // ---------- GROUPS: one row per group, plain traits, click opens the group's card ----------
 const GL = { q: "", sort: "bal", on: new Set(), all: false, cards: false };
@@ -2418,7 +2492,8 @@ const mvAge = (M) => agoTxt((Date.now() - Date.parse(M.asOf)) / 36e5);
 const mvPx = (W) => { const p = W.bars.map((b) => b[4]).filter((v) => v != null); return p.length ? [p[0], p[p.length - 1], d3.min(W.bars, (b) => b[5] ?? b[4]), d3.max(W.bars, (b) => b[6] ?? b[4])] : null; };
 function moversCard() {
   if (!S.MV) { card({ title: "Who's moving", wide: true, key: true, body: unavailable("This board arrives with the next scheduled run.") }); return; }
-  card({ title: "Who's moving", q: "Who bought, who sold, who moved GME to or from exchanges, and how much: by owner, not by wallet.", wide: true, key: true, body: `<div id="mvbox"></div>`,
+  const t0 = S.MV.windows["24h"].tot, n0 = t0.buy - t0.sell;
+  card({ title: "Who's moving", q: `In the last 24 hours ${fN(t0.buyers)} owners bought ${fU(t0.buy)} of GME and ${fN(t0.sellers)} sold ${fU(t0.sell)}. ${Math.abs(n0) < 1 ? "Buying and selling are even." : n0 > 0 ? "Buyers are ahead by " + fU(n0) + "." : "Sellers are ahead by " + fU(-n0) + "."}`, wide: true, key: true, body: `<div id="mvbox"></div>`,
     note: "Every holder, not only the tracked groups. An owner is a tracked group, else a linked group, else the wallet itself; GME moving between one owner's own wallets is left out. $ is the exact execution price for DEX trades matched to a pool swap, otherwise that day's close. Transfers under $1 are ignored. A wallet that bought and sold in the same window shows both (often a quick flip). Updated with every run of the terminal (about every 4 hours)." });
   draws.push(drawMovers);
 }
