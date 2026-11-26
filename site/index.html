@@ -158,6 +158,15 @@ main { padding-bottom: 60px }
 .trkbar b { font-weight: 600 } .trkbar .sp { flex: 1 }
 .trk td, .trk th { white-space: nowrap } .trk .own { color: var(--muted) }
 .trk .wt { font: 600 11px var(--mono); color: var(--accent); margin-right: 6px }
+/* link cards, chart jump list */
+.lcards { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px }
+.lcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 18px 44px 18px 18px; text-decoration: none; color: var(--fg) }
+.lcard b { font: 600 15px var(--sans) } .lcard span { font-size: 13px; color: var(--fg-2); line-height: 1.45 }
+.lcard i { position: absolute; right: 16px; top: 16px; font-style: normal; color: var(--accent) } .lcard:hover { border-color: var(--accent) }
+.jump { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -4px 0 16px }
+.jump .eyebrow { margin-right: 6px }
+@media (max-width: 900px) { .lcards { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
+@media (max-width: 520px) { .lcards { grid-template-columns: 1fr } .jump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none } .jump .mini { flex: none } }
 /* public landing hero */
 .hp-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 40px; align-items: end }
 .hp-top h1 { margin: 6px 0 0 }
@@ -656,8 +665,10 @@ let S, T, DD, N, IDX = null, AGEH = 0, STALE = false, PARTIAL = false;
 const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
-const PAGES_PUBLIC = [["overview", "Overview"], ["buyers", "Who's buying"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
-let PAGES = [["overview", "Overview"], ["holders", "Holders"], ["crowd", "Crowd"], ["transfers", "Transfers"], ["entities", "Entities"], ["visualizer", "Visualizer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
+const PAGES_PUBLIC = [["overview", "Overview"], ["buyers", "Who's buying"], ["groups", "Groups"], ["charts", "Charts"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
+const CHARTS = [["market", "Market"], ["holders", "Holders"], ["crowd", "Buyers and sellers"], ["transfers", "Activity"]];
+let csub = "market";
+let PAGES = [["overview", "Overview"], ["buyers", "Who's buying"], ["groups", "Groups"], ["charts", "Charts"], ["entities", "Desk"], ["visualizer", "Visualizer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
 // Group names end in a short handle: the last four characters of the wallet the group is named after ("Accumulator
 // efdb", "Linked group 847d").
 const nm = (s) => esc(s).replace(/(^|\s)([0-9a-f]{4,6})$/, (m, sp, h) => (sp ? "&nbsp;" : "") + `<span class="hd">${h}</span>`);   // nbsp: flex buttons drop a plain trailing space
@@ -718,7 +729,7 @@ function init() {
   PARTIAL = !!(IDX && IDX.lastTransfer && IDX.lastTransfer.slice(0, 10) === T.daily.d[N - 1]);
   $("nav").innerHTML = PAGES.map(([id, l]) => `<a href="#${id}" data-p="${id}">${l}</a>`).join("");
   const hs = $("hstat"); hs.classList.toggle("stale", STALE);
-  hs.innerHTML = `<i aria-hidden="true"></i><span><span class="hs-pre">Data </span>${STALE ? "stale" : "current"}</span><span class="hs-age">· ${agoTxt(AGEH)}</span>`;
+  hs.innerHTML = `<span><span class="hs-pre">Data </span>${STALE ? "stale" : "current"}</span><span class="hs-age">· ${agoTxt(AGEH)}</span>`;
   hs.dataset.tip = `Last indexed ${fdt(at)} (${agoTxt(AGEH)}). The index is rebuilt every 4 hours (fully once a day); it is marked stale after 12 hours without a new run.`;
   $("asof").textContent = "Last indexed " + fdt(at) + (STALE ? " · stale" : "");
   const themeLabel = () => { $("theme").textContent = document.documentElement.dataset.theme === "dark" ? "LIGHT" : "DARK"; };
@@ -742,9 +753,11 @@ function init() {
 function parseHash() {
   let h = location.hash.slice(1);
   if (LEGACY[h]) { h = LEGACY[h]; history.replaceState(null, "", "#" + h); }
-  const [p, s] = h.split("/");
+  let [p, s] = h.split("/");
+  if (["holders", "crowd", "transfers"].includes(p)) { s = p; p = "charts"; history.replaceState(null, "", "#charts/" + s); }
   page = PAGES.some((x) => x[0] === p) ? p : "overview";
   if (p && page !== p) history.replaceState(null, "", "#overview");
+  if (page === "charts") csub = CHARTS.some((x) => x[0] === s) ? s : "market";
   if (page === "entities") sub = SUBS.some((x) => x[0] === s) ? s : "cards";
   if (page === "wallet") { const m = W_ADDR.exec(s || ""); wAddr = m ? m[0].toLowerCase() : ""; wAll = false; }
 }
@@ -783,7 +796,7 @@ function render() {
   document.body.classList.toggle("vzmode", page === "visualizer");
   if (page !== "visualizer" && VZ.sim) { VZ.sim.stop(); VZ.sim = null; }
   if (page !== "visualizer" && VZ.keys) { removeEventListener("keydown", VZ.keys); VZ.keys = null; }
-  ({ overview, buyers, holders, crowd, transfers, entities, visualizer, wallet, methodology })[page]();
+  ({ overview, buyers, groups, charts, entities, visualizer, wallet, methodology })[page]();
   if (!DESK) pubScrub(); else document.querySelectorAll('a[href="/study.html"]').forEach((a) => (a.href = "/desk/study.html"));
   document.title = (page === "overview" ? "GME on Ethereum" : PAGES.find((p) => p[0] === page)[1] + " · GME on Ethereum") + " · Terminal";
   markRange(); redraw(); qTables();
@@ -911,7 +924,7 @@ function drawTS(id, opt, view = {}) {
   const base = P0.map((p) => (Array.isArray(p.h) ? p.h[mob ? 1 : 0] : p.h ?? (mob ? 215 : 250)));
   const lh = P0.map((p) => (p.label ? 22 : 0));
   const fixed = m.t + m.b + d3.sum(lh) + gap * (P0.length - 1);
-  const scale = view.fitH ? Math.max(0.55, (view.fitH - fixed - NAVH - 10) / d3.sum(base)) : mob ? 1.4 : 1.7;
+  const scale = view.fitH ? Math.max(0.55, (view.fitH - fixed - NAVH - 10) / d3.sum(base)) : mob ? 1.6 : 2.0;
   const hs = base.map((h) => Math.round(h * scale));
   const home = () => [startIdx(), N - 1];
   const win = () => { const z = ZOOM.get(id); return z ? z : home(); };
@@ -1156,10 +1169,17 @@ function closeChart() {
 
 // ---------- OVERVIEW ----------
 function overview() {
-  if (DESK) { hero(); metrics(); } else heroPublic();
-  grid(); primary();
-  if (DESK) { sect("Signals", DK.sig); insiderCard(false); alertsCard(false); moversMini(); changesCard(true); }
-  else { sect("Signals", "Who bought and sold in the last 24 hours, and what changed."); moversMini(); changesCard(true); }
+  if (!DESK) { heroPublic(); grid(); moversMini(); changesCard(true); linkCards(); return; }
+  hero(); metrics(); grid(); primary();
+  sect("Signals", DK.sig); insiderCard(false); alertsCard(false); moversMini(); changesCard(true);
+  marketCards();
+}
+function linkCards() {
+  const E = (S.E && S.E.entities) || [], A = S.accumulators || [];
+  const it = [["#buyers", "Who's buying", "Every buyer and seller of the last day, week and month."], ["#groups", "Groups", `${E.length} groups of linked wallets, ${A.length} of them quietly accumulating.`], ["#charts", "Charts", "Price against cost, holders, buyers and sellers, activity."], ["#wallet", "Wallet", "Paste any address: holdings, profit and loss, every transfer."]];
+  add(`<div class="lcards">${it.map(([h, t, d]) => `<a class="panel lcard" href="${h}"><b>${t}</b><span>${d}</span><i>→</i></a>`).join("")}</div>`);
+}
+function marketCards() {
   sect("Market structure", "Where holders stand against their own cost, and the pool that sets the price.", true);
   const mv = col("mvrv"); let id = card({ title: "MVRV", val: valDelta(lastVal(mv), ago(mv, 30), (v) => v.toFixed(3) + "×", (v) => v.toFixed(3)), sub: "Price ÷ realized price. Below 1× the average holder is underwater." });
   ts(id, { h: [150, 140], fmt: (v) => v.toFixed(2) + "×", log: true, ref: [{ y: 1, label: "break-even" }], series: [{ label: "MVRV", color: "--s1", v: mv, type: "line" }] });
@@ -1198,8 +1218,6 @@ function heroPublic() {
     ["Last indexed", d3.utcFormat("%H:%M UTC")(at), `${fd(at)} · ${agoTxt(AGEH)}`, "When the scheduled job last rebuilt the data (every 4 hours). Marked stale after 12 hours."],
   ];
   add(`<section class="hero">
-    <div class="sline"><span>Ethereum mainnet</span><span class="sep">·</span><span>Every transfer since launch</span><span class="sep">·</span>
-      <span class="dstat${STALE ? " stale" : ""}"><i aria-hidden="true"></i>${STALE ? "Data stale · last indexed " + agoTxt(AGEH) : "Data current · " + agoTxt(AGEH)}</span></div>
     <div class="hp-top"><div><h1>GME <span>on Ethereum</span></h1></div>
       <div class="hp-mc"><b>${fP(p0)}</b><span>market cap · ${[dd(c1, fPct, "24h"), dd(c7, fPct, "7d"), dd(c30, fPct, "30d")].filter(Boolean).join(" · ")}</span></div></div>
     <p class="hp-read">${read}</p>
@@ -1207,7 +1225,7 @@ function heroPublic() {
         <span class="seg" id="hpz">${["ALL", "1Y", "90D"].map((l, i) => `<button class="mini${i === HZ ? " on" : ""}" type="button" data-hz="${i}">${l}</button>`).join("")}</span></div>
       <div id="hpc"></div>
       <div class="hp-key"><span><i class="ln"></i>Market cap</span><span><i class="ln d"></i>Holders' avg cost</span>${HZN.map(([n, c]) => `<span><i style="background:var(${c});opacity:.55"></i>${n}</span>`).join("")}</div></div>
-    <div class="hp-cta"><a class="pri" href="#buyers">Who's buying →</a><a href="#wallet">Look up a wallet →</a><a href="#crowd">Cost basis and crowd →</a><a href="#methodology">How it's built →</a></div>
+    <div class="hp-cta"><a class="pri" href="#buyers">Who's buying →</a><a href="#wallet">Look up a wallet →</a><a href="#groups">Groups →</a><a href="#charts">All charts →</a><a href="#methodology">How it's built →</a></div>
     <div class="contract"><span class="eyebrow">Contract</span><span class="mono full">${TOKEN}</span><span class="mono shortc">${short(TOKEN)}</span><button class="mini" type="button" data-copy="${TOKEN}">Copy</button><a class="mini" href="${ETH(TOKEN)}" target="_blank" rel="noopener">Etherscan ↗</a></div>
   </section>
   <section class="panel metrics collapsed" id="metrics"><div class="mgrid">${items.map(([k, v, d, tp], i) => `<div class="m${i >= 4 ? " sec" : ""}"><span class="mk" data-tip="${esc(tp)}" tabindex="0">${k}</span><span class="mv">${v}</span><span class="md">${d}</span></div>`).join("")}</div></section>
@@ -2007,9 +2025,30 @@ function accCards() {
 }
 // Public page: who is buying. The movers board (every holder, by owner), the quiet accumulators and the fresh
 // holding wallets fed by buy-and-forward wallets.
+function charts() {
+  if (csub === "market") { pageHead("Charts", "Market", "Money in and out on the DEX, the holder base, and where holders stand against their own cost.", true); grid(); primary(); marketCards(); }
+  else ({ holders, crowd, transfers })[csub]();
+  const ph = document.querySelector("#view .phead");
+  if (ph) { const k = ph.querySelector(".eyebrow"); if (k) k.textContent = "Charts";
+    ph.insertAdjacentHTML("afterend", `<nav class="subnav" aria-label="Chart groups">${CHARTS.map(([k2, l]) => `<a href="#charts/${k2}" class="${k2 === csub ? "on" : ""}">${l}</a>`).join("")}</nav><div class="jump" id="jump"></div>`); }
+  const hs = [...document.querySelectorAll("#view .panel .ph h3")].filter((h) => h.textContent.trim());
+  if ($("jump") && hs.length > 3) { $("jump").innerHTML = `<span class="eyebrow">On this page</span>` + hs.map((h, i) => `<button type="button" class="mini" data-jump="${i}">${esc(h.textContent.trim())}</button>`).join("");
+    $("jump").onclick = (e) => { const b = e.target.closest("[data-jump]"); if (b) hs[+b.dataset.jump].closest(".panel").scrollIntoView({ behavior: "smooth", block: "start" }); }; }
+}
+function groups() {
+  pageHead("Groups", "Who else is here", "Wallets that belong together, shown as one owner: what each group holds, whether it is growing or shrinking, and how it got there. Open any card for its wallets, trades and profit and loss.");
+  grid();
+  const E = S.E;
+  if (!E || !E.entities) { card({ title: "Groups", wide: true, body: unavailable("The groups arrive with the next scheduled run.") }); return; }
+  card({ title: "All groups", q: "Which groups are growing, shrinking or only moving coins between their own wallets?", wide: true, key: true, body: `<div id="ecbox"></div>`,
+    note: "Each card is a group of wallets tied together by the linking rules (inferred, not proven). Change counts only GME entering or leaving the group. Red means coins left through the DEX or to an exchange. Groups are a floor on what one owner controls." });
+  accCards();
+  draws.push(drawCards);
+}
 function buyers() {
   pageHead("Who's buying", "Who is buying GME", "Every buyer and seller of the last day, week and month, the owners quietly building a position over 90 days, and the fresh wallets coins are being parked in.");
-  grid(); moversCard(); accCards();
+  grid(); moversCard();
+  add(`<p class="sub" style="grid-column:1/-1;margin:4px 2px">The owners building a position quietly over 90 days are on the <a href="#groups">Groups</a> page.</p>`);
 }
 //@desk
 function entWatch() {
