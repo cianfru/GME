@@ -73,3 +73,18 @@ test("the built public files carry no private name or member list (when dist/ ex
     assert.ok(readdirSync("dist/w").length > 4000);
   }
 });
+
+import { splitPage } from "../scripts/public-site.mjs";
+test("splitPage: the public page loses owner code and gets stubs; the desk page keeps it", () => {
+  const src = ["<script>", "const A = 1;", "//@desk", "function secret(x) {", "  return 'fbb4';", "}", "const NAMES = { a: 1 };", "const f2 = (x) => x;", "//@end", "//@pub", "const NAMES2 = [];", "//@end", "const t = `<p>ok</p><!--@desk--><p>owner</p><!--@end-->`;", "</script>"].join("\n");
+  const { pub, desk } = splitPage(src);
+  assert.ok(!/fbb4|owner|@desk|@end/.test(pub));
+  assert.match(pub, /function secret\(\) \{ return ""; \}/); assert.match(pub, /const NAMES = \{\};/); assert.match(pub, /const f2 = \(\) => "";/); assert.match(pub, /const NAMES2 = \[\];/);
+  assert.match(desk, /return 'fbb4'/); assert.match(desk, /<p>owner<\/p>/); assert.ok(!/NAMES2|@desk|@pub/.test(desk));
+  assert.throws(() => splitPage("//@desk\nx"));
+});
+test("the built public page has no private name; the desk page is behind /desk/", () => {
+  if (!existsSync(new URL("../dist/index.html", import.meta.url))) return;
+  assert.ok(!/fbb4/i.test(readFileSync(new URL("../dist/index.html", import.meta.url), "utf8")));
+  assert.ok(existsSync(new URL("../dist/desk/index.html", import.meta.url)));
+});

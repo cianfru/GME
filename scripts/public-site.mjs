@@ -92,3 +92,32 @@ export function publicIndexFile(key, d, P) {
   }
   return out;
 }
+
+/** The page is one source (site/index.html) with the owner's code between marker lines: `//@desk` … `//@end` (and
+ *  `<!--@desk-->` … `<!--@end-->` inside templates); `//@pub` … `//@end` is what the public page gets instead.
+ *  The desk page keeps the owner code; the public page loses it, and every top-level name declared there becomes an
+ *  empty stub so a stray reference can never throw. */
+export function splitPage(src) {
+  const desk = [], pub = [], stubs = [];
+  let mode = null;
+  for (const line of src.split("\n")) {
+    const t = line.trim();
+    if (t === "//@desk" || t === "//@pub") { if (mode) throw new Error("nested marker: " + line); mode = t.slice(3); continue; }
+    if (t === "//@end") { if (!mode) throw new Error("stray //@end"); mode = null; continue; }
+    if (mode !== "pub") desk.push(line);
+    if (mode !== "desk") pub.push(line);
+    else for (const m of line.matchAll(/^(?:async function|function) ([A-Za-z_$][\w$]*)|^(?:const|let) ([A-Za-z_$][\w$]*)/g)) {
+      if (m[1]) stubs.push(`function ${m[1]}() { return ""; }`);
+      else stubs.push(/^(?:const|let) [\w$]+ = (?:async )?(?:\([^)]*\)|[\w$]+) =>/.test(line) ? `const ${m[2]} = () => "";` : `const ${m[2]} = {};`);
+      for (const x of line.matchAll(/, ([A-Za-z_$][\w$]*) = /g)) if (/^(?:const|let) /.test(line) && !line.includes("=>")) stubs.push(`const ${x[1]} = {};`);
+    }
+  }
+  if (mode) throw new Error("unclosed marker");
+  const inline = /<!--@desk-->[\s\S]*?<!--@end-->/g;
+  let pubHtml = pub.join("\n").replace(inline, "");
+  const declared = new Set();
+  const uniq = stubs.filter((x) => { const n = x.match(/(?:function|const) ([\w$]+)/)[1]; if (declared.has(n) || new RegExp("^(?:async function|function|const|let) " + n.replace(/\$/g, "\\$") + "\\b", "m").test(pubHtml)) return false; declared.add(n); return true; });
+  const at = pubHtml.lastIndexOf("</script>");
+  pubHtml = pubHtml.slice(0, at) + uniq.join("\n") + "\n" + pubHtml.slice(at);
+  return { desk: desk.join("\n").replace(/<!--@(desk|end)-->/g, ""), pub: pubHtml };
+}

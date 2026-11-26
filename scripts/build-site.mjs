@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, copyFileSync, existsSyn
 import { join, dirname } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
-import { publicSite, publicIndexFile, privateSets } from "./public-site.mjs";
+import { publicSite, publicIndexFile, privateSets, splitPage } from "./public-site.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const D = join(ROOT, "data");
@@ -109,8 +109,10 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(DESK, { recursive: true });
 writeFileSync(join(OUT, "site.json"), JSON.stringify(pub));
 writeFileSync(join(DESK, "site.json"), JSON.stringify(site));
-writeFileSync(join(DESK, "unlock.html"), `<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>Desk</title><script>try{localStorage.setItem("gme-desk","1")}catch(e){}location.replace("/#overview")</script>`);
-copyFileSync(join(ROOT, "site/index.html"), join(OUT, "index.html"));
+writeFileSync(join(DESK, "unlock.html"), `<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>Desk</title><script>try{localStorage.setItem("gme-desk","1")}catch(e){}location.replace("/desk/#overview")</script>`);
+{ const pg = splitPage(readFileSync(join(ROOT, "site/index.html"), "utf8"));
+  if (/fbb4/i.test(pg.pub)) throw new Error("the public page still mentions the private layer: " + pg.pub.match(/.{60}fbb4.{40}/is)[0]);
+  writeFileSync(join(OUT, "index.html"), pg.pub); writeFileSync(join(DESK, "index.html"), pg.desk); }
 copyFileSync(join(ROOT, "site/logo.png"), join(OUT, "logo.png"));   // the token's logo (CoinGecko "GME (Ethereum)")
 // Daily cost-basis distribution of held supply (engine, ~900 × 40): fetched only by the Crowd page's heatmap.
 if (existsSync(join(D, "engine/urpd-history.json"))) copyFileSync(join(D, "engine/urpd-history.json"), join(OUT, "urpd-history.json"));
