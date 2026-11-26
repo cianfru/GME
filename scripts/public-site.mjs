@@ -121,3 +121,12 @@ export function splitPage(src) {
   pubHtml = pubHtml.slice(0, at) + uniq.join("\n") + "\n" + pubHtml.slice(at);
   return { desk: desk.join("\n").replace(/<!--@(desk|end)-->/g, ""), pub: pubHtml };
 }
+
+/** The Explorer's transfer graph for the public page: the same wallets and transfers (chain facts), but the private
+ *  groups are not groups there: their wallets are plain wallets and their names are gone. */
+export function publicGraph(g, P) {
+  const map = new Map(), entities = [];
+  g.entities.forEach((e, i) => { if (P.ids.has(e[0]) || mentionsPrivate(e[1], P.names)) return; map.set(i, entities.length); entities.push(e); });
+  const nodes = g.nodes.map((n) => { const m = n.slice(); m[3] = map.has(n[3]) ? map.get(n[3]) : -1; if (mentionsPrivate(m[2], P.names)) m[2] = ""; return m; });
+  return { ...g, entities, nodes };
+}

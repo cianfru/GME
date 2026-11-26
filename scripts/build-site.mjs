@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, copyFileSync, existsSyn
 import { join, dirname } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
-import { publicSite, publicIndexFile, privateSets, splitPage } from "./public-site.mjs";
+import { publicSite, publicIndexFile, privateSets, splitPage, publicGraph } from "./public-site.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const D = join(ROOT, "data");
@@ -120,6 +120,9 @@ if (existsSync(join(D, "engine/urpd-history.json"))) copyFileSync(join(D, "engin
 if (existsSync(join(D, "graph.json"))) copyFileSync(join(D, "graph.json"), join(DESK, "graph.json"));
 // The ledger behind the graph (graph.py → graph_tx.json, ~1.8 MB gzipped): fetched only when the ledger is opened.
 if (existsSync(join(D, "graph_tx.json"))) copyFileSync(join(D, "graph_tx.json"), join(DESK, "graph_tx.json"));
+// The public Explorer gets the same transfers with the private groups dissolved into plain wallets.
+if (existsSync(join(D, "graph.json"))) { const pg = publicGraph(JSON.parse(readFileSync(join(D, "graph.json"), "utf8")), privateSets(site));
+  writeFileSync(join(OUT, "graph.json"), JSON.stringify(pg)); if (existsSync(join(D, "graph_tx.json"))) copyFileSync(join(D, "graph_tx.json"), join(OUT, "graph_tx.json")); }
 // Per-group P/L tracks and trades (entities.py → pnl.json): fetched only when a group's P&L chart is opened.
 if (existsSync(join(D, "pnl.json"))) {
   copyFileSync(join(D, "pnl.json"), join(DESK, "pnl.json"));

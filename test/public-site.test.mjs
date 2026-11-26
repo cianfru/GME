@@ -65,7 +65,7 @@ test("the built public files carry no private name or member list (when dist/ ex
   const pub = readFileSync("dist/site.json", "utf8");
   assert.ok(!/(?<![0-9a-fA-Fx…])fbb4/.test(pub)); assert.ok(!/"(NET|H|insider|cluster|mon)":/.test(pub));
   for (const n of P.names) assert.ok(!pub.includes(`"${n}"`), n);
-  for (const f of ["wallets.json", "graph.json", "graph_tx.json", "study.html"]) assert.ok(!existsSync("dist/" + f), f + " must be desk-only");
+  for (const f of ["wallets.json", "study.html"]) assert.ok(!existsSync("dist/" + f), f + " must be desk-only");
   if (existsSync("dist/w")) {
     assert.ok(!existsSync("dist/w/_ties.json"));
     const priv = [...P.wallets][0], shard = `dist/w/${priv.slice(2, 5)}.json`;
@@ -87,4 +87,20 @@ test("the built public page has no private name; the desk page is behind /desk/"
   if (!existsSync(new URL("../dist/index.html", import.meta.url))) return;
   assert.ok(!/fbb4/i.test(readFileSync(new URL("../dist/index.html", import.meta.url), "utf8")));
   assert.ok(existsSync(new URL("../dist/desk/index.html", import.meta.url)));
+});
+
+import { publicGraph } from "../scripts/public-site.mjs";
+test("publicGraph: private groups become plain wallets, the rest keep their group", () => {
+  const P = { ids: new Set(["aaa"]), names: new Set(["fbb4"]), wallets: new Set() };
+  const g = { entities: [["aaa", "fbb4", "fbb4", "focus", 5, 2], ["bbb", "Linked group 1234", "1234", "linked", 1, 2]], nodes: [["0x1", 0, "", 0, 3], ["0x2", 0, "", 1, 1], ["0x3", 2, "MEXC deposit", -1, 0]], edges: [[0, 1, []]] };
+  const out = publicGraph(g, P);
+  assert.deepEqual(out.entities.map((e) => e[0]), ["bbb"]);
+  assert.deepEqual(out.nodes.map((n) => n[3]), [-1, 0, -1]);
+  assert.equal(out.edges, g.edges); assert.equal(g.nodes[0][3], 0);
+});
+test("the built public graph names no private group", () => {
+  const f = new URL("../dist/graph.json", import.meta.url); if (!existsSync(f)) return;
+  const g = JSON.parse(readFileSync(f, "utf8"));
+  assert.ok(!g.entities.some((e) => /fbb4|a8c8|dcf4|019d|5b69/.test(e[1]) || e[3] === "focus"));
+  assert.ok(!/(?<![0-9a-fA-Fx…])fbb4/.test(JSON.stringify(g.nodes.map((n) => n[2]))));
 });

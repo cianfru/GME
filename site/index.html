@@ -185,7 +185,7 @@ main { padding-bottom: 60px }
 }
 @media (max-width: 520px) { .gfilt { grid-template-columns: 1fr } .gf dl { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
 /* link cards, chart jump list */
-.lcards { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px }
+.lcards { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px }
 .lcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 18px 44px 18px 18px; text-decoration: none; color: var(--fg) }
 .lcard b { font: 600 15px var(--sans) } .lcard span { font-size: 13px; color: var(--fg-2); line-height: 1.45 }
 .lcard i { position: absolute; right: 16px; top: 16px; font-style: normal; color: var(--accent) } .lcard:hover { border-color: var(--accent) }
@@ -454,7 +454,7 @@ dl.rd dd { margin: 0; font-size: 14px; line-height: 1.55 } dl.rd dd b { font-fam
 @media (max-width: 900px) { .nmind { grid-template-columns: minmax(0, 1fr) } .nmrow { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 6px } .nmrow .nml { grid-column: span 3 } .nmrow .nmh { text-align: right } .nmrow .nms { text-align: right } .nmweb { flex-direction: column; height: auto } .nmweb i { padding: 6px 10px; flex: none !important } }
 @media (max-width: 760px) { .nmleg { display: none } }
 @media (max-width: 520px) { .nmwins { grid-template-columns: minmax(0, 1fr) } .nmw { box-shadow: 0 1px 0 var(--line) } .nmw > b { font-size: 19px } }
-body.pub a[href^="#visualizer"], body.pub a[href^="#entities"], body.pub [data-emap], body.pub [data-owner], body.pub a[href="/study"], body.pub a[href="/study.html"] { display: none !important }
+body.pub a[href^="#entities"], body.pub [data-emap], body.pub [data-owner], body.pub a[href="/study"], body.pub a[href="/study.html"] { display: none !important }
 .mvkv { margin: .7rem 0 .2rem }
 .mvleg { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin-top: .8rem; font: 400 11px var(--sans); color: var(--fg-2) } .mvleg span { display: inline-flex; align-items: center; gap: .35rem }
 .mvleg i { display: inline-block; width: 9px; height: 9px } .mvleg i.ln { height: 2px; width: 14px; background: var(--accent) } .mvkv b small { font-size: 10.5px; margin-left: .3rem }
@@ -691,10 +691,10 @@ let S, T, DD, N, IDX = null, AGEH = 0, STALE = false, PARTIAL = false;
 const RANGES = [["30D", 30], ["90D", 90], ["1Y", 365], ["ALL", 0]];
 let range = 90;
 try { const r = localStorage.getItem("gme-range"); if (r != null && RANGES.some((x) => x[1] === +r)) range = +r; } catch (e) {}
-const PAGES_PUBLIC = [["overview", "Overview"], ["buyers", "Who's buying"], ["groups", "Groups"], ["charts", "Charts"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
+const PAGES_PUBLIC = [["overview", "Overview"], ["buyers", "Who's buying"], ["groups", "Groups"], ["charts", "Charts"], ["visualizer", "Explorer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
 const CHARTS = [["market", "Market"], ["holders", "Holders"], ["crowd", "Buyers and sellers"], ["transfers", "Activity"]];
 let csub = "market";
-let PAGES = [["overview", "Overview"], ["buyers", "Who's buying"], ["groups", "Groups"], ["charts", "Charts"], ["entities", "Desk"], ["visualizer", "Visualizer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
+let PAGES = [["overview", "Overview"], ["buyers", "Who's buying"], ["groups", "Groups"], ["charts", "Charts"], ["entities", "Desk"], ["visualizer", "Explorer"], ["wallet", "Wallet"], ["methodology", "Methodology"]];
 // Group names end in a short handle: the last four characters of the wallet the group is named after ("Accumulator
 // efdb", "Linked group 847d").
 const nm = (s) => esc(s).replace(/(^|\s)([0-9a-f]{4,6})$/, (m, sp, h) => (sp ? "&nbsp;" : "") + `<span class="hd">${h}</span>`);   // nbsp: flex buttons drop a plain trailing space
@@ -1202,7 +1202,7 @@ function overview() {
 }
 function linkCards() {
   const E = (S.E && S.E.entities) || [], A = S.accumulators || [];
-  const it = [["#buyers", "Who's buying", "Every buyer and seller of the last day, week and month."], ["#groups", "Groups", `${E.length} groups of linked wallets, ${A.length} of them quietly accumulating.`], ["#charts", "Charts", "Price against cost, holders, buyers and sellers, activity."], ["#wallet", "Wallet", "Paste any address: holdings, profit and loss, every transfer."]];
+  const it = [["#buyers", "Who's buying", "Every buyer and seller of the last day, week and month."], ["#groups", "Groups", `${E.length} groups of linked wallets, ${A.length} of them quietly accumulating.`], ["#charts", "Charts", "Price against cost, holders, buyers and sellers, activity."], ["#visualizer", "Explorer", "The web of wallets: who sent GME to whom. Drag, expand, follow the coins."], ["#wallet", "Wallet", "Paste any address: holdings, profit and loss, every transfer."]];
   add(`<div class="lcards">${it.map(([h, t, d]) => `<a class="panel lcard" href="${h}"><b>${t}</b><span>${d}</span><i>→</i></a>`).join("")}</div>`);
 }
 function marketCards() {
@@ -1251,7 +1251,7 @@ function heroPublic() {
         <span class="seg" id="hpz">${["ALL", "1Y", "90D"].map((l, i) => `<button class="mini${i === HZ ? " on" : ""}" type="button" data-hz="${i}">${l}</button>`).join("")}</span></div>
       <div id="hpc"></div>
       <div class="hp-key"><span><i class="ln"></i>Market cap</span><span><i class="ln d"></i>Holders' avg cost</span>${HZN.map(([n, c]) => `<span><i style="background:var(${c});opacity:.55"></i>${n}</span>`).join("")}</div></div>
-    <div class="hp-cta"><a class="pri" href="#buyers">Who's buying →</a><a href="#wallet">Look up a wallet →</a><a href="#groups">Groups →</a><a href="#charts">All charts →</a><a href="#methodology">How it's built →</a></div>
+    <div class="hp-cta"><a class="pri" href="#buyers">Who's buying →</a><a href="#wallet">Look up a wallet →</a><a href="#groups">Groups →</a><a href="#visualizer">Explore the wallet web →</a><a href="#charts">All charts →</a><a href="#methodology">How it's built →</a></div>
     <div class="contract"><span class="eyebrow">Contract</span><span class="mono full">${TOKEN}</span><span class="mono shortc">${short(TOKEN)}</span><button class="mini" type="button" data-copy="${TOKEN}">Copy</button><a class="mini" href="${ETH(TOKEN)}" target="_blank" rel="noopener">Etherscan ↗</a></div>
   </section>
   <section class="panel metrics collapsed" id="metrics"><div class="mgrid">${items.map(([k, v, d, tp], i) => `<div class="m${i >= 4 ? " sec" : ""}"><span class="mk" data-tip="${esc(tp)}" tabindex="0">${k}</span><span class="mv">${v}</span><span class="md">${d}</span></div>`).join("")}</div></section>
@@ -3501,6 +3501,11 @@ function vzExpand(id, n = 12) {
   vzAdd(vzRaws(id).filter((i) => VZ.inc.has(i)), id);
   return Math.max(0, c.length - n);
 }
+function vzBusiest() {            // the group with the most distinct counterparties: a web worth opening on
+  const seen = VG.entities.map(() => new Set());
+  for (const [f, t] of VG.edges) { const a = VG.nodes[f][3], b = VG.nodes[t][3]; if (a === b) continue; if (a >= 0) seen[a].add(b >= 0 ? "E" + b : t); if (b >= 0) seen[b].add(a >= 0 ? "E" + a : f); }
+  const i = d3.maxIndex(seen, (x) => x.size); return i >= 0 ? VG.entities[i][0] : null;
+}
 function vzRefFor(ref) {          // an entity id, a handle, or an address → { id: display id, raws }
   ref = String(ref || "").trim().toLowerCase();
   if (!ref) return null;
@@ -3525,7 +3530,7 @@ function visualizer() {
   document.body.classList.add("vzmode");
   add(`<section class="vz" id="vz"><canvas id="vzc" aria-label="Transfer graph"></canvas>
     <div class="vzbar">
-      <div class="vzbox vzsearch"><span class="eyebrow">Visualizer</span><div class="vzq"><input id="vzq" type="search" autocomplete="off" spellcheck="false" placeholder="Search a wallet, group or handle (9717, 0x…)" aria-label="Search"><button type="button" class="mini" id="vzft" aria-expanded="false">Filters</button></div><div class="vzsug" id="vzsug" hidden></div><div class="vzchips" id="vzchips" hidden></div></div>
+      <div class="vzbox vzsearch"><span class="eyebrow">Explorer</span><div class="vzq"><input id="vzq" type="search" autocomplete="off" spellcheck="false" placeholder="Search a wallet, group or handle (9717, 0x…)" aria-label="Search"><button type="button" class="mini" id="vzft" aria-expanded="false">Filters</button></div><div class="vzsug" id="vzsug" hidden></div><div class="vzchips" id="vzchips" hidden></div></div>
       <div class="vzbox vzfil" id="vzfil" hidden></div>
     </div>
     <div class="vztools">
@@ -3549,7 +3554,7 @@ function vzMount() {
     $("vzload").hidden = true;
     const want = (location.hash.split("/")[1] || "").toLowerCase();
     if (want && want !== VZ.baseRef) vzSetBase(want, false);
-    else if (!VZ.base) vzSetBase(VG.entities.find((e) => e[3] === "focus")?.[0] || VG.nodes[0][0]);
+    else if (!VZ.base) vzSetBase(VG.entities.find((e) => e[3] === "focus")?.[0] || vzBusiest() || VG.nodes[0][0]);
     vzStart();
   }).catch((e) => { console.error(e); $("vzload").textContent = "The Visualizer data is not available in this build."; });
 }
@@ -3882,6 +3887,7 @@ async function vzWalFill(d) {
 }
 // A group's ties to other tracked groups (wallet_index.py _ties), with the two wallets behind each piece of evidence.
 async function vzTiesFill(d) {
+  if (!DESK) { const x = $("vzties"); if (x) x.remove(); return; }
   const id = d.id, eid = VG.entities[d.ent][0]; let all = [];
   try { all = await wLoad("ties"); } catch (e) {}
   const el = $("vzties"); if (!el || VZ.sel !== id) return;
